@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://keysluomo.github.io/"/>
-  <updated>2020-06-03T17:33:39.675Z</updated>
+  <updated>2020-06-04T06:44:16.507Z</updated>
   <id>https://keysluomo.github.io/</id>
   
   <author>
@@ -21,11 +21,13 @@
     <link href="https://keysluomo.github.io/2020/06/04/secondblog/"/>
     <id>https://keysluomo.github.io/2020/06/04/secondblog/</id>
     <published>2020-06-03T17:33:39.000Z</published>
-    <updated>2020-06-03T17:33:39.675Z</updated>
+    <updated>2020-06-04T06:44:16.507Z</updated>
     
     <summary type="html">
     
     </summary>
+    
+      <category term="Java" scheme="https://keysluomo.github.io/categories/Java/"/>
     
     
   </entry>
@@ -35,13 +37,13 @@
     <link href="https://keysluomo.github.io/2020/06/03/firstBlog/"/>
     <id>https://keysluomo.github.io/2020/06/03/firstBlog/</id>
     <published>2020-06-02T18:41:04.000Z</published>
-    <updated>2020-06-03T10:04:41.521Z</updated>
+    <updated>2020-06-04T06:43:35.000Z</updated>
     
     <summary type="html">
     
     </summary>
     
-      <category term="FLINK" scheme="https://keysluomo.github.io/categories/FLINK/"/>
+      <category term="Flink" scheme="https://keysluomo.github.io/categories/Flink/"/>
     
     
   </entry>
