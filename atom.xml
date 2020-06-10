@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://keysluomo.github.io/"/>
-  <updated>2020-06-10T05:04:45.865Z</updated>
+  <updated>2020-06-10T04:40:56.149Z</updated>
   <id>https://keysluomo.github.io/</id>
   
   <author>
@@ -15,48 +15,6 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
-  
-  <entry>
-    <title>a</title>
-    <link href="https://keysluomo.github.io/2020/06/10/a/"/>
-    <id>https://keysluomo.github.io/2020/06/10/a/</id>
-    <published>2020-06-10T05:04:45.000Z</published>
-    <updated>2020-06-10T05:04:45.865Z</updated>
-    
-    <summary type="html">
-    
-    </summary>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>e</title>
-    <link href="https://keysluomo.github.io/2020/06/10/e/"/>
-    <id>https://keysluomo.github.io/2020/06/10/e/</id>
-    <published>2020-06-10T05:04:27.000Z</published>
-    <updated>2020-06-10T05:04:27.621Z</updated>
-    
-    <summary type="html">
-    
-    </summary>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>l</title>
-    <link href="https://keysluomo.github.io/2020/06/10/l/"/>
-    <id>https://keysluomo.github.io/2020/06/10/l/</id>
-    <published>2020-06-10T05:04:12.000Z</published>
-    <updated>2020-06-10T05:04:12.517Z</updated>
-    
-    <summary type="html">
-    
-    </summary>
-    
-    
-  </entry>
   
   <entry>
     <title>ss</title>
@@ -73,81 +31,11 @@
   </entry>
   
   <entry>
-    <title>seven</title>
-    <link href="https://keysluomo.github.io/2020/06/10/seven/"/>
-    <id>https://keysluomo.github.io/2020/06/10/seven/</id>
-    <published>2020-06-10T04:40:25.000Z</published>
-    <updated>2020-06-10T04:40:25.491Z</updated>
-    
-    <summary type="html">
-    
-    </summary>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>sixth </title>
-    <link href="https://keysluomo.github.io/2020/06/10/sixth/"/>
-    <id>https://keysluomo.github.io/2020/06/10/sixth/</id>
-    <published>2020-06-10T04:39:20.000Z</published>
-    <updated>2020-06-10T04:39:20.702Z</updated>
-    
-    <summary type="html">
-    
-    </summary>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>fifth</title>
-    <link href="https://keysluomo.github.io/2020/06/10/fifth/"/>
-    <id>https://keysluomo.github.io/2020/06/10/fifth/</id>
-    <published>2020-06-10T04:38:55.000Z</published>
-    <updated>2020-06-10T04:38:55.571Z</updated>
-    
-    <summary type="html">
-    
-    </summary>
-    
-    
-  </entry>
-  
-  <entry>
     <title>third</title>
     <link href="https://keysluomo.github.io/2020/06/10/third/"/>
     <id>https://keysluomo.github.io/2020/06/10/third/</id>
     <published>2020-06-10T04:38:06.000Z</published>
     <updated>2020-06-10T04:38:06.280Z</updated>
-    
-    <summary type="html">
-    
-    </summary>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>second</title>
-    <link href="https://keysluomo.github.io/2020/06/10/second/"/>
-    <id>https://keysluomo.github.io/2020/06/10/second/</id>
-    <published>2020-06-10T04:15:50.000Z</published>
-    <updated>2020-06-10T04:15:50.477Z</updated>
-    
-    <summary type="html">
-    
-    </summary>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>first</title>
-    <link href="https://keysluomo.github.io/2020/06/10/first/"/>
-    <id>https://keysluomo.github.io/2020/06/10/first/</id>
-    <published>2020-06-10T04:15:09.000Z</published>
-    <updated>2020-06-10T04:15:09.640Z</updated>
     
     <summary type="html">
     
@@ -179,6 +67,26 @@
   </entry>
   
   <entry>
+    <title>a</title>
+    <link href="https://keysluomo.github.io/2020/06/03/a/"/>
+    <id>https://keysluomo.github.io/2020/06/03/a/</id>
+    <published>2020-06-02T18:41:04.000Z</published>
+    <updated>2020-06-10T11:16:33.914Z</updated>
+    
+    <summary type="html">
+    
+      前端知识体系：
+    
+    </summary>
+    
+      <category term="Flink" scheme="https://keysluomo.github.io/categories/Flink/"/>
+    
+    
+      <category term="spark" scheme="https://keysluomo.github.io/tags/spark/"/>
+    
+  </entry>
+  
+  <entry>
     <title>firstBlog</title>
     <link href="https://keysluomo.github.io/2020/06/03/firstBlog/"/>
     <id>https://keysluomo.github.io/2020/06/03/firstBlog/</id>
@@ -186,6 +94,146 @@
     <updated>2020-06-10T04:41:15.382Z</updated>
     
     <content type="html"><![CDATA[<p><strong> 前端知识体系：</strong><br>Scala具备类型系统，通过编译时检查，保证代码的安全性和一致性。<br>类型系统具体支持一下特性： </p><The rest of contents | 余下全文><p>Scala具备类型系统，通过编译时检查，保证代码的安全性和一致性。<br>类型系统具体支持一下特性：<br>泛型类<br>协变和逆变<br>标注<br>类型参数的上下限约束<br>把类别和抽象类型作为对象成员<br><strong>复合类型</strong><br>引用自己时显示指定类型<br>视图<br>多态方法<br><strong>扩展性：</strong><br>Scala的设计秉承一项事实，即在实践中，某个领域特定的应用程序开发往往需要特定于该领域的语言扩展。Scala提供了许多独特的语言机制，可以以库的形式轻易无缝添加新的语言结构：<br>任何方法可用作前缀或后缀操作符<br>可以根据预期类型自动构造闭包。<br><strong>并发性：</strong><br>Scala使用Actor作为其并发模型，Actor是类似线程的实体，通过邮箱发收消息。Actor可以复用线程，因此可以在程序中可以使用数百万个Actor，而线程只能创建数千个。在2.10之后的版本中，使用AKKa作为其默认Actor实现。</p>]]></content>
+    
+    <summary type="html">
+    
+      前端知识体系：
+    
+    </summary>
+    
+      <category term="Flink" scheme="https://keysluomo.github.io/categories/Flink/"/>
+    
+    
+      <category term="spark" scheme="https://keysluomo.github.io/tags/spark/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>first</title>
+    <link href="https://keysluomo.github.io/2020/06/03/first/"/>
+    <id>https://keysluomo.github.io/2020/06/03/first/</id>
+    <published>2020-06-02T18:41:04.000Z</published>
+    <updated>2020-06-10T11:17:12.591Z</updated>
+    
+    <summary type="html">
+    
+      前端知识体系：
+    
+    </summary>
+    
+      <category term="Flink" scheme="https://keysluomo.github.io/categories/Flink/"/>
+    
+    
+      <category term="spark" scheme="https://keysluomo.github.io/tags/spark/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>e</title>
+    <link href="https://keysluomo.github.io/2020/06/03/e/"/>
+    <id>https://keysluomo.github.io/2020/06/03/e/</id>
+    <published>2020-06-02T18:41:04.000Z</published>
+    <updated>2020-06-10T11:16:48.109Z</updated>
+    
+    <summary type="html">
+    
+      前端知识体系：
+    
+    </summary>
+    
+      <category term="Flink" scheme="https://keysluomo.github.io/categories/Flink/"/>
+    
+    
+      <category term="spark" scheme="https://keysluomo.github.io/tags/spark/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>fifth</title>
+    <link href="https://keysluomo.github.io/2020/06/03/fifth/"/>
+    <id>https://keysluomo.github.io/2020/06/03/fifth/</id>
+    <published>2020-06-02T18:41:04.000Z</published>
+    <updated>2020-06-10T11:17:01.151Z</updated>
+    
+    <summary type="html">
+    
+      前端知识体系：
+    
+    </summary>
+    
+      <category term="Flink" scheme="https://keysluomo.github.io/categories/Flink/"/>
+    
+    
+      <category term="spark" scheme="https://keysluomo.github.io/tags/spark/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>l</title>
+    <link href="https://keysluomo.github.io/2020/06/03/l/"/>
+    <id>https://keysluomo.github.io/2020/06/03/l/</id>
+    <published>2020-06-02T18:41:04.000Z</published>
+    <updated>2020-06-10T11:17:25.569Z</updated>
+    
+    <summary type="html">
+    
+      前端知识体系：
+    
+    </summary>
+    
+      <category term="Flink" scheme="https://keysluomo.github.io/categories/Flink/"/>
+    
+    
+      <category term="spark" scheme="https://keysluomo.github.io/tags/spark/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>second</title>
+    <link href="https://keysluomo.github.io/2020/06/03/second/"/>
+    <id>https://keysluomo.github.io/2020/06/03/second/</id>
+    <published>2020-06-02T18:41:04.000Z</published>
+    <updated>2020-06-10T11:17:46.220Z</updated>
+    
+    <summary type="html">
+    
+      前端知识体系：
+    
+    </summary>
+    
+      <category term="Flink" scheme="https://keysluomo.github.io/categories/Flink/"/>
+    
+    
+      <category term="spark" scheme="https://keysluomo.github.io/tags/spark/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>seven</title>
+    <link href="https://keysluomo.github.io/2020/06/03/seven/"/>
+    <id>https://keysluomo.github.io/2020/06/03/seven/</id>
+    <published>2020-06-02T18:41:04.000Z</published>
+    <updated>2020-06-10T11:18:03.949Z</updated>
+    
+    <summary type="html">
+    
+      前端知识体系：
+    
+    </summary>
+    
+      <category term="Flink" scheme="https://keysluomo.github.io/categories/Flink/"/>
+    
+    
+      <category term="spark" scheme="https://keysluomo.github.io/tags/spark/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>sixth </title>
+    <link href="https://keysluomo.github.io/2020/06/03/sixth/"/>
+    <id>https://keysluomo.github.io/2020/06/03/sixth/</id>
+    <published>2020-06-02T18:41:04.000Z</published>
+    <updated>2020-06-10T11:18:14.562Z</updated>
     
     <summary type="html">
     
