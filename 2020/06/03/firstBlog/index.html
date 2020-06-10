@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="baidu-site-verification" content="L6Lm9d5Crl"/>
+   
+    <meta name="keywords" content="firstBlog" />
   
   
   
@@ -17,9 +19,9 @@
 <meta property="og:description" content="前端知识体系：">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2020-06-02T18:41:04.000Z">
-<meta property="article:modified_time" content="2020-06-05T05:33:22.005Z">
+<meta property="article:modified_time" content="2020-06-05T08:01:32.735Z">
 <meta property="article:author" content="落墨">
-<meta property="article:tag" content="flink">
+<meta property="article:tag" content="firstBlog">
 <meta name="twitter:card" content="summary">
   
     <link rel="alternative" href="/atom.xml" title="落墨" type="application/atom+xml">
@@ -74,56 +76,6 @@
         </hgroup>
         
         
-            <form>
-                <input type="text" class="st-default-search-input search" id="local-search-input" placeholder="搜索一下" autocomplete="off">
-            </form>
-            <div id="local-search-result"></div>
-        
-        
-            <script type="text/javascript">
-                (function() {
-                    'use strict';
-                    function getMatchData(keyword, data) {
-                        var matchData = [];
-                        for(var i =0;i<data.length;i++){
-                            if(data[i].title.toLowerCase().indexOf(keyword)>=0) 
-                                matchData.push(data[i])
-                        }
-                        return matchData;
-                    }
-                    var $input = $('#local-search-input');
-                    var $resultContent = $('#local-search-result');
-                    $input.keyup(function(){
-                        $.ajax({
-                            url: '/search.json',
-                            dataType: "json",
-                            success: function( json ) {
-                                var str='<ul class=\"search-result-list\">';                
-                                var keyword = $input.val().trim().toLowerCase();
-                                $resultContent.innerHTML = "";
-                                if ($input.val().trim().length <= 0) {
-                                    $resultContent.empty();
-                                    $('#switch-area').show();
-                                    return;
-                                }
-                                var results = getMatchData(keyword, json);
-                                if(results.length === 0){
-                                    $resultContent.empty();
-                                    $('#switch-area').show();
-                                    return;
-                                } 
-                                for(var i =0; i<results.length; i++){
-                                    str += "<li><a href='"+ results[i].url +"' class='search-result-title'>"+ results[i].title +"</a></li>";
-                                }
-                                str += "</ul>";
-                                $resultContent.empty();
-                                $resultContent.append(str);
-                                $('#switch-area').hide();
-                            }
-                        });
-                    });
-                })();
-            </script>
         
         
             <div id="switch-btn" class="switch-btn">

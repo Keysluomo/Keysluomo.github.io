@@ -43,7 +43,7 @@
     <link href="https://keysluomo.github.io/2020/06/03/firstBlog/"/>
     <id>https://keysluomo.github.io/2020/06/03/firstBlog/</id>
     <published>2020-06-02T18:41:04.000Z</published>
-    <updated>2020-06-05T05:33:22.005Z</updated>
+    <updated>2020-06-05T08:01:32.735Z</updated>
     
     <content type="html"><![CDATA[<p><strong> 前端知识体系：</strong><br>Scala具备类型系统，通过编译时检查，保证代码的安全性和一致性。<br>类型系统具体支持一下特性： </p><The rest of contents | 余下全文><p>Scala具备类型系统，通过编译时检查，保证代码的安全性和一致性。<br>类型系统具体支持一下特性：<br>泛型类<br>协变和逆变<br>标注<br>类型参数的上下限约束<br>把类别和抽象类型作为对象成员<br><strong>复合类型</strong><br>引用自己时显示指定类型<br>视图<br>多态方法<br><strong>扩展性：</strong><br>Scala的设计秉承一项事实，即在实践中，某个领域特定的应用程序开发往往需要特定于该领域的语言扩展。Scala提供了许多独特的语言机制，可以以库的形式轻易无缝添加新的语言结构：<br>任何方法可用作前缀或后缀操作符<br>可以根据预期类型自动构造闭包。<br><strong>并发性：</strong><br>Scala使用Actor作为其并发模型，Actor是类似线程的实体，通过邮箱发收消息。Actor可以复用线程，因此可以在程序中可以使用数百万个Actor，而线程只能创建数千个。在2.10之后的版本中，使用AKKa作为其默认Actor实现。</p>]]></content>
     
