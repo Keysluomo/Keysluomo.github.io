@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://keysluomo.github.io/"/>
-  <updated>2020-06-12T03:44:37.620Z</updated>
+  <updated>2020-06-12T04:34:29.086Z</updated>
   <id>https://keysluomo.github.io/</id>
   
   <author>
@@ -17,11 +17,11 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>Apache Flink 简单的构建一个应用程序序</title>
+    <title>Apache Flink 简单的构建一个应用程序</title>
     <link href="https://keysluomo.github.io/2020/06/12/Apache-Flink-%E7%AE%80%E5%8D%95%E7%9A%84%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/"/>
     <id>https://keysluomo.github.io/2020/06/12/Apache-Flink-简单的构建一个应用程序/</id>
     <published>2020-06-12T03:17:46.000Z</published>
-    <updated>2020-06-12T03:44:37.620Z</updated>
+    <updated>2020-06-12T04:34:29.086Z</updated>
     
     <content type="html"><![CDATA[<h1 id="简单的构建一个ApacheFlink的应用程序"><a href="#简单的构建一个ApacheFlink的应用程序" class="headerlink" title="简单的构建一个ApacheFlink的应用程序"></a>简单的构建一个ApacheFlink的应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Flink 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Flink相关的依赖。</p><p>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191012/9094293_1570843930821_A4D48C34269A213CE6F6CE74BF95681C" alt="图片说明" title="图片标题"> </p><h1 id="编写Flink程序"><a href="#编写Flink程序" class="headerlink" title="编写Flink程序"></a>编写Flink程序</h1><p>创建 SocketWindowWordCount.java 文件：</p><pre><code>package FlinkDemo;import org.apache.flink.api.common.functions.FlatMapFunction;import org.apache.flink.api.java.tuple.Tuple2;import org.apache.flink.streaming.api.datastream.DataStream;import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;import org.apache.flink.streaming.api.windowing.time.Time;import org.apache.flink.util.Collector;public class SocketWindowWordCount {    public static void main(String[] args) throws Exception {        // 创建 execution environment        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();        // 通过连接 socket 获取输入数据，这里连接到本地9000端口，如果9000端口已被占用，请换一个端口        DataStream&lt;String&gt; text = env.socketTextStream(&quot;localhost&quot;, 9000, &quot;\n&quot;);        // 解析数据，按 word 分组，开窗，聚合        DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; windowCounts = text                .flatMap(new FlatMapFunction&lt;String, Tuple2&lt;String, Integer&gt;&gt;() {                    @Override                    public void flatMap(String value, Collector&lt;Tuple2&lt;String, Integer&gt;&gt; out) {                        for (String word : value.split(&quot;\\s&quot;)) {                            out.collect(Tuple2.of(word, 1));                        }                    }                })                .keyBy(0)                .timeWindow(Time.seconds(5))                .sum(1);        // 将结果打印到控制台，注意这里使用的是单线程打印，而非多线程        windowCounts.print().setParallelism(1);        env.execute(&quot;Socket Window WordCount&quot;);    }}</code></pre><h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>要运行示例程序，首先我们在终端启动 netcat 获得输入流：<br>nc -lk 9000<br>然后直接运行SocketWindowWordCount的 main 方法。</p><p>只需要在 netcat 控制台输入单词，就能在 SocketWindowWordCount 的输出控制台看到每个单词的词频统计。如果想看到大于1的计数，请在5秒内反复键入相同的单词。<br>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191012/9094293_1570862262668_C587F81A2896284000DDEC3E5471605F" alt="图片说明" title="图片标题"> </p>]]></content>
     
