@@ -16,13 +16,13 @@
 <meta property="og:site_name" content="落墨">
 <meta property="og:description" content="预览描述">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://github.com/Keysluomo/Keysluomo.github.io/blob/master/img/article/spark%E7%94%9F%E6%80%81%E7%B3%BB%E7%BB%9F.png">
+<meta property="og:image" content="https://github.com/Keysluomo/Keysluomo.github.io/blob/master/img/article/spark.png">
 <meta property="article:published_time" content="2020-06-12T05:12:22.000Z">
-<meta property="article:modified_time" content="2020-06-13T16:14:54.939Z">
+<meta property="article:modified_time" content="2020-06-13T16:21:19.658Z">
 <meta property="article:author" content="落墨">
 <meta property="article:tag" content="Spark">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://github.com/Keysluomo/Keysluomo.github.io/blob/master/img/article/spark%E7%94%9F%E6%80%81%E7%B3%BB%E7%BB%9F.png">
+<meta name="twitter:image" content="https://github.com/Keysluomo/Keysluomo.github.io/blob/master/img/article/spark.png">
   
     <link rel="alternative" href="/atom.xml" title="落墨" type="application/atom+xml">
   
@@ -312,7 +312,7 @@
 <li>流式处理：目前的流式系统也只提供了有限的容错处理，需要消耗系统非常大的拷贝代价或者非常长的容错时间。特别是在目前的系统中，基本都是基于连续计算的模型，常驻的有状态的操作会处理到达的每一条记录。为了恢复失败的节点，它们需要为每一个操作复制两份操作，或者是将上游的数据进行代价非常大的操作重放。利用RDD实现一种新的模型——离散数据流（D-Stream），可以克服上面的这些问题。D-Stream将流式计算当作一系列的短小而确定的批处理操作，而不是常驻的有状态的操作，将两个离散流之间的状态保存在RDD中。离散流模型能够允许通过RDD的继承关系图（lineage）进行并行性的恢复而不需要进行数据拷贝。<h1 id="Spark子系统"><a href="#Spark子系统" class="headerlink" title="Spark子系统"></a>Spark子系统</h1>如果按照目前流行的大数据处理场景来划分，可以将大数据处理分为如下三种情况。</li>
 <li>复杂的批量数据处理（batch data processing），通常的时间跨度为数十分钟到数小时。</li>
 <li>基于历史数据的交互式查询（interactive query），通常的时间跨度为数十秒到数分钟。</li>
-<li>基于实时数据流的数据处理（streaming data processing），通常的时间跨度为数百毫秒到数秒。<br>由于RDD具有丰富的表达能力，所以伯克利在Spark Core的基础之上衍生出了能够同时处理上述三种情形的统一大数据处理平台，如图1-1所示。<br><img src="https://github.com/Keysluomo/Keysluomo.github.io/blob/master/img/article/spark%E7%94%9F%E6%80%81%E7%B3%BB%E7%BB%9F.png" alt="图片说明"></li>
+<li>基于实时数据流的数据处理（streaming data processing），通常的时间跨度为数百毫秒到数秒。<br>由于RDD具有丰富的表达能力，所以伯克利在Spark Core的基础之上衍生出了能够同时处理上述三种情形的统一大数据处理平台，如图1-1所示。<br><img src="https://github.com/Keysluomo/Keysluomo.github.io/blob/master/img/article/spark.png" alt="图片说明"></li>
 <li>Spark Core：基于RDD提供了丰富的操作接口，利用DAG进行统一的任务规划，使得Spark能够更加灵活地处理类似MapReduce的批处理作业。</li>
 <li>Shark/Spark SQL:兼容Hive的接口HQL，提供了比Hive高出10~100倍的查询速度的分布式SQL引擎。</li>
 <li>Spark Streaming：将流式计算分解成一系列的短小的批处理作业，利用Spark轻量级和低延时的调度框架，可以很好的支持流式处理。目前已经支持的数据输入源包括Kafka、Flume、Twitter、TCP sockets。</li>
