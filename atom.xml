@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://keysluomo.github.io/"/>
-  <updated>2020-06-13T16:21:19.658Z</updated>
+  <updated>2020-06-13T16:31:25.194Z</updated>
   <id>https://keysluomo.github.io/</id>
   
   <author>
@@ -15,6 +15,28 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>picture</title>
+    <link href="https://keysluomo.github.io/2020/06/14/picture/"/>
+    <id>https://keysluomo.github.io/2020/06/14/picture/</id>
+    <published>2020-06-13T16:29:22.000Z</published>
+    <updated>2020-06-13T16:31:25.194Z</updated>
+    
+    <content type="html"><![CDATA[<p><img src="/2020/06/14/picture/spark.png" alt></p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;&lt;img src=&quot;/2020/06/14/picture/spark.png&quot; alt&gt;&lt;/p&gt;
+
+      
+    
+    </summary>
+    
+    
+  </entry>
   
   <entry>
     <title>Spark 概述</title>
