@@ -1,6 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Apache Flink 简单的构建一个应用程序</title>
+    <url>/2020/06/12/Apache-Flink-%E7%AE%80%E5%8D%95%E7%9A%84%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
+    <content><![CDATA[<h1 id="简单的构建一个ApacheFlink的应用程序"><a href="#简单的构建一个ApacheFlink的应用程序" class="headerlink" title="简单的构建一个ApacheFlink的应用程序"></a>简单的构建一个ApacheFlink的应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Flink 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Flink相关的依赖。</p>
+<p>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191012/9094293_1570843930821_A4D48C34269A213CE6F6CE74BF95681C" alt="图片说明" title="图片标题"> </p>
+<h1 id="编写Flink程序"><a href="#编写Flink程序" class="headerlink" title="编写Flink程序"></a>编写Flink程序</h1><p>创建 SocketWindowWordCount.java 文件：</p>
+<pre><code>package FlinkDemo;
+import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.util.Collector;
+
+public class SocketWindowWordCount {
+
+    public static void main(String[] args) throws Exception {
+
+        // 创建 execution environment
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+        // 通过连接 socket 获取输入数据，这里连接到本地9000端口，如果9000端口已被占用，请换一个端口
+        DataStream&lt;String&gt; text = env.socketTextStream(&quot;localhost&quot;, 9000, &quot;\n&quot;);
+
+        // 解析数据，按 word 分组，开窗，聚合
+        DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; windowCounts = text
+                .flatMap(new FlatMapFunction&lt;String, Tuple2&lt;String, Integer&gt;&gt;() {
+                    @Override
+                    public void flatMap(String value, Collector&lt;Tuple2&lt;String, Integer&gt;&gt; out) {
+                        for (String word : value.split(&quot;\\s&quot;)) {
+                            out.collect(Tuple2.of(word, 1));
+                        }
+                    }
+                })
+                .keyBy(0)
+                .timeWindow(Time.seconds(5))
+                .sum(1);
+
+        // 将结果打印到控制台，注意这里使用的是单线程打印，而非多线程
+        windowCounts.print().setParallelism(1);
+
+        env.execute(&quot;Socket Window WordCount&quot;);
+    }
+}
+</code></pre><h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>要运行示例程序，首先我们在终端启动 netcat 获得输入流：<br>nc -lk 9000<br>然后直接运行SocketWindowWordCount的 main 方法。</p>
+<p>只需要在 netcat 控制台输入单词，就能在 SocketWindowWordCount 的输出控制台看到每个单词的词频统计。如果想看到大于1的计数，请在5秒内反复键入相同的单词。<br>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191012/9094293_1570862262668_C587F81A2896284000DDEC3E5471605F" alt="图片说明" title="图片标题"> </p>
+]]></content>
+      <categories>
+        <category>Flink</category>
+      </categories>
+      <tags>
+        <tag>Flink</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Apache Flink DataStream API 编程</title>
     <url>/2020/06/12/Apache-Flink-DataStream-API-%E7%BC%96%E7%A8%8B/</url>
     <content><![CDATA[<p>#转载<br>作者：崔星灿<br>整理：高赟<br><a href="https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/" target="_blank" rel="noopener">https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/</a></p>
@@ -129,6 +183,160 @@ env.execute(&quot;Streaming WordCount&quot;);
       </tags>
   </entry>
   <entry>
+    <title>Apache Spark简单构建一个应用程序</title>
+    <url>/2020/06/14/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
+    <content><![CDATA[<h1 id="简单的构建一个Apache-Spark应用程序"><a href="#简单的构建一个Apache-Spark应用程序" class="headerlink" title="简单的构建一个Apache Spark应用程序"></a>简单的构建一个Apache Spark应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Spark 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Spark相关的依赖。<br>pom如下：</p>
+<pre><code>&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot; xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd&quot;&gt;
+  &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+  &lt;groupId&gt;SparkDemo&lt;/groupId&gt;
+  &lt;artifactId&gt;SparkDemo&lt;/artifactId&gt;
+  &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;
+  &lt;inceptionYear&gt;2008&lt;/inceptionYear&gt;
+  &lt;properties&gt;
+    &lt;scala.version&gt;2.11.1&lt;/scala.version&gt;
+  &lt;/properties&gt;
+
+  &lt;repositories&gt;
+    &lt;repository&gt;
+      &lt;id&gt;scala-tools.org&lt;/id&gt;
+      &lt;name&gt;Scala-Tools Maven2 Repository&lt;/name&gt;
+      &lt;url&gt;http://scala-tools.org/repo-releases&lt;/url&gt;
+    &lt;/repository&gt;
+  &lt;/repositories&gt;
+
+  &lt;pluginRepositories&gt;
+    &lt;pluginRepository&gt;
+      &lt;id&gt;scala-tools.org&lt;/id&gt;
+      &lt;name&gt;Scala-Tools Maven2 Repository&lt;/name&gt;
+      &lt;url&gt;http://scala-tools.org/repo-releases&lt;/url&gt;
+    &lt;/pluginRepository&gt;
+  &lt;/pluginRepositories&gt;
+
+  &lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.scala-lang&lt;/groupId&gt;
+      &lt;artifactId&gt;scala-library&lt;/artifactId&gt;
+      &lt;version&gt;${scala.version}&lt;/version&gt;
+    &lt;/dependency&gt;
+
+    &lt;!-- https://mvnrepository.com/artifact/org.apache.spark/spark-core --&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.apache.spark&lt;/groupId&gt;
+      &lt;artifactId&gt;spark-core_2.11&lt;/artifactId&gt;
+      &lt;version&gt;2.2.0&lt;/version&gt;
+    &lt;/dependency&gt;
+
+
+    &lt;dependency&gt;
+      &lt;groupId&gt;junit&lt;/groupId&gt;
+      &lt;artifactId&gt;junit&lt;/artifactId&gt;
+      &lt;version&gt;4.4&lt;/version&gt;
+      &lt;scope&gt;test&lt;/scope&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.specs&lt;/groupId&gt;
+      &lt;artifactId&gt;specs&lt;/artifactId&gt;
+      &lt;version&gt;1.2.5&lt;/version&gt;
+      &lt;scope&gt;test&lt;/scope&gt;
+    &lt;/dependency&gt;
+  &lt;/dependencies&gt;
+
+  &lt;build&gt;
+    &lt;sourceDirectory&gt;src/main/scala&lt;/sourceDirectory&gt;
+    &lt;testSourceDirectory&gt;src/test/scala&lt;/testSourceDirectory&gt;
+    &lt;plugins&gt;
+      &lt;plugin&gt;
+        &lt;groupId&gt;org.scala-tools&lt;/groupId&gt;
+        &lt;artifactId&gt;maven-scala-plugin&lt;/artifactId&gt;
+        &lt;executions&gt;
+          &lt;execution&gt;
+            &lt;goals&gt;
+              &lt;goal&gt;compile&lt;/goal&gt;
+              &lt;goal&gt;testCompile&lt;/goal&gt;
+            &lt;/goals&gt;
+          &lt;/execution&gt;
+        &lt;/executions&gt;
+        &lt;configuration&gt;
+          &lt;scalaVersion&gt;${scala.version}&lt;/scalaVersion&gt;
+          &lt;args&gt;
+            &lt;arg&gt;-target:jvm-1.5&lt;/arg&gt;
+          &lt;/args&gt;
+        &lt;/configuration&gt;
+      &lt;/plugin&gt;
+      &lt;plugin&gt;
+        &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
+        &lt;artifactId&gt;maven-eclipse-plugin&lt;/artifactId&gt;
+        &lt;configuration&gt;
+          &lt;downloadSources&gt;true&lt;/downloadSources&gt;
+          &lt;buildcommands&gt;
+            &lt;buildcommand&gt;ch.epfl.lamp.sdt.core.scalabuilder&lt;/buildcommand&gt;
+          &lt;/buildcommands&gt;
+          &lt;additionalProjectnatures&gt;
+            &lt;projectnature&gt;ch.epfl.lamp.sdt.core.scalanature&lt;/projectnature&gt;
+          &lt;/additionalProjectnatures&gt;
+          &lt;classpathContainers&gt;
+            &lt;classpathContainer&gt;org.eclipse.jdt.launching.JRE_CONTAINER&lt;/classpathContainer&gt;
+            &lt;classpathContainer&gt;ch.epfl.lamp.sdt.launching.SCALA_CONTAINER&lt;/classpathContainer&gt;
+          &lt;/classpathContainers&gt;
+        &lt;/configuration&gt;
+      &lt;/plugin&gt;
+    &lt;/plugins&gt;
+  &lt;/build&gt;
+  &lt;reporting&gt;
+    &lt;plugins&gt;
+      &lt;plugin&gt;
+        &lt;groupId&gt;org.scala-tools&lt;/groupId&gt;
+        &lt;artifactId&gt;maven-scala-plugin&lt;/artifactId&gt;
+        &lt;configuration&gt;
+          &lt;scalaVersion&gt;${scala.version}&lt;/scalaVersion&gt;
+        &lt;/configuration&gt;
+      &lt;/plugin&gt;
+    &lt;/plugins&gt;
+  &lt;/reporting&gt;
+&lt;/project&gt;
+
+</code></pre><p>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571913840705_C0C094E4A298BFA098F8123797C7F7CC" alt="图片说明" title="图片标题"><br>编写Spark程序：<br>创建WordCount程序：</p>
+<pre><code>package SparkDemo
+
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.rdd.RDD
+/**
+  * @Author: luomo
+  * @CreateTime: 2019/10/24
+  * @Description:WordCount
+  */
+object WordCount {
+  def main(args: Array[String]): Unit = {
+    //配置文件
+    val conf = new SparkConf().
+      setAppName(&quot;wordcount&quot;) // 运行时候的作业名称
+      .setMaster(&quot;local&quot;)
+    //上下文 拿着Conf信息创建出来 写spark应用程序的对象  通往集群的入口
+    val sc = new SparkContext(conf)
+    //传入文件对象 返回RDD集合
+    val input = sc.textFile(&quot;E:///test.txt&quot;)
+    //对文件行数据 按照空格切割 返回RDD集合 得到每个单词
+    val lines = input.flatMap(line =&gt; line.split(&quot; &quot;))
+    //统计单词数量 计数 得到RDD集合 按照相同的Key先分组，之后再对组内的Value进行操作
+    val count = lines.map(word =&gt; (word, 1)).reduceByKey(_ + _)
+    //将结果遍历打印到控制台
+    count.foreach(x =&gt;{
+      println(x)
+    })
+    //将结果输出到文件中
+    val output = count.saveAsTextFile(&quot;E:///wordCount&quot;)
+    //关闭流 在内存中释放这个spark对象
+    //sc.stop()
+  }
+}
+
+</code></pre><p>运行程序如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571914229568_474EA976C3A9A912CB36A0631F855823" alt="图片说明" title="图片标题"> </p>
+]]></content>
+      <categories>
+        <category>Spark</category>
+      </categories>
+  </entry>
+  <entry>
     <title>Apache Flink 状态管理与容错机制</title>
     <url>/2020/06/12/Apache-Flink-%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6/</url>
     <content><![CDATA[<h1 id="转载"><a href="#转载" class="headerlink" title="转载"></a>转载</h1><h3 id="作者：孙梦瑶"><a href="#作者：孙梦瑶" class="headerlink" title="作者：孙梦瑶"></a>作者：孙梦瑶</h3><h3 id="整理：韩非"><a href="#整理：韩非" class="headerlink" title="整理：韩非"></a>整理：韩非</h3><h3 id="校对：邱从贤（山智）"><a href="#校对：邱从贤（山智）" class="headerlink" title="校对：邱从贤（山智）"></a>校对：邱从贤（山智）</h3><p><a href="https://ververica.cn/developers/state-management/" target="_blank" rel="noopener">https://ververica.cn/developers/state-management/</a><br>本文主要分享内容如下：</p>
@@ -207,6 +415,113 @@ env.execute(&quot;Streaming WordCount&quot;);
       </tags>
   </entry>
   <entry>
+    <title>Spark Demo(Serializable)</title>
+    <url>/2020/06/14/Spark-Demo-Serializable/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在本文中将介绍spark中Task执行序列化的开发问题</p>
+<h1 id="开发环境准备"><a href="#开发环境准备" class="headerlink" title="开发环境准备"></a>开发环境准备</h1><p>本实验Spark运行在Windows上，为了开发Spark应用程序，在本地机器上需要有Jdk1.8和Maven环境。<br>确保我们的环境配置正常，我们可以使用快捷键 Win+R 输入cmd：<br>环境如下：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341256892_8D8973B8667179A2319B041328F690BD" alt="图片说明" title="图片标题"><br>程序开发工具我们使用IDEA，创建maven项目，添加pom依赖</p>
+<h1 id="编写Spark程序"><a href="#编写Spark程序" class="headerlink" title="编写Spark程序"></a>编写Spark程序</h1><h2 id="目录结构如下"><a href="#目录结构如下" class="headerlink" title="目录结构如下:"></a>目录结构如下:</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341490332_07386CADB58D4E8A80763A83F9F6B34D" alt="图片说明" title="图片标题"> </p>
+<h2 id="创建Serializable-scala"><a href="#创建Serializable-scala" class="headerlink" title="创建Serializable.scala:"></a>创建Serializable.scala:</h2><p>首先我们需要了解RDD中的函数传递：<br>在实际开发中我们往往需要自己定义一些对于RDD的操作，那么此时需要主要的是，初始化工作是在Driver端进行的，而实际运行程序是在Executor端进行的，这就涉及到了跨进程通信，是需要序列化的。<br>如果我们对我们自定义的类不进行序列化：</p>
+<pre><code>package SparkDemo
+
+import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
+
+/**
+  * @Author: luomo
+  * @CreateTime: 2019/10/29
+  * @Description: Serializable from Driver to Executor
+  */
+object Serializable {
+
+  def main(args: Array[String]): Unit = {
+
+    //创建Spark上下文对象
+    val config:SparkConf =new SparkConf().setMaster(&quot;local[*]&quot;).setAppName(&quot;Serializable&quot;)
+
+    //创建Spark上下文对象
+    val sc = new SparkContext(config)
+
+    val rdd:RDD[String] = sc.parallelize(Array(&quot;hadoop&quot;,&quot;spark&quot;,&quot;hive&quot;,&quot;Flink&quot;))
+
+    val search = new Search(&quot;h&quot;)
+
+    val match1:RDD[String] =search.getMatch1(rdd)
+    match1.collect().foreach(println)
+    sc.stop()
+  }
+  class Search(query:String){
+    //过滤出包含字符串的数据
+    def  isMatch(s:String):Boolean ={
+      s.contains(query)
+    }
+    //过滤出包含字符串的RDD
+    def getMatch1(rdd:RDD[String]) :RDD[String] = {
+      rdd.filter(isMatch)
+    }
+    //过滤出包含字符串的RDD
+    def getMatche2(rdd: RDD[String]): RDD[String] ={
+      rdd.filter(x=&gt; x.contains(query))
+    }
+  }
+}
+
+</code></pre><p>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572346997711_619AA778B91D5D25CAB063D1C7D53FFE" alt="图片说明" title="图片标题"> </p>
+<p>可见，对于自己定义的普通类，Spark是无法直接将其序列化的。<br>需要我们自定义的类继承java.io.Serializable</p>
+<pre><code>package SparkDemo
+
+import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
+
+/**
+  * @Author: luomo
+  * @CreateTime: 2019/10/29
+  * @Description: Serializable from Driver to Executor
+  */
+object Serializable {
+
+  def main(args: Array[String]): Unit = {
+
+    //创建Spark上下文对象
+    val config:SparkConf =new SparkConf().setMaster(&quot;local[*]&quot;).setAppName(&quot;Serializable&quot;)
+
+    //创建Spark上下文对象
+    val sc = new SparkContext(config)
+
+    val rdd:RDD[String] = sc.parallelize(Array(&quot;hadoop&quot;,&quot;spark&quot;,&quot;hive&quot;,&quot;Flink&quot;))
+
+    val search = new Search(&quot;h&quot;)
+
+    val match1:RDD[String] =search.getMatch1(rdd)
+    match1.collect().foreach(println)
+    sc.stop()
+  }
+  //自定义类
+  class Search(query:String) extends  java.io.Serializable {
+    //过滤出包含字符串的数据
+    def  isMatch(s:String):Boolean ={
+      s.contains(query)
+    }
+    //过滤出包含字符串的RDD
+    def getMatch1(rdd:RDD[String]) :RDD[String] = {
+      rdd.filter(isMatch)
+    }
+    //过滤出包含字符串的RDD
+    def getMatche2(rdd: RDD[String]): RDD[String] ={
+      rdd.filter(x=&gt; x.contains(query))
+    }
+  }
+}
+
+</code></pre><h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>如图我们过滤出包含字符h的字符串：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572351464995_DFD27DCB713FEB02D8628E6C67FD4273" alt="图片说明" title="图片标题"> </p>
+]]></content>
+      <categories>
+        <category>Spark</category>
+      </categories>
+      <tags>
+        <tag>Serializable</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Apache Flink概念</title>
     <url>/2020/06/03/Apache-Flink%E6%A6%82%E5%BF%B5/</url>
     <content><![CDATA[<h1 id="转载"><a href="#转载" class="headerlink" title="转载"></a>转载</h1><p>作者：陈守元 &amp; 戴资力<a href="https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/" target="_blank" rel="noopener">https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/</a></p>
@@ -270,57 +585,18 @@ env.execute(&quot;Streaming WordCount&quot;);
       </tags>
   </entry>
   <entry>
-    <title>Apache Flink 简单的构建一个应用程序</title>
-    <url>/2020/06/12/Apache-Flink-%E7%AE%80%E5%8D%95%E7%9A%84%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
-    <content><![CDATA[<h1 id="简单的构建一个ApacheFlink的应用程序"><a href="#简单的构建一个ApacheFlink的应用程序" class="headerlink" title="简单的构建一个ApacheFlink的应用程序"></a>简单的构建一个ApacheFlink的应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Flink 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Flink相关的依赖。</p>
-<p>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191012/9094293_1570843930821_A4D48C34269A213CE6F6CE74BF95681C" alt="图片说明" title="图片标题"> </p>
-<h1 id="编写Flink程序"><a href="#编写Flink程序" class="headerlink" title="编写Flink程序"></a>编写Flink程序</h1><p>创建 SocketWindowWordCount.java 文件：</p>
-<pre><code>package FlinkDemo;
-import org.apache.flink.api.common.functions.FlatMapFunction;
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.util.Collector;
-
-public class SocketWindowWordCount {
-
-    public static void main(String[] args) throws Exception {
-
-        // 创建 execution environment
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
-        // 通过连接 socket 获取输入数据，这里连接到本地9000端口，如果9000端口已被占用，请换一个端口
-        DataStream&lt;String&gt; text = env.socketTextStream(&quot;localhost&quot;, 9000, &quot;\n&quot;);
-
-        // 解析数据，按 word 分组，开窗，聚合
-        DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; windowCounts = text
-                .flatMap(new FlatMapFunction&lt;String, Tuple2&lt;String, Integer&gt;&gt;() {
-                    @Override
-                    public void flatMap(String value, Collector&lt;Tuple2&lt;String, Integer&gt;&gt; out) {
-                        for (String word : value.split(&quot;\\s&quot;)) {
-                            out.collect(Tuple2.of(word, 1));
-                        }
-                    }
-                })
-                .keyBy(0)
-                .timeWindow(Time.seconds(5))
-                .sum(1);
-
-        // 将结果打印到控制台，注意这里使用的是单线程打印，而非多线程
-        windowCounts.print().setParallelism(1);
-
-        env.execute(&quot;Socket Window WordCount&quot;);
-    }
-}
-</code></pre><h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>要运行示例程序，首先我们在终端启动 netcat 获得输入流：<br>nc -lk 9000<br>然后直接运行SocketWindowWordCount的 main 方法。</p>
-<p>只需要在 netcat 控制台输入单词，就能在 SocketWindowWordCount 的输出控制台看到每个单词的词频统计。如果想看到大于1的计数，请在5秒内反复键入相同的单词。<br>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191012/9094293_1570862262668_C587F81A2896284000DDEC3E5471605F" alt="图片说明" title="图片标题"> </p>
+    <title>Spark Error</title>
+    <url>/2020/06/14/Spark-Error/</url>
+    <content><![CDATA[<h1 id="配置historyserver时："><a href="#配置historyserver时：" class="headerlink" title="配置historyserver时："></a>配置historyserver时：</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227263283_97221A1B1C45BED99055FB1996A900CE" alt="图片说明" title="图片标题"> </p>
+<p>因为端口被占用了</p>
+<h1 id="SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错"><a href="#SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错" class="headerlink" title="SparkStreaming updateStateByKeyde 使用时 –checkpoint报错"></a>SparkStreaming updateStateByKeyde 使用时 –checkpoint报错</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227382925_460CCA764930F915D29C8DC785013F26" alt="图片说明" title="图片标题"> </p>
+<p>原因在使用的时候，并没有设置checkPoint 检测点<br>检测点的目的就是为了保存上一次的结果数据。如果没有检测点的话，那么将无法保存上一次结果<br>如果要保证中间数据不丢失的话，可以借助其它的工具，如hdfs<br>ssc.checkpoint(“hdfs://kd0301:9000/spark_checkpoint/”)</p>
 ]]></content>
       <categories>
-        <category>Flink</category>
+        <category>Spark</category>
       </categories>
       <tags>
-        <tag>Flink</tag>
+        <tag>Error</tag>
       </tags>
   </entry>
   <entry>
@@ -364,6 +640,66 @@ public class SocketWindowWordCount {
       </categories>
       <tags>
         <tag>Spark</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spark压缩文件性能分析</title>
+    <url>/2020/06/14/Spark%E5%8E%8B%E7%BC%A9%E6%96%87%E4%BB%B6%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/</url>
+    <content><![CDATA[<h1 id="Spark压缩文件性能分析"><a href="#Spark压缩文件性能分析" class="headerlink" title="Spark压缩文件性能分析"></a>Spark压缩文件性能分析</h1><p>HDFS上分布式文件存储，成为大数据平台首选存储平台。而Spark往往以HDFS文件为输入，为保持兼容性，Spark支持多种格式文件读取，大数据场景下，性能瓶颈往往是IO，而不是CPU算力，所以对文件的压缩处理成为了很必要的手段。Spark为提供兼容性，同时支持多种压缩包直接读取，方便于用户使用，不用提前对压缩格式处理，但各种压缩格式各有优缺点，若不注意将导致Spark的能力无法发挥出来。故，对Spark计算压缩文件做一个分析。</p>
+<h1 id="支持的压缩格式"><a href="#支持的压缩格式" class="headerlink" title="支持的压缩格式"></a>支持的压缩格式</h1><p>首先来看一下Spark读取HDFS文件常用的压缩格式：<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106237246_09ACB263F52577BA2C36F0D60E304A75" alt="图片说明" title="图片标题"></p>
+<h1 id="执行对比分析"><a href="#执行对比分析" class="headerlink" title="执行对比分析"></a>执行对比分析</h1><p>实验数据：同一个文件包，json格式文件数据<br>处理逻辑：增加列，然后发送到kafka中。<br>DAG逻辑划分：两个job（read动作一个job，foreach动作一个job），每个job下面各一个stage，每个stage下面task若干<br>程序执行参数：–master yarn –deploy-mode client –executor-cores 4 –executor-memory 4G –num-executors 4</p>
+<h2 id="非压缩文件"><a href="#非压缩文件" class="headerlink" title="非压缩文件"></a>非压缩文件</h2><p>文件大小：33.7GB<br>运行时间：9min</p>
+<h3 id="read阶段："><a href="#read阶段：" class="headerlink" title="read阶段："></a>read阶段：</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106293920_47AEB6D162BF532944DBDAB53E3D2EAB" alt="图片说明" title="图片标题"><br>可以看到所有节点都在读取，分布式读取，速度很快。<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106336406_317ADCB2DB2F35A583847F38535B7718" alt="图片说明" title="图片标题"></p>
+<p>Stage里面共计分成了252个task，每个读取128MB数据。</p>
+<h3 id="foreach阶段"><a href="#foreach阶段" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106365520_C40B30CD2EE17428DAC6E44372D32E64" alt="图片说明" title="图片标题"><br>依然并行全力计算<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106387308_25162C0F4A622B24CE97415EFFDE198A" alt="图片说明" title="图片标题"><br>每个执行节点上4个core都在并发运行。</p>
+<h2 id="GZIP"><a href="#GZIP" class="headerlink" title="GZIP"></a>GZIP</h2><p>文件大小：10.6GB<br>运行时间：2.2h</p>
+<p>###read阶段<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106404340_1FCD14A02942D89F2391B8A13BF3F1BF" alt="图片说明" title="图片标题"><br>只有单节点读取</p>
+<p>同时该节点上也只有一个核心在运行<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106440480_1A2BEF1D5E0E50929495F9B550115FBA" alt="图片说明" title="图片标题"><br>foreach阶段</p>
+<p>也是只有单节点、单core运行</p>
+<h2 id="BZIP2"><a href="#BZIP2" class="headerlink" title="BZIP2"></a>BZIP2</h2><p>文件大小：7.7GB<br>运行时间：12min</p>
+<p>###read阶段<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106466729_53072EE252372595149335F751CD1394" alt="图片说明" title="图片标题"><br>与非压缩一致，并行进行</p>
+<h3 id="foreach阶段-1"><a href="#foreach阶段-1" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106481625_67EEB8DB9FD25C46B3486090E777B5D7" alt="图片说明" title="图片标题"><br>同样并发执行</p>
+<h2 id="SNAPPY"><a href="#SNAPPY" class="headerlink" title="SNAPPY"></a>SNAPPY</h2><p>文件大小：16.5GB<br>运行时间：2.1h<br>这里直接采用的整文件压缩，所以文件不可分割。</p>
+<h3 id="read阶段"><a href="#read阶段" class="headerlink" title="read阶段"></a>read阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106498372_E01A7A3A8C35CDBBFDFD4A58BA865021" alt="图片说明" title="图片标题"></p>
+<p>单节点单核心读取，非并行。</p>
+<h3 id="foreach阶段-2"><a href="#foreach阶段-2" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p>同上类似，单节点单核心运行<br>结果<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106539620_64157194D9DFAFAA77BE73D5A02CE37B" alt="图片说明" title="图片标题"><br>gzip和snappy无法采用并行计算，也就是说在spark平台上，这两种格式只能采用串行单进程执行，于本文开头表格对应，无法分割（splittable）的压缩格式只能顺序一个进程读取，而读取后多文件又在一个executor上，其他executor无文件导致无法并行的foreach。<br>bz2和非压缩格式支持分割，也就是说可以并行读取以及计算。<br>不可分割的压缩格式文件不可并行读取，完全无法发挥spark的并行计算优势，并且若压缩包过大，对单节点的物理性能要求较高。<br>建议<br>snappy采用分块压缩方式使其可以并行读取计算。<br>gzip格式最好提前进行分割成小文件或者换格式，因多个文件可以并行读取。另一个办法是read文件后调用repartition操作强制将读取多数据重新均匀分配到不同的executor上，但这个操作会导致大量单节点性能占用，因此该格式建议不在spark上使用。<br>bz2表现相同于非压缩，但解压操作需要耗费时间。<br><strong>非压缩性能表现最佳，但会占用过大HDFS存储。</strong><br>spark输出压缩文件<br>实际生产环境需要spark输出文件到HDFS，并且为了节省空间会使用压缩格式，以下介绍几种常用的压缩格式<br>文本文件压缩</p>
+<h2 id="bzip2"><a href="#bzip2" class="headerlink" title="bzip2"></a>bzip2</h2><p>压缩率最高，压缩解压速度较慢，支持split。</p>
+<pre><code>import org.apache.hadoop.io.compress.BZip2Codec
+//
+rdd.saveAsTextFile(&quot;codec/bzip2&quot;,classOf[BZip2Codec])
+</code></pre><h2 id="snappy"><a href="#snappy" class="headerlink" title="snappy"></a>snappy</h2><p>json文本压缩率 38.2%，压缩和解压缩时间短。</p>
+<pre><code>
+import org.apache.hadoop.io.compress.SnappyCodec
+//
+rdd.saveAsTextFile(&quot;codec/snappy&quot;,classOf[SnappyCodec])
+
+</code></pre><h2 id="gzip"><a href="#gzip" class="headerlink" title="gzip"></a>gzip</h2><p>压缩率高，压缩和解压速度较快，不支持split，如果不对文件大小进行控制，下次分析可能可能会造成效率低下的问题。<br>json文本压缩率23.5%，适合使用率低，长期存储的文件。</p>
+<pre><code>
+import org.apache.hadoop.io.compress.GzipCodec
+//
+rdd.saveAsTextFile(&quot;codec/gzip&quot;,classOf[GzipCodec])
+</code></pre><h2 id="parquet文件压缩"><a href="#parquet文件压缩" class="headerlink" title="parquet文件压缩"></a>parquet文件压缩</h2><p>列式存储布局（比如 Parquet）可以加速查询，因为它只检查所有需要的列并对它们的值执行计算，因此只读取一个数据文件或表的小部分数据。Parquet 还支持灵活的压缩选项，因此可以显著减少磁盘上的存储。<br>如果您在 HDFS 上拥有基于文本的数据文件或表，而且正在使用 Spark SQL 对它们执行查询，那么强烈推荐将文本数据文件转换为 Parquet 数据文件，以实现性能和存储收益。当然，转换需要时间，但查询性能的提升在某些情况下可能达到 30 倍或更高，存储的节省可高达 75%！<br>转换 1 TB 数据将花费多长时间？<br>50 分钟，在一个 6 数据节点的 Spark v1.5.1 集群上可达到约 20 GB/分的吞吐量。使用的总内存约为 500GB。HDFS 上最终的 Parquet 文件的格式为：</p>
+<pre><code>...
+/user/spark/data/parquet/catalog_page/part-r-00000-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet
+/user/spark/data/parquet/catalog_page/part-r-00001-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet
+...
+</code></pre><p>###存储节省<br>以下 Linux 输出显示了 TEXT 和 PARQUET 在 HDFS 上的大小比较：</p>
+<pre><code>% hadoop fs -du -h -s /user/spark/hadoopds1000g
+897.9 G /user/spark/hadoopds1000g
+% hadoop fs -du -h -s /user/spark/data/parquet
+231.4 G /user/spark/data/parquet
+</code></pre><p>1 TB 数据的存储节省了将近 75%！<br>parquet为文件提供了列式存储，查询时只会取出需要的字段和分区，对IO性能的提升非常大，同时占用空间较小，即使是parquet的uncompressed存储方式也比普通的文本要小的多。<br>spark中通过对parquet文件进行存储，spark2.0后默认使用snappy压缩，1.6.3及以前版本默认使用的gzip压缩方式。</p>
+<p>dataset.write().parquet(“path”);</p>
+<p>可以通过<br>spark.sql.parquet.compression.codec</p>
+<p>参数或是在代码中进行修改配置压缩方式。<br>sparkConf.set(“spark.sql.parquet.compression.codec”,”gzip”)</p>
+<p>parquet存储提供了<br>lzo gzip snappy uncompressed</p>
+<p>参考文章<br><a href="https://zturn.cc/?p=24" target="_blank" rel="noopener">https://zturn.cc/?p=24</a><br><a href="https://blog.csdn.net/bajinsheng/article/details/100031359" target="_blank" rel="noopener">https://blog.csdn.net/bajinsheng/article/details/100031359</a><br><a href="https://www.ibm.com/developerworks/cn/analytics/blog/ba-parquet-for-spark-sql/index.html" target="_blank" rel="noopener">https://www.ibm.com/developerworks/cn/analytics/blog/ba-parquet-for-spark-sql/index.html</a></p>
+]]></content>
+      <categories>
+        <category>Spark</category>
+      </categories>
+      <tags>
+        <tag>性能调优</tag>
       </tags>
   </entry>
 </search>
