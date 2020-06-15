@@ -7,24 +7,23 @@
   
   
   
-  <title>Kafka 概述 | 落墨</title>
+  <title>Kafka实现高吞吐之零拷贝 | 落墨</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="Kafka诞生的背景">
+  <meta name="description" content="Kafka是一个非常优秀的消息开源系统，作为分布式的消息队列之所以能够实现高吞吐，其中的一个原因就是sendFile 的零拷贝">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Kafka 概述">
-<meta property="og:url" content="https://keysluomo.github.io/2020/06/14/Kafka-%E6%A6%82%E8%BF%B0/index.html">
+<meta property="og:title" content="Kafka实现高吞吐之零拷贝">
+<meta property="og:url" content="https://keysluomo.github.io/2020/06/15/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/index.html">
 <meta property="og:site_name" content="落墨">
-<meta property="og:description" content="Kafka诞生的背景">
+<meta property="og:description" content="Kafka是一个非常优秀的消息开源系统，作为分布式的消息队列之所以能够实现高吞吐，其中的一个原因就是sendFile 的零拷贝">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975462389_04F96407B00295C6D53D599B4F14DC90">
-<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975497955_62B3F472CB3D859915FB4C3B0BBEBAAE">
-<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975534470_558AC9E4B632C16EBB53304E1BB3518A">
-<meta property="article:published_time" content="2020-06-14T06:08:08.000Z">
-<meta property="article:modified_time" content="2020-06-14T06:11:03.877Z">
+<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191211/9094293_1576070784154_4D4779930518B8C6481F57B613C44A83%20&quot;%E5%9B%BE%E7%89%87%E6%A0%87%E9%A2%98&quot;">
+<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191211/9094293_1576071188171_B15E58899E60865C572A5B5DEC8B1A1C%20&quot;%E5%9B%BE%E7%89%87%E6%A0%87%E9%A2%98&quot;">
+<meta property="article:published_time" content="2020-06-15T10:04:27.000Z">
+<meta property="article:modified_time" content="2020-06-15T10:09:03.047Z">
 <meta property="article:author" content="落墨">
-<meta property="article:tag" content="Kafka">
+<meta property="article:tag" content="零拷贝">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975462389_04F96407B00295C6D53D599B4F14DC90">
+<meta name="twitter:image" content="https://uploadfiles.nowcoder.com/images/20191211/9094293_1576070784154_4D4779930518B8C6481F57B613C44A83%20&quot;%E5%9B%BE%E7%89%87%E6%A0%87%E9%A2%98&quot;">
   
     <link rel="alternative" href="/atom.xml" title="落墨" type="application/atom+xml">
   
@@ -257,11 +256,11 @@
         </header>
     </div>
 </nav>
-      <div class="body-wrap"><article id="post-Kafka-概述" class="article article-type-post" itemscope itemprop="blogPost">
+      <div class="body-wrap"><article id="post-Kafka实现高吞吐之零拷贝" class="article article-type-post" itemscope itemprop="blogPost">
   
     <div class="article-meta">
-      <a  href="/2020/06/14/Kafka-%E6%A6%82%E8%BF%B0/" class="article-date">
-      <time datetime="2020-06-14T06:08:08.000Z" itemprop="datePublished">2020-06-14</time>
+      <a  href="/2020/06/15/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/" class="article-date">
+      <time datetime="2020-06-15T10:04:27.000Z" itemprop="datePublished">2020-06-15</time>
 </a>
 
     </div>
@@ -275,7 +274,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      Kafka 概述
+      Kafka实现高吞吐之零拷贝
     </h1>
   
 
@@ -291,7 +290,7 @@
 
         
     <div class="article-tag tagcloud">
-        <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Kafka/" rel="tag">Kafka</a></li></ul>
+        <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E9%9B%B6%E6%8B%B7%E8%B4%9D/" rel="tag">零拷贝</a></li></ul>
     </div>
 
         <div class="clearfix"></div>
@@ -301,13 +300,56 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-        <h1 id="kafka诞生的背景"><a href="#kafka诞生的背景" class="headerlink" title="kafka诞生的背景"></a>kafka诞生的背景</h1><p>对于一个高效的组织，所有数据需要对该组织的所有服务和系统是可用的，以便挖掘出数据的最大价值。数据采集和数据使用是一个金字塔的结构，底部为以某种统一的方式捕获数据，这些数据需要以统一的方式建模，以方便读取和处理。捕获数据的工作做扎实后，在这个基础上以不同方法处理这些数据就变得得心应手。<br>数据捕获的来源主要有两种：一种是记录正在发生的事件数据。比如Web系统中的用户活动日志（用户的点击选择等）、交警行业中的违章事件等。随着传统行业业务活动的数字化，事件数据正在不断增长，而且这个趋势没有停止。这种类型的事件数据记录了已经发生的事情，往往比传统数据库应用要大好几个数量级。因此对于数据的捕获、数据的处理提出了重大的挑战；另一种是经过二次分析处理之后的数据。对捕获的数据进行二次分析处理后得到的数据也需要记录保存，这里的处理指的是利用批处理、图分析等专有的数据处理系统进行了处理，这些加工后的数据可以作为数据捕获的第二个来源。总之，捕获的数据越来越多，如何将这些巨量的数据以可靠的、完整的数据流方式传递给数据分析处理系统也变得越来越困难。</p>
-<h1 id="Kafka是什么"><a href="#Kafka是什么" class="headerlink" title="Kafka是什么"></a>Kafka是什么</h1><p>在流式计算中，Kafka一般用来缓存数据，Storm通过消费Kafka的数据进行计算。<br>1）Apache Kafka是一个开源消息系统，由Scala写成。是由Apache软件基金会开发的一个开源消息系统项目。<br>2）Kafka最初是由LinkedIn公司开发，并于    2011年初开源。2012年10月从Apache Incubator毕业。该项目的目标是为处理实时数据提供一个统一、高通量、低等待的平台。<br>3）Kafka是一个分布式消息队列。Kafka对消息保存时根据Topic进行归类，发送消息者称为Producer，消息接受者称为Consumer，此外kafka集群有多个kafka实例组成，每个实例(server)成为broker。<br>4）无论是kafka集群，还是producer和consumer都依赖于zookeeper集群保存一些meta信息，来保证系统可用性。</p>
-<h1 id="消息队列内部实现原理"><a href="#消息队列内部实现原理" class="headerlink" title="消息队列内部实现原理"></a>消息队列内部实现原理</h1><p><img src="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975462389_04F96407B00295C6D53D599B4F14DC90" alt="图片说明" title="图片标题"> </p>
-<p>  （1）点对点模式（一对一，消费者主动拉取数据，消息收到后消息清除）<br>点对点模型通常是一个基于拉取或者轮询的消息传送模型，这种模型从队列中请求信息，而不是将消息推送到客户端。这个模型的特点是发送到队列的消息被一个且只有一个接收者接收处理，即使有多个消息监听者也是如此。<br>（2）发布/订阅模式（一对多，数据生产后，推送给所有订阅者）<br>发布订阅模型则是一个基于推送的消息传送模型。发布订阅模型可以有多种不同的订阅者，临时订阅者只在主动监听主题时才接收消息，而持久订阅者则监听主题的所有消息，即使当前订阅者不可用，处于离线状态。</p>
-<h1 id="为什么需要消息队列"><a href="#为什么需要消息队列" class="headerlink" title="为什么需要消息队列"></a>为什么需要消息队列</h1><p>1）解耦：<br>　　允许你独立的扩展或修改两边的处理过程，只要确保它们遵守同样的接口约束。<br>2）冗余：<br>消息队列把数据进行持久化直到它们已经被完全处理，通过这一方式规避了数据丢失风险。许多消息队列所采用的”插入-获取-删除”范式中，在把一个消息从队列中删除之前，需要你的处理系统明确的指出该消息已经被处理完毕，从而确保你的数据被安全的保存直到你使用完毕。<br>3）扩展性：<br>因为消息队列解耦了你的处理过程，所以增大消息入队和处理的频率是很容易的，只要另外增加处理过程即可。<br>4）灵活性 &amp; 峰值处理能力：<br>在访问量剧增的情况下，应用仍然需要继续发挥作用，但是这样的突发流量并不常见。如果为以能处理这类峰值访问为标准来投入资源随时待命无疑是巨大的浪费。使用消息队列能够使关键组件顶住突发的访问压力，而不会因为突发的超负荷的请求而完全崩溃。<br>5）可恢复性：<br>系统的一部分组件失效时，不会影响到整个系统。消息队列降低了进程间的耦合度，所以即使一个处理消息的进程挂掉，加入队列中的消息仍然可以在系统恢复后被处理。<br>6）顺序保证：<br>在大多使用场景下，数据处理的顺序都很重要。大部分消息队列本来就是排序的，并且能保证数据会按照特定的顺序来处理。（Kafka保证一个Partition内的消息的有序性）<br>7）缓冲：<br>有助于控制和优化数据流经过系统的速度，解决生产消息和消费消息的处理速度不一致的情况。<br>8）异步通信：<br>很多时候，用户不想也不需要立即处理消息。消息队列提供了异步处理机制，允许用户把一个消息放入队列，但并不立即处理它。想向队列中放入多少消息就放多少，然后在需要的时候再去处理它们。</p>
-<h1 id="Kafka架构"><a href="#Kafka架构" class="headerlink" title="Kafka架构"></a>Kafka架构</h1><p><img src="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975497955_62B3F472CB3D859915FB4C3B0BBEBAAE" alt="图片说明" title="图片标题"><br>1）Producer ：消息生产者，就是向kafka broker发消息的客户端。<br>2）Consumer ：消息消费者，向kafka broker取消息的客户端<br>3）Topic ：可以理解为一个队列。<br>4） Consumer Group （CG）：这是kafka用来实现一个topic消息的广播（发给所有的consumer）和单播（发给任意一个consumer）的手段。一个topic可以有多个CG。topic的消息会复制-给consumer。如果需要实现广播，只要每个consumer有一个独立的CG就可以了。要实现单播只要所有的consumer在同一个CG。用CG还可以将consumer进行自由的分组而不需要多次发送消息到不同的topic。<br>5）Broker ：一台kafka服务器就是一个broker。一个集群由多个broker组成。一个broker可以容纳多个topic。<br>6）Partition：为了实现扩展性，一个非常大的topic可以分布到多个broker（即服务器）上，一个topic可以分为多个partition，每个partition是一个有序的队列。partition中的每条消息都会被分配一个有序的id（offset）。kafka只保证按一个partition中的顺序将消息发给consumer，不保证一个topic的整体（多个partition间）的顺序。<br>7）Offset：kafka的存储文件都是按照offset.kafka来命名，用offset做名字的好处是方便查找。例如你想找位于2049的位置，只要找到2048.kafka的文件即可。当然the first offset就是00000000000.kafka</p>
-<h1 id="分布式模型"><a href="#分布式模型" class="headerlink" title="分布式模型"></a>分布式模型</h1><p>   Kafka每个主题的多个分区日志分布式地存储在Kafka集群上，同时为了故障容错，每个分区都会以副本的方式复制到多个消息代理节点上。其中一个节点会作为主副本（Leader），其他节点作为备份副本（Follower，也叫作从副本）。主副本会负责所有的客户端读写操作，备份副本仅仅从主副本同步数据。当主副本出现故障时，备份副本中的一个副本会被选择为新的主副本。因为每个分区的副本中只有主副本接受读写，所以每个服务器端都会作为某些分区的主副本，以及另外一些分区的备份副本，这样Kafka集群的所有服务端整体上对客户端是负载均衡的。<br>       Kafka的生产者和消费者相对于服务器端而言都是客户端。<br>Kafka生产者客户端发布消息到服务端的指定主题，会指定消息所属的分区。生产者发布消息时根据消息是否有键，采用不同的分区策略。消息没有键时，通过轮询方式进行客户端负载均衡；消息有键时，根据分区语义（例如hash）确保相同键的消息总是发送到同一分区。<br>       Kafka的消费者通过订阅主题来消费消息，并且每个消费者都会设置一个消费组名称。因为生产者发布到主题的每一条消息都只会发送给消费者组的一个消费者。所以，如果要实现传统消息系统的“队列”模型，可以让每个消费者都拥有相同的消费组名称，这样消息就会负责均衡到所有的消费者；如果要实现“发布-订阅”模型，则每个消费者的消费者组名称都不相同，这样每条消息就会广播给所有的消费者。<br>       分区是消费者现场模型的最小并行单位。如下图（图1）所示，生产者发布消息到一台服务器的3个分区时，只有一个消费者消费所有的3个分区。在下图（图2）中，3个分区分布在3台服务器上，同时有3个消费者分别消费不同的分区。假设每个服务器的吞吐量时300MB，在下图（图1）中分摊到每个分区只有100MB，而在下图（图2）中，集群整体的吞吐量有900MB。可以看到，增加服务器节点会提升集群的性能，增加消费者数量会提升处理性能。<br>       同一个消费组下多个消费者互相协调消费工作，Kafka会将所有的分区平均地分配给所有的消费者实例，这样每个消费者都可以分配到数量均等的分区。Kafka的消费组管理协议会动态地维护消费组的成员列表，当一个新消费者加入消费者组，或者有消费者离开消费组，都会触发再平衡操作。<br><img src="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975534470_558AC9E4B632C16EBB53304E1BB3518A" alt="图片说明" title="图片标题"><br>Kafka的消费者消费消息时，只保证在一个分区内的消息的完全有序性，并不保证同一个主题汇中多个分区的消息顺序。而且，消费者读取一个分区消息的顺序和生产者写入到这个分区的顺序是一致的。比如，生产者写入“hello”和“Kafka”两条消息到分区P1，则消费者读取到的顺序也一定是“hello”和“Kafka”。如果业务上需要保证所有消息完全一致，只能通过设置一个分区完成，但这种做法的缺点是最多只能有一个消费者进行消费。一般来说，只需要保证每个分区的有序性，再对消息假设键来保证相同键的所有消息落入同一分区，就可以满足绝大多数的应用。</p>
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Kafka是一个非常优秀的消息开源系统，作为分布式的消息队列之所以能够实现高吞吐，其中的一个原因就是sendFile 的零拷贝</p>
+<h2 id="关于零拷贝"><a href="#关于零拷贝" class="headerlink" title="关于零拷贝"></a>关于零拷贝</h2><p>&quot;零拷贝&quot;中的&quot;拷贝&quot;是操作系统在I/O操作中,将数据从一个内存区域复制到另外一个内存区域. 而&quot;零&quot;并不是指0次复制, 更多的是指在用户态和内核态之前的复制是0次.</p>
+<h2 id="CPU-COPY"><a href="#CPU-COPY" class="headerlink" title="CPU COPY"></a>CPU COPY</h2><p>通过计算机的组成原理我们知道, 内存的读写操作是需要CPU的协调数据总线,地址总线和控制总线来完成的<br>因此在&quot;拷贝&quot;发生的时候,往往需要CPU暂停现有的处理逻辑,来协助内存的读写.这种我们称为CPU COPY，CPU COPY不但占用了CPU资源,还占用了总线的带宽.</p>
+<h2 id="DMA-COPY"><a href="#DMA-COPY" class="headerlink" title="DMA COPY"></a>DMA COPY</h2><p>DMA(DIRECT MEMORY ACCESS)是现代计算机的重要功能. 它的一个重要 的特点就是, 当需要与外设进行数据交换时, CPU只需要初始化这个动作便可以继续执行其他指令,剩下的数据传输的动作完全由DMA来完成，可以看到DMA COPY是可以避免大量的CPU中断的</p>
+<h2 id="上下文切换"><a href="#上下文切换" class="headerlink" title="上下文切换"></a>上下文切换</h2><p>本文中的上下文切换时指由用户态切换到内核态, 以及由内核态切换到用户态<br>存在多次拷贝的原因？</p>
+<ul>
+<li><p>操作系统为了保护系统不被应用程序有意或无意地破坏,为操作系统设置了用户态和内核态两种状态.用户态想要获取系统资源(例如访问硬盘), 必须通过系统调用进入到内核态, 由内核态获取到系统资源,再切换回用户态返回应用程序.</p>
+</li>
+<li><p>出于&quot;readahead cache&quot;和异步写入等等性能优化的需要, 操作系统在内核态中也增加了一个&quot;内核缓冲区&quot;(kernel buffer). 读取数据时并不是直接把数据读取到应用程序的buffer, 而先读取到kernel buffer, 再由kernel buffer复制到应用程序的buffer. 因此,数据在被应用程序使用之前,可能需要被多次拷贝  </p>
+</li>
+</ul>
+<p>所有<strong>涉及到数据传输</strong>的场景, 无非就一种:从硬盘上读取文件数据, 发送到网络上去。<br>这个场景我们简化为一个模型:</p>
+<p> File.read(fileDesc, buf, len);<br> Socket.send(socket, buf, len);<br>为了方便描述,上面这两行代码, 我们给它起个名字: read-send模型</p>
+<p>操作系统在实现这个read-send模型时,需要有以下步骤:</p>
+<ol>
+<li>应用程序开始读文件的操作</li>
+<li>应用程序发起系统调用, 从用户态切换到内核态(第一次上下文切换)</li>
+<li>内核态中把数据从硬盘文件读取到内核中间缓冲区(kernel buf)</li>
+<li>数据从内核中间缓冲区(kernel buf)复制到(用户态)应用程序缓冲区(app buf),从内核态切换回到用户态(第二次上下文切换)</li>
+<li>应用程序开始发送数据到网络上</li>
+<li>应用程序发起系统调用,从用户态切换到内核态(第三次上下文切换)</li>
+<li>内核中把数据从应用程序(app buf)的缓冲区复制到socket的缓冲区(socket)</li>
+<li>内核中再把数据从socket的缓冲区(socket buf)发送的网卡的缓冲区(NIC buf)上</li>
+<li>从内核态切换回到用户态(第四次上下文切换)</li>
+</ol>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191211/9094293_1576070784154_4D4779930518B8C6481F57B613C44A83 &quot;图片标题&quot;" alt="图片说明"> </p>
+<p>由上图可以很清晰地看到, 一次read-send涉及到了四次拷贝:</p>
+<ol>
+<li>硬盘拷贝到内核缓冲区(DMA COPY)</li>
+<li>内核缓冲区拷贝到应用程序缓冲区(CPU COPY)</li>
+<li>应用程序缓冲区拷贝到socket缓冲区(CPU COPY)</li>
+<li>socket buf拷贝到网卡的buf(DMA COPY)  </li>
+</ol>
+<p>其中涉及到2次cpu中断, 还有4次的上下文切换，很明显,第2次和第3次的的copy只是把数据复制到app buffer又原封不动的复制回来, 为此带来了两次的cpu copy和两次上下文切换, 是完全没有必要的，linux的零拷贝技术就是为了优化掉这两次不必要的拷贝</p>
+<h2 id="sendFile"><a href="#sendFile" class="headerlink" title="sendFile"></a>sendFile</h2><p>linux内核2.1开始引入一个叫sendFile系统调用,这个系统调用可以在内核态内把数据从内核缓冲区直接复制到套接字(SOCKET)缓冲区内, 从而可以减少上下文的切换和不必要数据的复制<br>有了sendFile这个系统调用后, 我们read-send模型就可以简化为:</p>
+<ol>
+<li>应用程序开始读文件的操作</li>
+<li>应用程序发起系统调用, 从用户态切换到内核态(第一次上下文切换)</li>
+<li>内核态中把数据从硬盘文件读取到内核中间缓冲区</li>
+<li>通过sendFile,在内核态中把数据从内核缓冲区复制到socket的缓冲区</li>
+<li>内核中再把数据从socket的缓冲区发送的网卡的buf上</li>
+<li>从内核态切换到用户态(第二次上下文切换)  </li>
+</ol>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191211/9094293_1576071188171_B15E58899E60865C572A5B5DEC8B1A1C &quot;图片标题&quot;" alt="图片说明"><br>如图所示：<br>涉及到数据拷贝变成:</p>
+<ol>
+<li>硬盘拷贝到内核缓冲区(DMA COPY)</li>
+<li>内核缓冲区拷贝到socket缓冲区(CPU COPY)</li>
+<li>socket缓冲区拷贝到网卡的buf(DMA COPY)</li>
+</ol>
+<p>可以看到,一次read-send模型中, 利用sendFile系统调用后, 可以将4次数据拷贝减少到3次, 4次上下文切换减少到2次, 2次CPU中断减少到1次，<br>相对传统I/O, 这种零拷贝技术通过减少两次上下文切换, 1次cpu copy, <strong>可以将I/O性能提高50%以上(网络数据, 未亲测)</strong>，开始的术语中说到, 所谓的<strong>零拷贝的&quot;零&quot;</strong>, <strong>是指用户态和内核态之间的拷贝次数为0</strong>, 从这个定义上来说, 现在的这个零拷贝技术已经是真正的&quot;零&quot;了</p>
 
       
     </div>
@@ -321,18 +363,9 @@
 
 <nav id="article-nav">
   
-    <a  href="/2020/06/15/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/" id="article-nav-newer" class="article-nav-link-wrap">
-      <strong class="article-nav-caption"><</strong>
-      <div class="article-nav-title">
-        
-          Kafka实现高吞吐之零拷贝
-        
-      </div>
-    </a>
   
-  
-    <a  href="/2020/06/14/Spark-Demo-Serializable/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">Spark Demo(Serializable)</div>
+    <a  href="/2020/06/14/Kafka-%E6%A6%82%E8%BF%B0/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Kafka 概述</div>
       <strong class="article-nav-caption">></strong>
     </a>
   
@@ -344,7 +377,7 @@
 
     <div id="toc" class="toc-article">
     <strong class="toc-title">文章目录</strong>
-    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#kafka诞生的背景"><span class="toc-number">1.</span> <span class="toc-text">kafka诞生的背景</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Kafka是什么"><span class="toc-number">2.</span> <span class="toc-text">Kafka是什么</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#消息队列内部实现原理"><span class="toc-number">3.</span> <span class="toc-text">消息队列内部实现原理</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#为什么需要消息队列"><span class="toc-number">4.</span> <span class="toc-text">为什么需要消息队列</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Kafka架构"><span class="toc-number">5.</span> <span class="toc-text">Kafka架构</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#分布式模型"><span class="toc-number">6.</span> <span class="toc-text">分布式模型</span></a></li></ol>
+    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#前言"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#关于零拷贝"><span class="toc-number">1.1.</span> <span class="toc-text">关于零拷贝</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CPU-COPY"><span class="toc-number">1.2.</span> <span class="toc-text">CPU COPY</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DMA-COPY"><span class="toc-number">1.3.</span> <span class="toc-text">DMA COPY</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#上下文切换"><span class="toc-number">1.4.</span> <span class="toc-text">上下文切换</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sendFile"><span class="toc-number">1.5.</span> <span class="toc-text">sendFile</span></a></li></ol></li></ol>
 </div>
 <style>
     .left-col .switch-btn {
@@ -405,13 +438,11 @@
 
     <div class="scroll" id="post-nav-button">
         
-            <a  href="/2020/06/15/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/" title="上一篇: Kafka实现高吞吐之零拷贝">
-                <i class="fa fa-angle-left"></i>
-            </a>
+            <a  href="/" title="回到主页"><i class="fa fa-home"></i></a>
         
         <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
         
-            <a  href="/2020/06/14/Spark-Demo-Serializable/" title="下一篇: Spark Demo(Serializable)">
+            <a  href="/2020/06/14/Kafka-%E6%A6%82%E8%BF%B0/" title="下一篇: Kafka 概述">
                 <i class="fa fa-angle-right"></i>
             </a>
         
