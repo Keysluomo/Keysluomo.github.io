@@ -4,20 +4,31 @@
   <meta charset="utf-8">
   <meta name="baidu-site-verification" content="L6Lm9d5Crl"/>
   
-   
-    <meta name="keywords" content="性能调优" />
   
   
   
-  <title>Tag: 性能调优 | 落墨</title>
+  <title>Java线程死锁 | 落墨</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="落墨">
-<meta property="og:url" content="https://keysluomo.github.io/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/index.html">
+  <meta name="description" content="预览描述">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java线程死锁">
+<meta property="og:url" content="https://keysluomo.github.io/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/index.html">
 <meta property="og:site_name" content="落墨">
+<meta property="og:description" content="预览描述">
 <meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://keysluomo.github.io/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/%E6%AD%BB%E9%94%81.png">
+<meta property="og:image" content="https://keysluomo.github.io/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/%E6%AD%BB%E9%94%811.png">
+<meta property="og:image" content="https://keysluomo.github.io/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/%E6%AD%BB%E9%94%812.png">
+<meta property="og:image" content="https://keysluomo.github.io/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/%E6%AD%BB%E9%94%813.png">
+<meta property="og:image" content="https://keysluomo.github.io/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/%E6%AD%BB%E9%94%814.png">
+<meta property="og:image" content="https://keysluomo.github.io/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/%E6%AD%BB%E9%94%815.png">
+<meta property="og:image" content="https://keysluomo.github.io/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/%E6%AD%BB%E9%94%816.png">
+<meta property="article:published_time" content="2020-06-15T10:28:39.000Z">
+<meta property="article:modified_time" content="2020-06-15T10:42:53.983Z">
 <meta property="article:author" content="落墨">
+<meta property="article:tag" content="死锁">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://keysluomo.github.io/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/%E6%AD%BB%E9%94%81.png">
   
     <link rel="alternative" href="/atom.xml" title="落墨" type="application/atom+xml">
   
@@ -44,9 +55,9 @@
           fancybox: true,
           animate: true,
           isHome: false,
-          isPost: false,
+          isPost: true,
           isArchive: false,
-          isTag: true,
+          isTag: false,
           isCategory: false,
           open_in_new: false
       }
@@ -250,60 +261,261 @@
         </header>
     </div>
 </nav>
-      <div class="body-wrap">
+      <div class="body-wrap"><article id="post-Java线程死锁" class="article article-type-post" itemscope itemprop="blogPost">
   
-  
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a  href="/archives/2020" class="archive-year">2020</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-          <div class="article-meta">
-              <a  href="/2020/06/14/Spark%E5%8E%8B%E7%BC%A9%E6%96%87%E4%BB%B6%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/" class="archive-article-date">
-      <time datetime="2020-06-14T02:52:53.000Z" itemprop="datePublished">06-14</time>
+    <div class="article-meta">
+      <a  href="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/" class="article-date">
+      <time datetime="2020-06-15T10:28:39.000Z" itemprop="datePublished">2020-06-15</time>
 </a>
 
-        </div>
-         
+    </div>
   
-    <h1 itemprop="name">
-      <a  class="archive-article-title" href="/2020/06/14/Spark%E5%8E%8B%E7%BC%A9%E6%96%87%E4%BB%B6%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/">Spark压缩文件性能分析</a>
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Java线程死锁
     </h1>
   
 
 
-        <div class="article-info info-on-archive">
-          
+      </header>
+      
+      <div class="article-info article-info-post">
+        
     <div class="article-category tagcloud">
-    <a class="article-category-link" href="/categories/Spark/">Spark</a>
+    <a class="article-category-link" href="/categories/Java/">Java</a>
     </div>
 
 
-          
+        
     <div class="article-tag tagcloud">
-        <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" rel="tag">性能调优</a></li></ul>
+        <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%AD%BB%E9%94%81/" rel="tag">死锁</a></li></ul>
     </div>
 
-        </div>
         <div class="clearfix"></div>
-    </header>
+      </div>
+      
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+          
+        <h1 id="Java线程死锁"><a href="#Java线程死锁" class="headerlink" title="Java线程死锁"></a>Java线程死锁</h1><blockquote><br>死锁是一种特定的程序状态，在实体之间，由于循环依赖导致彼此一直处于等待之中，没有 任何个体可以继续前进。死锁不仅仅是在线程之间会发生，存在资源独占的进程之间同样也 可能出现死锁。通常来说，我们大多是聚焦在多线程场景中的死锁，指两个或多个线程之 间，由于互相持有对方需要的锁，而永久处于阻塞的状态。<br><br></blockquote>
+
+
+<p><strong>Java线程死锁</strong>是一个经典的多线程问题，因为不同的线程都在等待那些根本不可能被释放的锁，从而导致所有的工作都无法完成。如图所示</p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁.png" alt="图片说明"> </p>
+<hr>
+
+<h2 id="如何去定位Java线程死锁呢？"><a href="#如何去定位Java线程死锁呢？" class="headerlink" title="如何去定位Java线程死锁呢？"></a>如何去定位Java线程死锁呢？</h2><p>定位死锁最常见的方式就是利用 jstack 等工具获取线程栈，然后定位互相之间的依赖关系，进而找到死锁。如果是比较明显的死锁，往往 jstack 等就能直接定位，类似 JConsole 甚至可以在图形界面进行有限的死锁检测。<br>既然了解了用什么工具去定位线程死锁，那我们模拟一个Java线程死锁的情况，实战定位线程死锁<br><strong>死锁代码：</strong></p>
+<pre><code>/**
+ * @Author:luomo
+ * @CreateTime: 2020/3/28
+ * @Description:模拟DeadLock
+ */
+public class deadLock implements Runnable{
+    public static  Object obj1=new Object();
+    public static  Object obj2=new Object();
+    private int flag;
+    deadLock(int flag){
+        this.flag=flag;
+    }
+
+    @Override
+    public void run() {
+        if(flag==0){
+            synchronized (obj1){
+                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁1&quot;);
+                try {
+                    Thread.currentThread().sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁2&quot;);
+                synchronized (obj2){
+                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);
+
+
+                }
+            }
+        }else{
+            synchronized (obj2){
+                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);
+                try {
+                    Thread.currentThread().sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁1&quot;);
+                synchronized (obj1){
+                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);
+
+
+                }
+            }
+        }
+
+    }
+
+    public static void main(String[] args) {
+   deadLock d1=new deadLock(0);
+   deadLock d2=new deadLock(1);
+   Thread thread1=new Thread(d1);
+   Thread thread2=new Thread(d2);
+   thread1.start();
+   thread2.start();
+
+    }
+
+}
+
+
+</code></pre><p><strong>代码运行：</strong></p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁1.png" alt=" "> </p>
+<p>从运行结果我们看到Thread1和Thread0同时都在争用对方已经占有的锁，进而产生死锁。</p>
+<hr>
+
+<h2 id="如何定位死锁"><a href="#如何定位死锁" class="headerlink" title="如何定位死锁"></a>如何定位死锁</h2><p>如果程序发生了死锁，我们如何去定位死锁？我们可以通过JConsole工具来发现死锁。<br>打开cmd：输入 JConsole 回车<br>我们可以看到一个可视化的工具，找到死锁进程点击连接</p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁2.png" alt="图片说明"> </p>
+<p>我们可以看到有检查死锁的选项</p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁3.png" alt="图片说明"> </p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁4.png" alt="图片说明"> </p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁5.png" alt="图片说明"> </p>
+<p>通过上图我们可以发现产生死锁的线程，从而定位到发生死锁的代码。</p>
+<p>当然我们还可以使用Jstack + pid的方式来定位问题</p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁6.png" alt="图片说明"> </p>
+
+      
+    </div>
+    
   </div>
+  
+    
+         
+
+
+
+<nav id="article-nav">
+  
+  
+    <a  href="/2020/06/15/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Kafka实现高吞吐之零拷贝</div>
+      <strong class="article-nav-caption">></strong>
+    </a>
+  
+</nav>
+
+
+  
 </article>
-  
-  
-    </div></section>
-  
+
+    <div id="toc" class="toc-article">
+    <strong class="toc-title">文章目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Java线程死锁"><span class="toc-number">1.</span> <span class="toc-text">Java线程死锁</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#如何去定位Java线程死锁呢？"><span class="toc-number">1.1.</span> <span class="toc-text">如何去定位Java线程死锁呢？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何定位死锁"><span class="toc-number">1.2.</span> <span class="toc-text">如何定位死锁</span></a></li></ol></li></ol>
+</div>
+<style>
+    .left-col .switch-btn {
+        display: none;
+    }
+    .left-col .switch-area {
+        display: none;
+    }
+</style>
+<input type="button" id="tocButton" value="隐藏目录"  title="点击按钮隐藏或者显示文章目录">
+
+<script src="https://7.url.cn/edu/jslib/comb/require-2.1.6,jquery-1.9.1.min.js"></script>
+
+<script>
+    var valueHide = "隐藏目录";
+    var valueShow = "显示目录";
+    if ($(".left-col").is(":hidden")) {
+        $("#tocButton").attr("value", valueShow);
+    }
+    $("#tocButton").click(function() {
+        if ($("#toc").is(":hidden")) {
+            $("#tocButton").attr("value", valueHide);
+            $("#toc").slideDown(320);
+            $(".switch-btn, .switch-area").fadeOut(300);
+        }
+        else {
+            $("#tocButton").attr("value", valueShow);
+            $("#toc").slideUp(350);
+            $(".switch-btn, .switch-area").fadeIn(500);
+        }
+    })
+    if ($(".toc").length < 1) {
+        $("#toc, #tocButton").hide();
+        $(".switch-btn, .switch-area").show();
+    }
+</script>
+
+
+
+
+
 
     
+        <section class="changyan" id="comments">
+  <!--<div id="uyan_frame"></div>-->
+  <div id="SOHUCS"></div>
+  <script charset="utf-8" type="text/javascript" src="https://changyan.sohu.com/upload/changyan.js"></script>
+  <script type="text/javascript">
+    window.changyan.api.config({
+      appid: 'xxxx',
+      conf: 'xxxxxxxxx'
+    });
+  </script>
+</section>
+    
 
+
+
+    <div class="scroll" id="post-nav-button">
+        
+            <a  href="/" title="回到主页"><i class="fa fa-home"></i></a>
+        
+        <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
+        
+            <a  href="/2020/06/15/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/" title="下一篇: Kafka实现高吞吐之零拷贝">
+                <i class="fa fa-angle-right"></i>
+            </a>
+        
+    </div>
+    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/">Java线程死锁</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/15/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/">Kafka实现高吞吐之零拷贝</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/14/Kafka-%E6%A6%82%E8%BF%B0/">Kafka 概述</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/14/Spark-Demo-Serializable/">Spark Demo(Serializable)</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/14/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/">Apache Spark简单构建一个应用程序</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/14/Spark-Error/">Spark Error</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/14/Spark%E5%8E%8B%E7%BC%A9%E6%96%87%E4%BB%B6%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/">Spark压缩文件性能分析</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/">Spark 概述</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/12/Apache-Flink-%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6/">Apache Flink 状态管理与容错机制</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/12/Apache-Flink-%E7%AE%80%E5%8D%95%E7%9A%84%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/">Apache Flink 简单的构建一个应用程序</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/12/Apache-Flink-DataStream-API-%E7%BC%96%E7%A8%8B/">Apache Flink DataStream API 编程</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/03/Apache-Flink%E6%A6%82%E5%BF%B5/">Apache Flink概念</a></li></ul>
+    
+<script src="https://7.url.cn/edu/jslib/comb/require-2.1.6,jquery-1.9.1.min.js"></script>
+
+    <script>
+        $(".post-list").addClass("toc-article");
+        // $(".post-list-item a").attr("target","_blank");
+        $("#post-nav-button > a:nth-child(2)").click(function() {
+            $(".fa-bars, .fa-times").toggle();
+            $(".post-list").toggle(300);
+            if ($(".toc").length > 0) {
+                $("#toc, #tocButton").toggle(200, function() {
+                    if ($(".switch-area").is(":visible")) {
+                        $("#toc, .switch-btn, .switch-area").toggle();
+                        $("#tocButton").attr("value", valueHide);
+                        }
+                    })
+            }
+            else {
+                $(".switch-btn, .switch-area").fadeToggle(300);
+            }
+        })
+    </script>
+
+
+
+
+    <script>
+        
+    </script>
 
 </div>
       <footer id="footer">
@@ -395,18 +607,6 @@ ga('send', 'pageview');
         };
     })
 </script>
-
-    <button class="hide-labels">TAG 开关</button>
-    
-<script src="https://7.url.cn/edu/jslib/comb/require-2.1.6,jquery-1.9.1.min.js"></script>
-
-    <script>
-        $(document).ready(function() {
-            $("button").click(function() {
-                $(".article-info").toggle(200);
-            });
-        });
-    </script>
 
 <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js">
 </script>

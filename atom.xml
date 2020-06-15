@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://keysluomo.github.io/"/>
-  <updated>2020-06-15T10:24:34.307Z</updated>
+  <updated>2020-06-15T10:42:53.983Z</updated>
   <id>https://keysluomo.github.io/</id>
   
   <author>
@@ -15,6 +15,28 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Java线程死锁</title>
+    <link href="https://keysluomo.github.io/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/"/>
+    <id>https://keysluomo.github.io/2020/06/15/Java线程死锁/</id>
+    <published>2020-06-15T10:28:39.000Z</published>
+    <updated>2020-06-15T10:42:53.983Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="Java线程死锁"><a href="#Java线程死锁" class="headerlink" title="Java线程死锁"></a>Java线程死锁</h1><blockquote><br>死锁是一种特定的程序状态，在实体之间，由于循环依赖导致彼此一直处于等待之中，没有 任何个体可以继续前进。死锁不仅仅是在线程之间会发生，存在资源独占的进程之间同样也 可能出现死锁。通常来说，我们大多是聚焦在多线程场景中的死锁，指两个或多个线程之 间，由于互相持有对方需要的锁，而永久处于阻塞的状态。<br><br></blockquote><p><strong>Java线程死锁</strong>是一个经典的多线程问题，因为不同的线程都在等待那些根本不可能被释放的锁，从而导致所有的工作都无法完成。如图所示</p><p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁.png" alt="图片说明"> </p><hr><h2 id="如何去定位Java线程死锁呢？"><a href="#如何去定位Java线程死锁呢？" class="headerlink" title="如何去定位Java线程死锁呢？"></a>如何去定位Java线程死锁呢？</h2><p>定位死锁最常见的方式就是利用 jstack 等工具获取线程栈，然后定位互相之间的依赖关系，进而找到死锁。如果是比较明显的死锁，往往 jstack 等就能直接定位，类似 JConsole 甚至可以在图形界面进行有限的死锁检测。<br>既然了解了用什么工具去定位线程死锁，那我们模拟一个Java线程死锁的情况，实战定位线程死锁<br><strong>死锁代码：</strong></p><pre><code>/** * @Author:luomo * @CreateTime: 2020/3/28 * @Description:模拟DeadLock */public class deadLock implements Runnable{    public static  Object obj1=new Object();    public static  Object obj2=new Object();    private int flag;    deadLock(int flag){        this.flag=flag;    }    @Override    public void run() {        if(flag==0){            synchronized (obj1){                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁1&quot;);                try {                    Thread.currentThread().sleep(1000);                } catch (InterruptedException e) {                    e.printStackTrace();                }                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁2&quot;);                synchronized (obj2){                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);                }            }        }else{            synchronized (obj2){                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);                try {                    Thread.currentThread().sleep(1000);                } catch (InterruptedException e) {                    e.printStackTrace();                }                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁1&quot;);                synchronized (obj1){                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);                }            }        }    }    public static void main(String[] args) {   deadLock d1=new deadLock(0);   deadLock d2=new deadLock(1);   Thread thread1=new Thread(d1);   Thread thread2=new Thread(d2);   thread1.start();   thread2.start();    }}</code></pre><p><strong>代码运行：</strong></p><p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁1.png" alt=" "> </p><p>从运行结果我们看到Thread1和Thread0同时都在争用对方已经占有的锁，进而产生死锁。</p><hr><h2 id="如何定位死锁"><a href="#如何定位死锁" class="headerlink" title="如何定位死锁"></a>如何定位死锁</h2><p>如果程序发生了死锁，我们如何去定位死锁？我们可以通过JConsole工具来发现死锁。<br>打开cmd：输入 JConsole 回车<br>我们可以看到一个可视化的工具，找到死锁进程点击连接</p><p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁2.png" alt="图片说明"> </p><p>我们可以看到有检查死锁的选项</p><p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁3.png" alt="图片说明"> </p><p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁4.png" alt="图片说明"> </p><p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁5.png" alt="图片说明"> </p><p>通过上图我们可以发现产生死锁的线程，从而定位到发生死锁的代码。</p><p>当然我们还可以使用Jstack + pid的方式来定位问题</p><p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁6.png" alt="图片说明"> </p>]]></content>
+    
+    <summary type="html">
+    
+      预览描述
+    
+    </summary>
+    
+      <category term="Java" scheme="https://keysluomo.github.io/categories/Java/"/>
+    
+    
+      <category term="死锁" scheme="https://keysluomo.github.io/tags/%E6%AD%BB%E9%94%81/"/>
+    
+  </entry>
   
   <entry>
     <title>Kafka实现高吞吐之零拷贝</title>
