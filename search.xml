@@ -1,6 +1,201 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Apache Flink 状态管理与容错机制</title>
+    <url>/2020/06/12/Apache-Flink-%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<h1 id="转载"><a href="#转载" class="headerlink" title="转载"></a>转载</h1><h3 id="作者：孙梦瑶"><a href="#作者：孙梦瑶" class="headerlink" title="作者：孙梦瑶"></a>作者：孙梦瑶</h3><h3 id="整理：韩非"><a href="#整理：韩非" class="headerlink" title="整理：韩非"></a>整理：韩非</h3><h3 id="校对：邱从贤（山智）"><a href="#校对：邱从贤（山智）" class="headerlink" title="校对：邱从贤（山智）"></a>校对：邱从贤（山智）</h3><p><a href="https://ververica.cn/developers/state-management/" target="_blank" rel="noopener">https://ververica.cn/developers/state-management/</a><br>本文主要分享内容如下：</p>
+<p>状态管理的基本概念；</p>
+<p>状态的类型与使用示例；</p>
+<p>容错机制与故障恢复。</p>
+<h1 id="一-状态管理的基本概念"><a href="#一-状态管理的基本概念" class="headerlink" title="一. 状态管理的基本概念"></a>一. 状态管理的基本概念</h1><h2 id="1-什么是状态"><a href="#1-什么是状态" class="headerlink" title="1.什么是状态"></a>1.什么是状态</h2><p>  <img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571142947113_E857A8299D24A087FF0E55FCF75A5E09" alt="图片说明" title="图片标题">  </p>
+<p>首先举一个无状态计算的例子：消费延迟计算。假设现在有一个消息队列，消息队列中有一个生产者持续往消费队列写入消息，多个消费者分别从消息队列中读取消息。从图上可以看出，生产者已经写入 16 条消息，Offset 停留在 15 ；有 3 个消费者，有的消费快，而有的消费慢。消费快的已经消费了 13 条数据，消费者慢的才消费了 7、8 条数据。</p>
+<p>如何实时统计每个消费者落后多少条数据，如图给出了输入输出的示例。可以了解到输入的时间点有一个时间戳，生产者将消息写到了某个时间点的位置，每个消费者同一时间点分别读到了什么位置。刚才也提到了生产者写入了 15 条，消费者分别读取了 10、7、12 条。那么问题来了，怎么将生产者、消费者的进度转换为右侧示意图信息呢？</p>
+<p>consumer 0 落后了 5 条，consumer 1 落后了 8 条，consumer 2 落后了 3 条，根据 Flink 的原理，此处需进行 Map 操作。Map 首先把消息读取进来，然后分别相减，即可知道每个 consumer 分别落后了几条。Map 一直往下发，则会得出最终结果。</p>
+<p>大家会发现，在这种模式的计算中，无论这条输入进来多少次，输出的结果都是一样的，因为单条输入中已经包含了所需的所有信息。消费落后等于生产者减去消费者。生产者的消费在单条数据中可以得到，消费者的数据也可以在单条数据中得到，所以相同输入可以得到相同输出，这就是一个无状态的计算。</p>
+<p>相应的什么是有状态的计算？<br><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571142977408_909F1111218DA0F992FEE083105341CF" alt="图片说明" title="图片标题"><br>以访问日志统计量的例子进行说明，比如当前拿到一个 Nginx 访问日志，一条日志表示一个请求，记录该请求从哪里来，访问的哪个地址，需要实时统计每个地址总共被访问了多少次，也即每个 API 被调用了多少次。可以看到下面简化的输入和输出，输入第一条是在某个时间点请求 GET 了 /api/a；第二条日志记录了某个时间点 Post /api/b ;第三条是在某个时间点 GET了一个 /api/a，总共有 3 个 Nginx 日志。从这 3 条 Nginx 日志可以看出，第一条进来输出 /api/a 被访问了一次，第二条进来输出 /api/b 被访问了一次，紧接着又进来一条访问 api/a，所以 api/a 被访问了 2 次。不同的是，两条 /api/a 的 Nginx 日志进来的数据是一样的，但输出的时候结果可能不同，第一次输出 count=1 ，第二次输出 count=2，说明相同输入可能得到不同输出。输出的结果取决于当前请求的 API 地址之前累计被访问过多少次。第一条过来累计是 0 次，count = 1，第二条过来 API 的访问已经有一次了，所以 /api/a 访问累计次数 count=2。单条数据其实仅包含当前这次访问的信息，而不包含所有的信息。要得到这个结果，还需要依赖 API 累计访问的量，即状态。</p>
+<p>这个计算模式是将数据输入算子中，用来进行各种复杂的计算并输出数据。这个过程中算子会去访问之前存储在里面的状态。另外一方面，它还会把现在的数据对状态的影响实时更新，如果输入 200 条数据，最后输出就是 200 条结果。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143001685_B490A739A55C2916AA8993039A8E9D17" alt="图片说明" title="图片标题"><br>什么场景会用到状态呢？下面列举了常见的 4 种：</p>
+<p>去重：比如上游的系统数据可能会有重复，落到下游系统时希望把重复的数据都去掉。去重需要先了解哪些数据来过，哪些数据还没有来，也就是把所有的主键都记录下来，当一条数据到来后，能够看到在主键当中是否存在。</p>
+<p>窗口计算：比如统计每分钟 Nginx 日志 API 被访问了多少次。窗口是一分钟计算一次，在窗口触发前，如 08:00 ~ 08:01 这个窗口，前59秒的数据来了需要先放入内存，即需要把这个窗口之内的数据先保留下来，等到 8:01 时一分钟后，再将整个窗口内触发的数据输出。未触发的窗口数据也是一种状态。</p>
+<p>机器学习/深度学习：如训练的模型以及当前模型的参数也是一种状态，机器学习可能每次都用有一个数据集，需要在数据集上进行学习，对模型进行一个反馈。</p>
+<p>访问历史数据：比如与昨天的数据进行对比，需要访问一些历史数据。如果每次从外部去读，对资源的消耗可能比较大，所以也希望把这些历史数据也放入状态中做对比。</p>
+<h2 id="2-为什么要管理状态"><a href="#2-为什么要管理状态" class="headerlink" title="2. 为什么要管理状态"></a>2. 为什么要管理状态</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143038696_E074DE090177F98DB5E17EA0EEA487FD" alt="图片说明" title="图片标题"><br>管理状态最直接的方式就是将数据都放到内存中，这也是很常见的做法。比如在做 WordCount 时，Word 作为输入，Count 作为输出。在计算的过程中把输入不断累加到 Count。</p>
+<p>但对于流式作业有以下要求：</p>
+<p>7*24小时运行，高可靠；</p>
+<p>数据不丢不重，恰好计算一次；</p>
+<p>数据实时产出，不延迟；</p>
+<p>基于以上要求，内存的管理就会出现一些问题。由于内存的容量是有限制的。如果要做 24 小时的窗口计算，将 24 小时的数据都放到内存，可能会出现内存不足；另外，作业是 7*24，需要保障高可用，机器若出现故障或者宕机，需要考虑如何备份及从备份中去恢复，保证运行的作业不受影响；此外，考虑横向扩展，假如网站的访问量不高，统计每个 API 访问次数的程序可以用单线程去运行，但如果网站访问量突然增加，单节点无法处理全部访问数据，此时需要增加几个节点进行横向扩展，这时数据的状态如何平均分配到新增加的节点也问题之一。因此，将数据都放到内存中，并不是最合适的一种状态管理方式。</p>
+<h2 id="3-理想的状态管理"><a href="#3-理想的状态管理" class="headerlink" title="3. 理想的状态管理"></a>3. 理想的状态管理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143056691_3C14E7779B855AD529EC7BDD67713F1A" alt="图片说明" title="图片标题"><br>最理想的状态管理需要满足易用、高效、可靠三点需求：</p>
+<p>易用，Flink 提供了丰富的数据结构、多样的状态组织形式以及简洁的扩展接口，让状态管理更加易用；<br>高效，实时作业一般需要更低的延迟，一旦出现故障，恢复速度也需要更快；当处理能力不够时，可以横向扩展，同时在处理备份时，不影响作业本身处理性能；<br>可靠，Flink 提供了状态持久化，包括不丢不重的语义以及具备自动的容错能力，比如 HA，当节点挂掉后会自动拉起，不需要人工介入。</p>
+<h1 id="二-Flink-状态的类型与使用示例"><a href="#二-Flink-状态的类型与使用示例" class="headerlink" title="二. Flink 状态的类型与使用示例"></a>二. Flink 状态的类型与使用示例</h1><h2 id="1-Managed-State-amp-Raw-State"><a href="#1-Managed-State-amp-Raw-State" class="headerlink" title="1. Managed State &amp; Raw State"></a>1. Managed State &amp; Raw State</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143093887_CDD5C3A073E8EDF8BCE5DBC3F331915E" alt="图片说明" title="图片标题"><br>Managed State 是 Flink 自动管理的 State，而 Raw State 是原生态 State，两者的区别如下：</p>
+<p>从状态管理方式的方式来说，Managed State 由 Flink Runtime 管理，自动存储，自动恢复，在内存管理上有优化；而 Raw State 需要用户自己管理，需要自己序列化，Flink 不知道 State 中存入的数据是什么结构，只有用户自己知道，需要最终序列化为可存储的数据结构。</p>
+<p>从状态数据结构来说，Managed State 支持已知的数据结构，如 Value、List、Map 等。而 Raw State只支持字节数组 ，所有状态都要转换为二进制字节数组才可以。</p>
+<p>从推荐使用场景来说，Managed State 大多数情况下均可使用，而 Raw State 是当 Managed State 不够用时，比如需要自定义 Operator 时，推荐使用 Raw State。</p>
+<h2 id="2-Keyed-State-amp-Operator-State"><a href="#2-Keyed-State-amp-Operator-State" class="headerlink" title="2. Keyed State &amp; Operator State"></a>2. Keyed State &amp; Operator State</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143125792_7A7126166D67C3FDDB90CEFFD7505ED8" alt="图片说明" title="图片标题"><br>Managed State 分为两种，一种是 Keyed State；另外一种是 Operator State。在Flink Stream模型中，Datastream 经过 keyBy 的操作可以变为 KeyedStream 。</p>
+<p>每个 Key 对应一个 State，即一个 Operator 实例处理多个 Key，访问相应的多个 State，并由此就衍生了 Keyed State。Keyed State 只能用在 KeyedStream 的算子中，即在整个程序中没有 keyBy 的过程就没有办法使用 KeyedStream。</p>
+<p>相比较而言，Operator State 可以用于所有算子，相对于数据源有一个更好的匹配方式，常用于 Source，例如 FlinkKafkaConsumer。相比 Keyed State，一个 Operator 实例对应一个 State，随着并发的改变，Keyed State 中，State 随着 Key 在实例间迁移，比如原来有 1 个并发，对应的 API 请求过来，/api/a 和 /api/b 都存放在这个实例当中；如果请求量变大，需要扩容，就会把 /api/a 的状态和 /api/b 的状态分别放在不同的节点。由于 Operator State 没有 Key，并发改变时需要选择状态如何重新分配。其中内置了 2 种分配方式：一种是均匀分配，另外一种是将所有 State 合并为全量 State 再分发给每个实例。</p>
+<p>在访问上，Keyed State 通过 RuntimeContext 访问，这需要 Operator 是一个Rich Function。Operator State 需要自己实现 CheckpointedFunction 或 ListCheckpointed 接口。在数据结构上，Keyed State 支持的数据结构，比如 ValueState、ListState、ReducingState、AggregatingState 和 MapState；而 Operator State 支持的数据结构相对较少，如 ListState。</p>
+<h2 id="3-Keyed-State-使用示例"><a href="#3-Keyed-State-使用示例" class="headerlink" title="3. Keyed State 使用示例"></a>3. Keyed State 使用示例</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143165677_9823447C87064C14565BD91D2B3A3434" alt="图片说明" title="图片标题"><br>Keyed State 有很多种，如图为几种 Keyed State 之间的关系。首先 State 的子类中一级子类有 ValueState、MapState、AppendingState。AppendingState 又有一个子类 MergingState。MergingState 又分为 3 个子类分别是ListState、ReducingState、AggregatingState。这个继承关系使它们的访问方式、数据结构也存在差异。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143194008_77861EEA917B2DB9735F3A5C9AC49413" alt="图片说明" title="图片标题"><br>几种 Keyed State 的差异具体体现在：</p>
+<p>ValueState 存储单个值，比如 Wordcount，用 Word 当 Key，State 就是它的 Count。这里面的单个值可能是数值或者字符串，作为单个值，访问接口可能有两种，get 和 set。在 State 上体现的是 update(T) / T value()。</p>
+<p>MapState 的状态数据类型是 Map，在 State 上有 put、remove等。需要注意的是在 MapState 中的 key 和 Keyed state 中的 key 不是同一个。</p>
+<p>ListState 状态数据类型是 List，访问接口如 add、update 等。</p>
+<p>ReducingState 和 AggregatingState 与 ListState 都是同一个父类，但状态数据类型上是单个值，原因在于其中的 add 方法不是把当前的元素追加到列表中，而是把当前元素直接更新进了 Reducing 的结果中。</p>
+<p>AggregatingState 的区别是在访问接口，ReducingState 中 add（T）和 T get() 进去和出来的元素都是同一个类型，但在 AggregatingState 输入的 IN，输出的是 OUT。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143217922_688BF6B699D86F2D4A0129F59E6CC1F5" alt="图片说明" title="图片标题"><br>下面以 ValueState 为例，来阐述一下具体如何使用，以状态机的案例来讲解 。</p>
+<p>源代码地址：<a href="https://github.com/apache/flink/blob/master/flink-examples/flink-examples-streaming/src/main/java/org/apache/flink/streaming/examples/statemachine/StateMachineExample.java" target="_blank" rel="noopener">https://github.com/apache/flink/blob/master/flink-examples/flink-examples-streaming/src/main/java/org/apache/flink/streaming/examples/statemachine/StateMachineExample.java</a></p>
+<p>感兴趣的同学可直接查看完整源代码，在此截取部分。如图为 Flink 作业的主方法与主函数中的内容，前面的输入、后面的输出以及一些个性化的配置项都已去掉，仅保留了主干。</p>
+<p>首先 events 是一个 DataStream，通过 env.addSource 加载数据进来，接下来有一个 DataStream 叫 alerts，先 keyby 一个 sourceAddress，然后在 flatMap 一个StateMachineMapper。StateMachineMapper 就是一个状态机，状态机指有不同的状态与状态间有不同的转换关系的结合，以买东西的过程简单举例。首先下订单，订单生成后状态为待付款，当再来一个事件状态付款成功，则事件的状态将会从待付款变为已付款，待发货。已付款，待发货的状态再来一个事件发货，订单状态将会变为配送中，配送中的状态再来一个事件签收，则该订单的状态就变为已签收。在整个过程中，随时都可以来一个事件，取消订单，无论哪个状态，一旦触发了取消订单事件最终就会将状态转移到已取消，至此状态就结束了。</p>
+<p>Flink 写状态机是如何实现的？首先这是一个 RichFlatMapFunction，要用 Keyed State getRuntimeContext，getRuntimeContext 的过程中需要 RichFunction，所以需要在 open 方法中获取 currentState ，然后 getState，currentState 保存的是当前状态机上的状态。</p>
+<p>如果刚下订单，那么 currentState 就是待付款状态，初始化后，currentState 就代表订单完成。订单来了后，就会走 flatMap 这个方法，在 flatMap 方法中，首先定义一个 State，从 currentState 取出，即 Value，Value 取值后先判断值是否为空，如果 sourceAddress state 是空，则说明没有被使用过，那么此状态应该为刚创建订单的初始状态，即待付款。然后赋值 state = State.Initial，注意此处的 State 是本地的变量，而不是 Flink 中管理的状态，将它的值从状态中取出。接下来在本地又会来一个变量，然后 transition，将事件对它的影响加上，刚才待付款的订单收到付款成功的事件，就会变成已付款，待发货，然后 nextState 即可算出。此外，还需要判断 State 是否合法，比如一个已签收的订单，又来一个状态叫取消订单，会发现已签收订单不能被取消，此时这个状态就会下发，订单状态为非法状态。</p>
+<p>如果不是非法的状态，还要看该状态是否已经无法转换，比如这个状态变为已取消时，就不会在有其他的状态再发生了，此时就会从 state 中 clear。clear 是所有的 Flink 管理 keyed state 都有的公共方法，意味着将信息删除，如果既不是一个非法状态也不是一个结束状态，后面可能还会有更多的转换，此时需要将订单的当前状态 update ，这样就完成了 ValueState 的初始化、取值、更新以及清零，在整个过程中状态机的作用就是将非法的状态进行下发，方便下游进行处理。其他的状态也是类似的使用方式。</p>
+<h1 id="三-容错机制与故障恢复"><a href="#三-容错机制与故障恢复" class="headerlink" title="三. 容错机制与故障恢复"></a>三. 容错机制与故障恢复</h1><h2 id="1-状态如何保存及恢复"><a href="#1-状态如何保存及恢复" class="headerlink" title="1. 状态如何保存及恢复"></a>1. 状态如何保存及恢复</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143252142_BE28DFB6669E19340E15658720E17D19" alt="图片说明" title="图片标题"><br>Flink 状态保存主要依靠 Checkpoint 机制，Checkpoint 会定时制作分布式快照，对程序中的状态进行备份。分布式快照是如何实现的可以参考【第二课时】的内容，这里就不再阐述分布式快照具体是如何实现的。分布式快照 Checkpoint 完成后，当作业发生故障了如何去恢复？假如作业分布跑在 3 台机器上，其中一台挂了。这个时候需要把进程或者线程移到 active 的 2 台机器上，此时还需要将整个作业的所有 Task 都回滚到最后一次成功 Checkpoint 中的状态，然后从该点开始继续处理。</p>
+<p>如果要从 Checkpoint 恢复，必要条件是数据源需要支持数据重新发送。Checkpoint恢复后， Flink 提供两种一致性语义，一种是恰好一次，一种是至少一次。在做 Checkpoint时，可根据 Barries 对齐来判断是恰好一次还是至少一次，如果对齐，则为恰好一次，否则没有对齐即为至少一次。如果只有一个上游，也就是说 Barries 是不需要对齐的的；如果只有一个 Checkpoint 在做，不管什么时候从 Checkpoint 恢复，都会恢复到刚才的状态；如果有多个上游，假如一个上游的 Barries 到了，另一个 Barries 还没有来，如果这个时候对状态进行快照，那么从这个快照恢复的时候其中一个上游的数据可能会有重复。</p>
+<p>Checkpoint 通过代码的实现方法如下：</p>
+<p>首先从作业的运行环境 env.enableCheckpointing 传入 1000，意思是做 2 个 Checkpoint 的事件间隔为 1 秒。Checkpoint 做的越频繁，恢复时追数据就会相对减少，同时 Checkpoint 相应的也会有一些 IO 消耗。</p>
+<p>接下来是设置 Checkpoint 的 model，即设置了 Exactly_Once 语义，表示需要 Barrier 对齐，这样可以保证消息不会丢失也不会重复。</p>
+<p>setMinPauseBetweenCheckpoints 是 2 个 Checkpoint 之间最少是要等 500ms，也就是刚做完一个 Checkpoint。比如某个 Checkpoint 做了700ms，按照原则过 300ms 应该是做下一个 Checkpoint，因为设置了 1000ms 做一次 Checkpoint 的，但是中间的等待时间比较短，不足 500ms 了，需要多等 200ms，因此以这样的方式防止 Checkpoint 太过于频繁而导致业务处理的速度下降。</p>
+<p>setCheckpointTimeout 表示做 Checkpoint 多久超时，如果 Checkpoint 在 1min 之内尚未完成，说明 Checkpoint 超时失败。</p>
+<p>setMaxConcurrentCheckpoints 表示同时有多少个 Checkpoint 在做快照，这个可以根据具体需求去做设置。</p>
+<p>enableExternalizedCheckpoints 表示下 Cancel 时是否需要保留当前的 Checkpoint，默认 Checkpoint 会在整个作业 Cancel 时被删除。Checkpoint 是作业级别的保存点。</p>
+<p>上面讲过，除了故障恢复之外，还需要可以手动去调整并发重新分配这些状态。手动调整并发，必须要重启作业并会提示 Checkpoint 已经不存在，那么作业如何恢复数据？</p>
+<p>一方面 Flink 在 Cancel 时允许在外部介质保留 Checkpoint ；另一方面，Flink 还有另外一个机制是 SavePoint。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143266754_72F6543E219A34B25A05F127BF7A64E8" alt="图片说明" title="图片标题"><br>Savepoint 与 Checkpoint 类似，同样是把状态存储到外部介质。当作业失败时，可以从外部恢复。Savepoint 与 Checkpoint 有什么区别呢？</p>
+<p>从触发管理方式来讲，Checkpoint 由 Flink 自动触发并管理，而 Savepoint 由用户手动触发并人肉管理；</p>
+<p>从用途来讲，Checkpoint 在 Task 发生异常时快速恢复，例如网络抖动或超时异常，而 Savepoint 有计划地进行备份，使作业能停止后再恢复，例如修改代码、调整并发；</p>
+<p>最后从特点来讲，Checkpoint 比较轻量级，作业出现问题会自动从故障中恢复，在作业停止后默认清除；而 Savepoint 比较持久，以标准格式存储，允许代码或配置发生改变，恢复需要启动作业手动指定一个路径恢复。</p>
+<h2 id="2-可选的状态存储方式"><a href="#2-可选的状态存储方式" class="headerlink" title="2. 可选的状态存储方式"></a>2. 可选的状态存储方式</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143282020_64E753626240D5EA470570F497051FEB" alt="图片说明" title="图片标题"><br>Checkpoint 的存储，第一种是内存存储，即 MemoryStateBackend，构造方法是设置最大的StateSize，选择是否做异步快照，这种存储状态本身存储在 TaskManager 节点也就是执行节点内存中的，因为内存有容量限制，所以单个 State maxStateSize 默认 5 M，且需要注意 maxStateSize &lt;= akka.framesize 默认 10 M。Checkpoint 存储在 JobManager 内存中，因此总大小不超过 JobManager 的内存。推荐使用的场景为：本地测试、几乎无状态的作业，比如 ETL、JobManager 不容易挂，或挂掉影响不大的情况。不推荐在生产场景使用。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143322242_5498DC3E67A0518E3A1BA95DE5F26257" alt="图片说明" title="图片标题"><br>另一种就是在文件系统上的 FsStateBackend ，构建方法是需要传一个文件路径和是否异步快照。State 依然在 TaskManager 内存中，但不会像 MemoryStateBackend 有 5 M 的设置上限，Checkpoint 存储在外部文件系统（本地或 HDFS），打破了总大小 Jobmanager 内存的限制。容量限制上，单 TaskManager 上 State 总量不超过它的内存，总大小不超过配置的文件系统容量。推荐使用的场景、常规使用状态的作业、例如分钟级窗口聚合或 join、需要开启HA的作业。</p>
+<p>还有一种存储为 RocksDBStateBackend ，RocksDB 是一个 key/value 的内存存储系统，和其他的 key/value 一样，先将状态放到内存中，如果内存快满时，则写入到磁盘中，但需要注意 RocksDB 不支持同步的 Checkpoint，构造方法中没有同步快照这个选项。不过 RocksDB 支持增量的 Checkpoint，也是目前唯一增量 Checkpoint 的 Backend，意味着并不需要把所有 sst 文件上传到 Checkpoint 目录，仅需要上传新生成的 sst 文件即可。它的 Checkpoint 存储在外部文件系统（本地或HDFS），其容量限制只要单个 TaskManager 上 State 总量不超过它的内存+磁盘，单 Key最大 2G，总大小不超过配置的文件系统容量即可。推荐使用的场景为：超大状态的作业，例如天级窗口聚合、需要开启 HA 的作业、最好是对状态读写性能要求不高的作业。</p>
+<h1 id="四-总结"><a href="#四-总结" class="headerlink" title="四. 总结"></a>四. 总结</h1><h2 id="1-为什么要使用状态？"><a href="#1-为什么要使用状态？" class="headerlink" title="1. 为什么要使用状态？"></a>1. 为什么要使用状态？</h2><p>前面提到有状态的作业要有有状态的逻辑，有状态的逻辑是因为数据之间存在关联，单条数据是没有办法把所有的信息给表现出来。所以需要通过状态来满足业务逻辑。</p>
+<h2 id="2-为什么要管理状态？"><a href="#2-为什么要管理状态？" class="headerlink" title="2.为什么要管理状态？"></a>2.为什么要管理状态？</h2><p>使用了状态，为什么要管理状态？因为实时作业需要7*24不间断的运行，需要应对不可靠的因素而带来的影响。</p>
+<h2 id="3-如何选择状态的类型和存储方式？"><a href="#3-如何选择状态的类型和存储方式？" class="headerlink" title="3.如何选择状态的类型和存储方式？"></a>3.如何选择状态的类型和存储方式？</h2><p>那如何选择状态的类型和存储方式？结合前面的内容，可以看到，首先是要分析清楚业务场景；比如想要做什么，状态到底大不大。比较各个方案的利弊，选择根据需求合适的状态类型和存储方式即可。</p>
+]]></content>
+      <categories>
+        <category>Flink</category>
+      </categories>
+      <tags>
+        <tag>状态管理与容错机制</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Apache Flink 简单的构建一个应用程序</title>
+    <url>/2020/06/12/Apache-Flink-%E7%AE%80%E5%8D%95%E7%9A%84%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
+    <content><![CDATA[<h1 id="简单的构建一个ApacheFlink的应用程序"><a href="#简单的构建一个ApacheFlink的应用程序" class="headerlink" title="简单的构建一个ApacheFlink的应用程序"></a>简单的构建一个ApacheFlink的应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Flink 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Flink相关的依赖。</p>
+<p>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191012/9094293_1570843930821_A4D48C34269A213CE6F6CE74BF95681C" alt="图片说明" title="图片标题"> </p>
+<h1 id="编写Flink程序"><a href="#编写Flink程序" class="headerlink" title="编写Flink程序"></a>编写Flink程序</h1><p>创建 SocketWindowWordCount.java 文件：</p>
+<pre><code>package FlinkDemo;
+import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.util.Collector;
+
+public class SocketWindowWordCount {
+
+    public static void main(String[] args) throws Exception {
+
+        // 创建 execution environment
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+        // 通过连接 socket 获取输入数据，这里连接到本地9000端口，如果9000端口已被占用，请换一个端口
+        DataStream&lt;String&gt; text = env.socketTextStream(&quot;localhost&quot;, 9000, &quot;\n&quot;);
+
+        // 解析数据，按 word 分组，开窗，聚合
+        DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; windowCounts = text
+                .flatMap(new FlatMapFunction&lt;String, Tuple2&lt;String, Integer&gt;&gt;() {
+                    @Override
+                    public void flatMap(String value, Collector&lt;Tuple2&lt;String, Integer&gt;&gt; out) {
+                        for (String word : value.split(&quot;\\s&quot;)) {
+                            out.collect(Tuple2.of(word, 1));
+                        }
+                    }
+                })
+                .keyBy(0)
+                .timeWindow(Time.seconds(5))
+                .sum(1);
+
+        // 将结果打印到控制台，注意这里使用的是单线程打印，而非多线程
+        windowCounts.print().setParallelism(1);
+
+        env.execute(&quot;Socket Window WordCount&quot;);
+    }
+}
+</code></pre><h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>要运行示例程序，首先我们在终端启动 netcat 获得输入流：<br>nc -lk 9000<br>然后直接运行SocketWindowWordCount的 main 方法。</p>
+<p>只需要在 netcat 控制台输入单词，就能在 SocketWindowWordCount 的输出控制台看到每个单词的词频统计。如果想看到大于1的计数，请在5秒内反复键入相同的单词。<br>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191012/9094293_1570862262668_C587F81A2896284000DDEC3E5471605F" alt="图片说明" title="图片标题"> </p>
+]]></content>
+      <categories>
+        <category>Flink</category>
+      </categories>
+      <tags>
+        <tag>Flink</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Apache Flink概念</title>
+    <url>/2020/06/03/Apache-Flink%E6%A6%82%E5%BF%B5/</url>
+    <content><![CDATA[<h1 id="转载"><a href="#转载" class="headerlink" title="转载"></a>转载</h1><p>作者：陈守元 &amp; 戴资力<a href="https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/" target="_blank" rel="noopener">https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/</a></p>
+<h1 id="一、Apache-Flink-的定义、架构及原理"><a href="#一、Apache-Flink-的定义、架构及原理" class="headerlink" title="一、Apache Flink 的定义、架构及原理"></a>一、Apache Flink 的定义、架构及原理</h1><p>Apache Flink 是一个分布式大数据处理引擎，可对有限数据流和无限数据流进行有状态或无状态的计算，能够部署在各种集群环境，对各种规模大小的数据进行快速计算。</p>
+<h2 id="1-Flink-Application"><a href="#1-Flink-Application" class="headerlink" title="1. Flink Application"></a>1. Flink Application</h2><p>了解Flink 应用开发需要先理解Flink 的Streams、State、Time 等基础处理语义以及Flink 兼顾灵活性和方便性的多层次API。</p>
+<p>Streams：流，分为有限数据流与无限数据流，unbounded stream 是有始无终的数据流，即无限数据流；而bounded stream 是限定大小的有始有终的数据集合，即有限数据流，二者的区别在于无限数据流的数据会随时间的推演而持续增加，计算持续进行且不存在结束的状态，相对的有限数据流数据大小固定，计算最终会完成并处于结束的状态。</p>
+<p>State，状态是计算过程中的数据信息，在容错恢复和Checkpoint 中有重要的作用，流计算在本质上是Incremental Processing，因此需要不断查询保持状态；另外，为了确保Exactly- once 语义，需要数据能够写入到状态中；而持久化存储，能够保证在整个分布式系统运行失败或者挂掉的情况下做到Exactly- once，这是状态的另外一个价值。</p>
+<p>Time，分为Event time、Ingestion time、Processing time，Flink 的无限数据流是一个持续的过程，时间是我们判断业务状态是否滞后，数据处理是否及时的重要依据。</p>
+<p>API，API 通常分为三层，由上而下可分为SQL / Table API、DataStream API、ProcessFunction 三层，API 的表达能力及业务抽象能力都非常强大，但越接近SQL 层，表达能力会逐步减弱，抽象能力会增强，反之，ProcessFunction 层API 的表达能力非常强，可以进行多种灵活方便的操作，但抽象能力也相对越小。</p>
+<h2 id="2-Flink-Architecture"><a href="#2-Flink-Architecture" class="headerlink" title="2. Flink Architecture"></a>2. Flink Architecture</h2><p>在架构部分，主要分为以下四点：<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276646050_A977E198D8048EFD6DC1F6636BFE9453" alt="图片说明" title="图片标题"><br>第一，Flink 具备统一的框架处理有界和无界两种数据流的能力</p>
+<p>第二， 部署灵活，Flink 底层支持多种资源调度器，包括Yarn、Kubernetes 等。Flink 自身带的Standalone 的调度器，在部署上也十分灵活。</p>
+<p>第三， 极高的可伸缩性，可伸缩性对于分布式系统十分重要，阿里巴巴双11大屏采用Flink 处理海量数据，使用过程中测得Flink 峰值可达17 亿/秒。</p>
+<p>第四， 极致的流式处理性能。Flink 相对于Storm 最大的特点是将状态语义完全抽象到框架中，支持本地状态读取，避免了大量网络IO，可以极大提升状态存取的性能。</p>
+<h2 id="3-Flink-Operation"><a href="#3-Flink-Operation" class="headerlink" title="3. Flink Operation"></a>3. Flink Operation</h2><p>后面会有专门课程讲解，此处简单分享Flink 关于运维及业务监控的内容：</p>
+<p>Flink具备7 X 24 小时高可用的SOA（面向服务架构），原因是在实现上Flink 提供了一致性的Checkpoint。Checkpoint是Flink 实现容错机制的核心，它周期性的记录计算过程中Operator 的状态，并生成快照持久化存储。当Flink 作业发生故障崩溃时，可以有选择的从Checkpoint 中恢复，保证了计算的一致性。</p>
+<p>Flink本身提供监控、运维等功能或接口，并有内置的WebUI，对运行的作业提供DAG 图以及各种Metric 等，协助用户管理作业状态。</p>
+<h2 id="4-Flink-的应用场景"><a href="#4-Flink-的应用场景" class="headerlink" title="4. Flink 的应用场景"></a>4. Flink 的应用场景</h2><h2 id="4-1-Flink-的应用场景：Data-Pipeline"><a href="#4-1-Flink-的应用场景：Data-Pipeline" class="headerlink" title="4.1 Flink 的应用场景：Data Pipeline"></a>4.1 Flink 的应用场景：Data Pipeline</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276745180_8D7749B09365031340991DD2E127A69D" alt="图片说明" title="图片标题"><br>Data Pipeline 的核心场景类似于数据搬运并在搬运的过程中进行部分数据清洗或者处理，而整个业务架构图的左边是Periodic ETL，它提供了流式ETL 或者实时ETL，能够订阅消息队列的消息并进行处理，清洗完成后实时写入到下游的Database或File system 中。场景举例：</p>
+<p>实时数仓<br>当下游要构建实时数仓时，上游则可能需要实时的Stream ETL。这个过程会进行实时清洗或扩展数据，清洗完成后写入到下游的实时数仓的整个链路中，可保证数据查询的时效性，形成实时数据采集、实时数据处理以及下游的实时Query。</p>
+<p>搜索引擎推荐<br>搜索引擎这块以淘宝为例，当卖家上线新商品时，后台会实时产生消息流，该消息流经过Flink 系统时会进行数据的处理、扩展。然后将处理及扩展后的数据生成实时索引，写入到搜索引擎中。这样当淘宝卖家上线新商品时，能在秒级或者分钟级实现搜索引擎的搜索。</p>
+<h2 id="4-2-Flink-应用场景：Data-Analytics"><a href="#4-2-Flink-应用场景：Data-Analytics" class="headerlink" title="4.2 Flink 应用场景：Data Analytics"></a>4.2 Flink 应用场景：Data Analytics</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276787069_136FDC2F733378161152115CD1F9140C" alt="图片说明" title="图片标题"><br>Data Analytics，如图，左边是Batch Analytics，右边是Streaming Analytics。Batch Analytics 就是传统意义上使用类似于Map Reduce、Hive、Spark Batch 等，对作业进行分析、处理、生成离线报表；Streaming Analytics 使用流式分析引擎如Storm、Flink 实时处理分析数据，应用较多的场景如实时大屏、实时报表。</p>
+<h2 id="4-3-Flink-应用场景：Data-Driven"><a href="#4-3-Flink-应用场景：Data-Driven" class="headerlink" title="4.3 Flink 应用场景：Data Driven"></a>4.3 Flink 应用场景：Data Driven</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276813600_B7803A0512D98F04701816656E67B8BD" alt="图片说明" title="图片标题"><br>从某种程度上来说，所有的实时的数据处理或者是流式数据处理都是属于Data Driven，流计算本质上是Data Driven 计算。应用较多的如风控系统，当风控系统需要处理各种各样复杂的规则时，Data Driven 就会把处理的规则和逻辑写入到Datastream 的API 或者是ProcessFunction 的API 中，然后将逻辑抽象到整个Flink 引擎，当外面的数据流或者是事件进入就会触发相应的规则，这就是Data Driven 的原理。在触发某些规则后，Data Driven 会进行处理或者是进行预警，这些预警会发到下游产生业务通知，这是Data Driven 的应用场景，Data Driven 在应用上更多应用于复杂事件的处理。</p>
+<h1 id="二、「有状态的流式处理」概念解析"><a href="#二、「有状态的流式处理」概念解析" class="headerlink" title="二、「有状态的流式处理」概念解析"></a>二、「有状态的流式处理」概念解析</h1><h2 id="1-传统批处理"><a href="#1-传统批处理" class="headerlink" title="1. 传统批处理"></a>1. 传统批处理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276859239_6A1AC20A97B0A786629AFFF3B8EBE515" alt="图片说明" title="图片标题"><br>传统批处理方法是持续收取数据，以时间作为划分多个批次的依据，再周期性地执行批次运算。但假设需要计算每小时出现事件转换的次数，如果事件转换跨越了所定义的时间划分，传统批处理会将中介运算结果带到下一个批次进行计算；除此之外，当出现接收到的事件顺序颠倒情况下，传统批处理仍会将中介状态带到下一批次的运算结果中，这种处理方式也不尽如人意。</p>
+<h2 id="2-理想方法"><a href="#2-理想方法" class="headerlink" title="2. 理想方法"></a>2. 理想方法</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276897730_A901CD03516649C53E785F0D1B0FC2B7" alt="图片说明" title="图片标题"><br>第一点，要有理想方法，这个理想方法是引擎必须要有能力可以累积状态和维护状态，累积状态代表着过去历史中接收过的所有事件，会影响到输出。</p>
+<p>第二点，时间，时间意味着引擎对于数据完整性有机制可以操控，当所有数据都完全接收到后，输出计算结果。</p>
+<p>第三点，理想方法模型需要实时产生结果，但更重要的是采用新的持续性数据处理模型来处理实时数据，这样才最符合Continuous data 的特性。</p>
+<h2 id="3-流式处理"><a href="#3-流式处理" class="headerlink" title="3.流式处理"></a>3.流式处理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276921632_0C5C777CEE1105EFB2D1403DA0D58C20" alt="图片说明" title="图片标题"><br>流式处理简单来讲即有一个无穷无尽的数据源在持续收取数据，以代码作为数据处理的基础逻辑，数据源的数据经过代码处理后产生出结果，然后输出，这就是流式处理的基本原理。</p>
+<h2 id="4-分布式流式处理"><a href="#4-分布式流式处理" class="headerlink" title="4.分布式流式处理"></a>4.分布式流式处理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276957801_36789D1AAE3E0699128254C8F4844110" alt="图片说明" title="图片标题"><br>假设Input Streams 有很多个使用者，每个使用者都有自己的ID，如果计算每个使用者出现的次数，我们需要让同一个使用者的出现事件流到同一运算代码，这跟其他批次需要做Group by 是同样的概念，所以跟Stream 一样需要做分区，设定相应的Key，然后让同样的 Key 流到同一个 Computation instance 做同样的运算。</p>
+<h2 id="5-有状态分布式流式处理"><a href="#5-有状态分布式流式处理" class="headerlink" title="5. 有状态分布式流式处理"></a>5. 有状态分布式流式处理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276988699_BD17D461E0C4514D6362646AB611A327" alt="图片说明" title="图片标题"><br>如图，上述代码中定义了变数X，X 在数据处理过程中会进行读和写，在最后输出结果时，可以依据变数X 决定输出的内容，即状态X 会影响最终的输出结果。这个过程中，第一个重点是先进行了状态Co-partitioned key by，同样的 Key 都会流到Computation instance，与使用者出现次数的原理相同，次数即所谓的状态，这个状态一定会跟同一个Key 的事件累积在同一个 Computation instance。类似于根据输入流的Key 重新分区的状态，当分区进入 Stream 之后，这个 Stream 会累积起来的状态也变成 Copartiton 。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277013707_B97FF832FFD370F6FCF7BECE3AB95233" alt="图片说明" title="图片标题"><br>第二个重点是embeded local state backend。有状态分散式流式处理的引擎，状态可能会累积到非常大，当 Key 非常多时，状态可能就会超出单一节点的 Memory 的负荷量，这时候状态必须有状态后端去维护它；在这个状态后端在正常状况下，用In-memory 维护即可。</p>
+<h1 id="三、Apache-Flink-的优势"><a href="#三、Apache-Flink-的优势" class="headerlink" title="三、Apache Flink 的优势"></a>三、Apache Flink 的优势</h1><h2 id="1-状态容错"><a href="#1-状态容错" class="headerlink" title="1.状态容错"></a>1.状态容错</h2><p>当我们考虑状态容错时难免会想到精确一次的状态容错，应用在运算时累积的状态，每笔输入的事件反映到状态，更改状态都是精确一次，如果修改超过一次的话也意味着数据引擎产生的结果是不可靠的。</p>
+<p>如何确保状态拥有精确一次（Exactly-once guarantee）的容错保证？</p>
+<p>如何在分散式场景下替多个拥有本地状态的运算子产生一个全域一致的快照（Global consistent snapshot）？</p>
+<p>更重要的是，如何在不中断运算的前提下产生快照？</p>
+<h2 id="1-1-简单场景的精确一次容错方法"><a href="#1-1-简单场景的精确一次容错方法" class="headerlink" title="1.1 简单场景的精确一次容错方法"></a>1.1 简单场景的精确一次容错方法</h2><p>还是以使用者出现次数来看，如果某个使用者出现的次数计算不准确，不是精确一次，那么产生的结果是无法作为参考的。在考虑精确的容错保证前，我们先考虑最简单的使用场景，如无限流的数据进入，后面单一的Process 进行运算，每处理完一笔计算即会累积一次状态，这种情况下如果要确保Process 产生精确一次的状态容错，每处理完一笔数据，更改完状态后进行一次快照，快照包含在队列中并与相应的状态进行对比，完成一致的快照，就能确保精确一次。</p>
+<h2 id="1-2-分布式状态容错"><a href="#1-2-分布式状态容错" class="headerlink" title="1.2 分布式状态容错"></a>1.2 分布式状态容错</h2><p>Flink作为分布式的处理引擎，在分布式的场景下，进行多个本地状态的运算，只产生一个全域一致的快照，如需要在不中断运算值的前提下产生全域一致的快照，就涉及到分散式状态容错。</p>
+<p>Global consistent snapshot<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277051016_E86271345C7D773AE4D952CCA23C5097" alt="图片说明" title="图片标题"><br>关于Global consistent snapshot，当Operator 在分布式的环境中，在各个节点做运算，首先产生Global consistent snapshot 的方式就是处理每一笔数据的快照点是连续的，这笔运算流过所有的运算值，更改完所有的运算值后，能够看到每一个运算值的状态与该笔运算的位置，即可称为Consistent snapshot，当然，Global consistent snapshot 也是简易场景的延伸。</p>
+<p>容错恢复</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277083117_FD70E2F6BA35FC84C0C08B008FB0F040" alt="图片说明" title="图片标题"> </p>
+<p>首先了解一下Checkpoint，上面提到连续性快照每个Operator 运算值本地的状态后端都要维护状态，也就是每次将产生检查点时会将它们传入共享的DFS 中。当任何一个Process 挂掉后，可以直接从三个完整的Checkpoint 将所有的运算值的状态恢复，重新设定到相应位置。Checkpoint的存在使整个Process 能够实现分散式环境中的Exactly-once。</p>
+<h2 id="1-3-分散式快照（Distributed-Snapshots）方法"><a href="#1-3-分散式快照（Distributed-Snapshots）方法" class="headerlink" title="1.3 分散式快照（Distributed Snapshots）方法"></a>1.3 分散式快照（Distributed Snapshots）方法</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277108380_1973D803C8683A5F7DA57AE4C17ADD12" alt="图片说明" title="图片标题"><br>关于Flink 如何在不中断运算的状况下持续产生Global consistent snapshot，其方式是基于用 Simple lamport 演算法机制下延伸的。已知的一个点Checkpoint barrier，Flink 在某个Datastream 中会一直安插Checkpoint barrier，Checkpoint barrier 也会N – 1等等，Checkpoint barrier N 代表着所有在这个范围里面的数据都是Checkpoint barrier N。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277133562_65F9BD7806B8D46B1F0D721AEA6A1F3B" alt="图片说明" title="图片标题"><br>举例：假设现在需要产生Checkpoint barrier N，但实际上在Flink 中是由Job manager 触发Checkpoint，Checkpoint 被触发后开始从数据源产生Checkpoint barrier。当Job 开始做Checkpoint barrier N 的时候，可以理解为Checkpoint barrier N 需要逐步填充左下角的表格。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277167888_F0E968DD5BED4B3DB4B20946EECA3973" alt="图片说明" title="图片标题"><br>如图，当部分事件标为红色，Checkpoint barrier N 也是红色时，代表着这些数据或事件都由Checkpoint barrier N 负责。Checkpoint barrier N 后面白色部分的数据或事件则不属于Checkpoint barrier N。</p>
+<p>在以上的基础上，当数据源收到Checkpoint barrier N 之后会先将自己的状态保存，以读取Kafka资料为例，数据源的状态就是目前它在Kafka 分区的位置，这个状态也会写入到上面提到的表格中。下游的Operator 1 会开始运算属于Checkpoint barrier N 的数据，当Checkpoint barrier N 跟着这些数据流动到Operator 1 之后,Operator 1 也将属于Checkpoint barrier N 的所有数据都反映在状态中，当收到Checkpoint barrier N 时也会直接对Checkpoint去做快照。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277198821_DA42B62744D7181CD6E2EB2785E54AA6" alt="图片说明" title="图片标题"> </p>
+<p>当快照完成后继续往下游走，Operator 2 也会接收到所有数据，然后搜索Checkpoint barrier N 的数据并直接反映到状态，当状态收到Checkpoint barrier N 之后也会直接写入到Checkpoint N 中。以上过程到此可以看到Checkpoint barrier N 已经完成了一个完整的表格，这个表格叫做Distributed Snapshots，即分布式快照。分布式快照可以用来做状态容错，任何一个节点挂掉的时候可以在之前的Checkpoint 中将其恢复。继续以上Process，当多个Checkpoint 同时进行，Checkpoint barrier N 已经流到Job manager 2，Flink job manager 可以触发其他的Checkpoint，比如Checkpoint N + 1，Checkpoint N + 2 等等也同步进行，利用这种机制，可以在不阻挡运算的状况下持续地产生Checkpoint。</p>
+<h2 id="2-状态维护"><a href="#2-状态维护" class="headerlink" title="2. 状态维护"></a>2. 状态维护</h2><p>状态维护即用一段代码在本地维护状态值，当状态值非常大时需要本地的状态后端来支持。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277236063_ACAF4389211CBB001A75DBDCC3FD8DC3" alt="图片说明" title="图片标题"><br>如图，在Flink 程序中，可以采用getRuntimeContext().getState(desc); 这组API 去注册状态。Flink 有多种状态后端，采用API 注册状态后，读取状态时都是通过状态后端来读取的。Flink 有两种不同的状态值，也有两种不同的状态后端：<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277259395_13B121DEE1F8C3DB4A0EC3EAFA480A97" alt="图片说明" title="图片标题"><br>JVM Heap状态后端，适合数量较小的状态，当状态量不大时就可以采用JVM Heap 的状态后端。JVM Heap 状态后端会在每一次运算值需要读取状态时，用Java object read / writes 进行读或写，不会产生较大代价，但当Checkpoint 需要将每一个运算值的本地状态放入Distributed Snapshots 的时候，就需要进行序列化了。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277284906_0E1ED0DC5B85939AFC377F6DB8FBE492" alt="图片说明" title="图片标题"><br>RocksDB状态后端，它是一种out of core 的状态后端。在Runtime 的本地状态后端让使用者去读取状态的时候会经过磁盘，相当于将状态维护在磁盘里，与之对应的代价可能就是每次读取状态时，都需要经过序列化和反序列化的过程。当需要进行快照时只将应用序列化即可，序列化后的数据直接传输到中央的共享DFS 中。</p>
+<p>Flink目前支持以上两种状态后端，一种是纯 Memory 的状态后端，另一种是有资源磁盘的状态后端，在维护状态时可以根据状态的数量选择相应的状态后端。</p>
+<h1 id="3-Event-–-Time"><a href="#3-Event-–-Time" class="headerlink" title="3. Event – Time"></a>3. Event – Time</h1><h2 id="3-1-不同时间种类"><a href="#3-1-不同时间种类" class="headerlink" title="3.1 不同时间种类"></a>3.1 不同时间种类</h2><p>在Flink 及其他进阶的流式处理引擎出现之前，大数据处理引擎一直只支持Processing-time 的处理。假设定义一个运算 Windows 的窗口，Windows 运算设定每小时进行结算。Processing-time 进行运算时，可以发现数据引擎将3 点至4 点间收到的数据进行结算。实际上在做报表或者分析结果时是想了解真实世界中3 点至4 点之间实际产生数据的输出结果，了解实际数据的输出结果就必须采用Event – Time 了。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277314899_C86B0E1CC29E09723ADD59312CE14E9E" alt="图片说明" title="图片标题"><br>如图，Event – Time 相当于事件，它在数据最源头产生时带有时间戳，后面都需要用时间戳来进行运算。用图来表示，最开始的队列收到数据，每小时对数据划分一个批次，这就是Event – Time Process 在做的事情。</p>
+<h2 id="3-2-Event-–-Time-处理"><a href="#3-2-Event-–-Time-处理" class="headerlink" title="3.2 Event – Time 处理"></a>3.2 Event – Time 处理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277337150_4A55B468AA19FDB340A1F54FE65E7B28" alt="图片说明" title="图片标题"><br>Event – Time 是用事件真实产生的时间戳去做Re-bucketing，把对应时间3 点到4 点的数据放在3 点到4 点的Bucket，然后Bucket 产生结果。所以Event – Time 跟Processing – time 的概念是这样对比的存在。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277366521_BE05EF9EB19A0CB3718F632FC6912425" alt="图片说明" title="图片标题"><br>Event – Time 的重要性在于记录引擎输出运算结果的时间。简单来说，流式引擎连续24 小时在运行、搜集资料，假设Pipeline 里有一个 Windows Operator 正在做运算，每小时能产生结果，何时输出 Windows的运算值，这个时间点就是Event – Time 处理的精髓，用来表示该收的数据已经收到。</p>
+<h2 id="3-3-Watermarks"><a href="#3-3-Watermarks" class="headerlink" title="3.3 Watermarks"></a>3.3 Watermarks</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277387632_B8E06B3E6F548DB536E4C97D9EF99105" alt="图片说明" title="图片标题"><br>Flink实际上是用 Watermarks 来实现Event – Time 的功能。Watermarks 在Flink 中也属于特殊事件，其精髓在于当某个运算值收到带有时间戳“ T ”的 Watermarks 时就意味着它不会接收到新的数据了。使用Watermarks 的好处在于可以准确预估收到数据的截止时间。举例，假设预期收到数据时间与输出结果时间的时间差延迟5 分钟，那么Flink 中所有的 Windows Operator 搜索3 点至4 点的数据，但因为存在延迟需要再多等5分钟直至收集完4：05 分的数据，此时方能判定4 点钟的资料收集完成了，然后才会产出3 点至4 点的数据结果。这个时间段的结果对应的就是 Watermarks 的部分。</p>
+<h2 id="4-状态保存与迁移"><a href="#4-状态保存与迁移" class="headerlink" title="4. 状态保存与迁移"></a>4. 状态保存与迁移</h2><p>流式处理应用无时无刻不在运行，运维上有几个重要考量：</p>
+<p>更改应用逻辑/修bug 等，如何将前一执行的状态迁移到新的执行？<br>如何重新定义运行的平行化程度？<br>如何升级运算丛集的版本号？</p>
+<p>Checkpoint完美符合以上需求，不过Flink 中还有另外一个名词保存点（Savepoint），当手动产生一个Checkpoint 的时候，就叫做一个Savepoint。Savepoint 跟Checkpoint 的差别在于Checkpoint是Flink 对于一个有状态应用在运行中利用分布式快照持续周期性的产生Checkpoint，而Savepoint 则是手动产生的Checkpoint，Savepoint 记录着流式应用中所有运算元的状态。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277415823_4638D1CF6191C1511AAFD86DB0A6CA2B" alt="图片说明" title="图片标题"><br>如图，Savepoint A 和Savepoint B，无论是变更底层代码逻辑、修bug 或是升级Flink 版本，重新定义应用、计算的平行化程度等，最先需要做的事情就是产生Savepoint。</p>
+<p>Savepoint产生的原理是在Checkpoint barrier 流动到所有的Pipeline 中手动插入从而产生分布式快照，这些分布式快照点即Savepoint。Savepoint 可以放在任何位置保存，当完成变更时，可以直接从Savepoint 恢复、执行。</p>
+<p>从Savepoint 的恢复执行需要注意，在变更应用的过程中时间在持续，如Kafka 在持续收集资料，当从Savepoint 恢复时，Savepoint 保存着Checkpoint 产生的时间以及Kafka 的相应位置，因此它需要恢复到最新的数据。无论是任何运算，Event – Time 都可以确保产生的结果完全一致。</p>
+<p>假设恢复后的重新运算用Process Event – Time，将 Windows 窗口设为1 小时，重新运算能够在10 分钟内将所有的运算结果都包含到单一的 Windows 中。而如果使用Event – Time，则类似于做Bucketing。在Bucketing 的状况下，无论重新运算的数量多大，最终重新运算的时间以及Windows 产生的结果都一定能保证完全一致。</p>
+]]></content>
+      <categories>
+        <category>Flink</category>
+      </categories>
+      <tags>
+        <tag>Flink</tag>
+        <tag>转载</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Apache Flink DataStream API 编程</title>
     <url>/2020/06/12/Apache-Flink-DataStream-API-%E7%BC%96%E7%A8%8B/</url>
     <content><![CDATA[<p>#转载<br>作者：崔星灿<br>整理：高赟<br><a href="https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/" target="_blank" rel="noopener">https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/</a></p>
@@ -129,198 +324,98 @@ env.execute(&quot;Streaming WordCount&quot;);
       </tags>
   </entry>
   <entry>
-    <title>Apache Flink概念</title>
-    <url>/2020/06/03/Apache-Flink%E6%A6%82%E5%BF%B5/</url>
-    <content><![CDATA[<h1 id="转载"><a href="#转载" class="headerlink" title="转载"></a>转载</h1><p>作者：陈守元 &amp; 戴资力<a href="https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/" target="_blank" rel="noopener">https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/</a></p>
-<h1 id="一、Apache-Flink-的定义、架构及原理"><a href="#一、Apache-Flink-的定义、架构及原理" class="headerlink" title="一、Apache Flink 的定义、架构及原理"></a>一、Apache Flink 的定义、架构及原理</h1><p>Apache Flink 是一个分布式大数据处理引擎，可对有限数据流和无限数据流进行有状态或无状态的计算，能够部署在各种集群环境，对各种规模大小的数据进行快速计算。</p>
-<h2 id="1-Flink-Application"><a href="#1-Flink-Application" class="headerlink" title="1. Flink Application"></a>1. Flink Application</h2><p>了解Flink 应用开发需要先理解Flink 的Streams、State、Time 等基础处理语义以及Flink 兼顾灵活性和方便性的多层次API。</p>
-<p>Streams：流，分为有限数据流与无限数据流，unbounded stream 是有始无终的数据流，即无限数据流；而bounded stream 是限定大小的有始有终的数据集合，即有限数据流，二者的区别在于无限数据流的数据会随时间的推演而持续增加，计算持续进行且不存在结束的状态，相对的有限数据流数据大小固定，计算最终会完成并处于结束的状态。</p>
-<p>State，状态是计算过程中的数据信息，在容错恢复和Checkpoint 中有重要的作用，流计算在本质上是Incremental Processing，因此需要不断查询保持状态；另外，为了确保Exactly- once 语义，需要数据能够写入到状态中；而持久化存储，能够保证在整个分布式系统运行失败或者挂掉的情况下做到Exactly- once，这是状态的另外一个价值。</p>
-<p>Time，分为Event time、Ingestion time、Processing time，Flink 的无限数据流是一个持续的过程，时间是我们判断业务状态是否滞后，数据处理是否及时的重要依据。</p>
-<p>API，API 通常分为三层，由上而下可分为SQL / Table API、DataStream API、ProcessFunction 三层，API 的表达能力及业务抽象能力都非常强大，但越接近SQL 层，表达能力会逐步减弱，抽象能力会增强，反之，ProcessFunction 层API 的表达能力非常强，可以进行多种灵活方便的操作，但抽象能力也相对越小。</p>
-<h2 id="2-Flink-Architecture"><a href="#2-Flink-Architecture" class="headerlink" title="2. Flink Architecture"></a>2. Flink Architecture</h2><p>在架构部分，主要分为以下四点：<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276646050_A977E198D8048EFD6DC1F6636BFE9453" alt="图片说明" title="图片标题"><br>第一，Flink 具备统一的框架处理有界和无界两种数据流的能力</p>
-<p>第二， 部署灵活，Flink 底层支持多种资源调度器，包括Yarn、Kubernetes 等。Flink 自身带的Standalone 的调度器，在部署上也十分灵活。</p>
-<p>第三， 极高的可伸缩性，可伸缩性对于分布式系统十分重要，阿里巴巴双11大屏采用Flink 处理海量数据，使用过程中测得Flink 峰值可达17 亿/秒。</p>
-<p>第四， 极致的流式处理性能。Flink 相对于Storm 最大的特点是将状态语义完全抽象到框架中，支持本地状态读取，避免了大量网络IO，可以极大提升状态存取的性能。</p>
-<h2 id="3-Flink-Operation"><a href="#3-Flink-Operation" class="headerlink" title="3. Flink Operation"></a>3. Flink Operation</h2><p>后面会有专门课程讲解，此处简单分享Flink 关于运维及业务监控的内容：</p>
-<p>Flink具备7 X 24 小时高可用的SOA（面向服务架构），原因是在实现上Flink 提供了一致性的Checkpoint。Checkpoint是Flink 实现容错机制的核心，它周期性的记录计算过程中Operator 的状态，并生成快照持久化存储。当Flink 作业发生故障崩溃时，可以有选择的从Checkpoint 中恢复，保证了计算的一致性。</p>
-<p>Flink本身提供监控、运维等功能或接口，并有内置的WebUI，对运行的作业提供DAG 图以及各种Metric 等，协助用户管理作业状态。</p>
-<h2 id="4-Flink-的应用场景"><a href="#4-Flink-的应用场景" class="headerlink" title="4. Flink 的应用场景"></a>4. Flink 的应用场景</h2><h2 id="4-1-Flink-的应用场景：Data-Pipeline"><a href="#4-1-Flink-的应用场景：Data-Pipeline" class="headerlink" title="4.1 Flink 的应用场景：Data Pipeline"></a>4.1 Flink 的应用场景：Data Pipeline</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276745180_8D7749B09365031340991DD2E127A69D" alt="图片说明" title="图片标题"><br>Data Pipeline 的核心场景类似于数据搬运并在搬运的过程中进行部分数据清洗或者处理，而整个业务架构图的左边是Periodic ETL，它提供了流式ETL 或者实时ETL，能够订阅消息队列的消息并进行处理，清洗完成后实时写入到下游的Database或File system 中。场景举例：</p>
-<p>实时数仓<br>当下游要构建实时数仓时，上游则可能需要实时的Stream ETL。这个过程会进行实时清洗或扩展数据，清洗完成后写入到下游的实时数仓的整个链路中，可保证数据查询的时效性，形成实时数据采集、实时数据处理以及下游的实时Query。</p>
-<p>搜索引擎推荐<br>搜索引擎这块以淘宝为例，当卖家上线新商品时，后台会实时产生消息流，该消息流经过Flink 系统时会进行数据的处理、扩展。然后将处理及扩展后的数据生成实时索引，写入到搜索引擎中。这样当淘宝卖家上线新商品时，能在秒级或者分钟级实现搜索引擎的搜索。</p>
-<h2 id="4-2-Flink-应用场景：Data-Analytics"><a href="#4-2-Flink-应用场景：Data-Analytics" class="headerlink" title="4.2 Flink 应用场景：Data Analytics"></a>4.2 Flink 应用场景：Data Analytics</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276787069_136FDC2F733378161152115CD1F9140C" alt="图片说明" title="图片标题"><br>Data Analytics，如图，左边是Batch Analytics，右边是Streaming Analytics。Batch Analytics 就是传统意义上使用类似于Map Reduce、Hive、Spark Batch 等，对作业进行分析、处理、生成离线报表；Streaming Analytics 使用流式分析引擎如Storm、Flink 实时处理分析数据，应用较多的场景如实时大屏、实时报表。</p>
-<h2 id="4-3-Flink-应用场景：Data-Driven"><a href="#4-3-Flink-应用场景：Data-Driven" class="headerlink" title="4.3 Flink 应用场景：Data Driven"></a>4.3 Flink 应用场景：Data Driven</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276813600_B7803A0512D98F04701816656E67B8BD" alt="图片说明" title="图片标题"><br>从某种程度上来说，所有的实时的数据处理或者是流式数据处理都是属于Data Driven，流计算本质上是Data Driven 计算。应用较多的如风控系统，当风控系统需要处理各种各样复杂的规则时，Data Driven 就会把处理的规则和逻辑写入到Datastream 的API 或者是ProcessFunction 的API 中，然后将逻辑抽象到整个Flink 引擎，当外面的数据流或者是事件进入就会触发相应的规则，这就是Data Driven 的原理。在触发某些规则后，Data Driven 会进行处理或者是进行预警，这些预警会发到下游产生业务通知，这是Data Driven 的应用场景，Data Driven 在应用上更多应用于复杂事件的处理。</p>
-<h1 id="二、「有状态的流式处理」概念解析"><a href="#二、「有状态的流式处理」概念解析" class="headerlink" title="二、「有状态的流式处理」概念解析"></a>二、「有状态的流式处理」概念解析</h1><h2 id="1-传统批处理"><a href="#1-传统批处理" class="headerlink" title="1. 传统批处理"></a>1. 传统批处理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276859239_6A1AC20A97B0A786629AFFF3B8EBE515" alt="图片说明" title="图片标题"><br>传统批处理方法是持续收取数据，以时间作为划分多个批次的依据，再周期性地执行批次运算。但假设需要计算每小时出现事件转换的次数，如果事件转换跨越了所定义的时间划分，传统批处理会将中介运算结果带到下一个批次进行计算；除此之外，当出现接收到的事件顺序颠倒情况下，传统批处理仍会将中介状态带到下一批次的运算结果中，这种处理方式也不尽如人意。</p>
-<h2 id="2-理想方法"><a href="#2-理想方法" class="headerlink" title="2. 理想方法"></a>2. 理想方法</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276897730_A901CD03516649C53E785F0D1B0FC2B7" alt="图片说明" title="图片标题"><br>第一点，要有理想方法，这个理想方法是引擎必须要有能力可以累积状态和维护状态，累积状态代表着过去历史中接收过的所有事件，会影响到输出。</p>
-<p>第二点，时间，时间意味着引擎对于数据完整性有机制可以操控，当所有数据都完全接收到后，输出计算结果。</p>
-<p>第三点，理想方法模型需要实时产生结果，但更重要的是采用新的持续性数据处理模型来处理实时数据，这样才最符合Continuous data 的特性。</p>
-<h2 id="3-流式处理"><a href="#3-流式处理" class="headerlink" title="3.流式处理"></a>3.流式处理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276921632_0C5C777CEE1105EFB2D1403DA0D58C20" alt="图片说明" title="图片标题"><br>流式处理简单来讲即有一个无穷无尽的数据源在持续收取数据，以代码作为数据处理的基础逻辑，数据源的数据经过代码处理后产生出结果，然后输出，这就是流式处理的基本原理。</p>
-<h2 id="4-分布式流式处理"><a href="#4-分布式流式处理" class="headerlink" title="4.分布式流式处理"></a>4.分布式流式处理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276957801_36789D1AAE3E0699128254C8F4844110" alt="图片说明" title="图片标题"><br>假设Input Streams 有很多个使用者，每个使用者都有自己的ID，如果计算每个使用者出现的次数，我们需要让同一个使用者的出现事件流到同一运算代码，这跟其他批次需要做Group by 是同样的概念，所以跟Stream 一样需要做分区，设定相应的Key，然后让同样的 Key 流到同一个 Computation instance 做同样的运算。</p>
-<h2 id="5-有状态分布式流式处理"><a href="#5-有状态分布式流式处理" class="headerlink" title="5. 有状态分布式流式处理"></a>5. 有状态分布式流式处理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570276988699_BD17D461E0C4514D6362646AB611A327" alt="图片说明" title="图片标题"><br>如图，上述代码中定义了变数X，X 在数据处理过程中会进行读和写，在最后输出结果时，可以依据变数X 决定输出的内容，即状态X 会影响最终的输出结果。这个过程中，第一个重点是先进行了状态Co-partitioned key by，同样的 Key 都会流到Computation instance，与使用者出现次数的原理相同，次数即所谓的状态，这个状态一定会跟同一个Key 的事件累积在同一个 Computation instance。类似于根据输入流的Key 重新分区的状态，当分区进入 Stream 之后，这个 Stream 会累积起来的状态也变成 Copartiton 。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277013707_B97FF832FFD370F6FCF7BECE3AB95233" alt="图片说明" title="图片标题"><br>第二个重点是embeded local state backend。有状态分散式流式处理的引擎，状态可能会累积到非常大，当 Key 非常多时，状态可能就会超出单一节点的 Memory 的负荷量，这时候状态必须有状态后端去维护它；在这个状态后端在正常状况下，用In-memory 维护即可。</p>
-<h1 id="三、Apache-Flink-的优势"><a href="#三、Apache-Flink-的优势" class="headerlink" title="三、Apache Flink 的优势"></a>三、Apache Flink 的优势</h1><h2 id="1-状态容错"><a href="#1-状态容错" class="headerlink" title="1.状态容错"></a>1.状态容错</h2><p>当我们考虑状态容错时难免会想到精确一次的状态容错，应用在运算时累积的状态，每笔输入的事件反映到状态，更改状态都是精确一次，如果修改超过一次的话也意味着数据引擎产生的结果是不可靠的。</p>
-<p>如何确保状态拥有精确一次（Exactly-once guarantee）的容错保证？</p>
-<p>如何在分散式场景下替多个拥有本地状态的运算子产生一个全域一致的快照（Global consistent snapshot）？</p>
-<p>更重要的是，如何在不中断运算的前提下产生快照？</p>
-<h2 id="1-1-简单场景的精确一次容错方法"><a href="#1-1-简单场景的精确一次容错方法" class="headerlink" title="1.1 简单场景的精确一次容错方法"></a>1.1 简单场景的精确一次容错方法</h2><p>还是以使用者出现次数来看，如果某个使用者出现的次数计算不准确，不是精确一次，那么产生的结果是无法作为参考的。在考虑精确的容错保证前，我们先考虑最简单的使用场景，如无限流的数据进入，后面单一的Process 进行运算，每处理完一笔计算即会累积一次状态，这种情况下如果要确保Process 产生精确一次的状态容错，每处理完一笔数据，更改完状态后进行一次快照，快照包含在队列中并与相应的状态进行对比，完成一致的快照，就能确保精确一次。</p>
-<h2 id="1-2-分布式状态容错"><a href="#1-2-分布式状态容错" class="headerlink" title="1.2 分布式状态容错"></a>1.2 分布式状态容错</h2><p>Flink作为分布式的处理引擎，在分布式的场景下，进行多个本地状态的运算，只产生一个全域一致的快照，如需要在不中断运算值的前提下产生全域一致的快照，就涉及到分散式状态容错。</p>
-<p>Global consistent snapshot<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277051016_E86271345C7D773AE4D952CCA23C5097" alt="图片说明" title="图片标题"><br>关于Global consistent snapshot，当Operator 在分布式的环境中，在各个节点做运算，首先产生Global consistent snapshot 的方式就是处理每一笔数据的快照点是连续的，这笔运算流过所有的运算值，更改完所有的运算值后，能够看到每一个运算值的状态与该笔运算的位置，即可称为Consistent snapshot，当然，Global consistent snapshot 也是简易场景的延伸。</p>
-<p>容错恢复</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277083117_FD70E2F6BA35FC84C0C08B008FB0F040" alt="图片说明" title="图片标题"> </p>
-<p>首先了解一下Checkpoint，上面提到连续性快照每个Operator 运算值本地的状态后端都要维护状态，也就是每次将产生检查点时会将它们传入共享的DFS 中。当任何一个Process 挂掉后，可以直接从三个完整的Checkpoint 将所有的运算值的状态恢复，重新设定到相应位置。Checkpoint的存在使整个Process 能够实现分散式环境中的Exactly-once。</p>
-<h2 id="1-3-分散式快照（Distributed-Snapshots）方法"><a href="#1-3-分散式快照（Distributed-Snapshots）方法" class="headerlink" title="1.3 分散式快照（Distributed Snapshots）方法"></a>1.3 分散式快照（Distributed Snapshots）方法</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277108380_1973D803C8683A5F7DA57AE4C17ADD12" alt="图片说明" title="图片标题"><br>关于Flink 如何在不中断运算的状况下持续产生Global consistent snapshot，其方式是基于用 Simple lamport 演算法机制下延伸的。已知的一个点Checkpoint barrier，Flink 在某个Datastream 中会一直安插Checkpoint barrier，Checkpoint barrier 也会N – 1等等，Checkpoint barrier N 代表着所有在这个范围里面的数据都是Checkpoint barrier N。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277133562_65F9BD7806B8D46B1F0D721AEA6A1F3B" alt="图片说明" title="图片标题"><br>举例：假设现在需要产生Checkpoint barrier N，但实际上在Flink 中是由Job manager 触发Checkpoint，Checkpoint 被触发后开始从数据源产生Checkpoint barrier。当Job 开始做Checkpoint barrier N 的时候，可以理解为Checkpoint barrier N 需要逐步填充左下角的表格。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277167888_F0E968DD5BED4B3DB4B20946EECA3973" alt="图片说明" title="图片标题"><br>如图，当部分事件标为红色，Checkpoint barrier N 也是红色时，代表着这些数据或事件都由Checkpoint barrier N 负责。Checkpoint barrier N 后面白色部分的数据或事件则不属于Checkpoint barrier N。</p>
-<p>在以上的基础上，当数据源收到Checkpoint barrier N 之后会先将自己的状态保存，以读取Kafka资料为例，数据源的状态就是目前它在Kafka 分区的位置，这个状态也会写入到上面提到的表格中。下游的Operator 1 会开始运算属于Checkpoint barrier N 的数据，当Checkpoint barrier N 跟着这些数据流动到Operator 1 之后,Operator 1 也将属于Checkpoint barrier N 的所有数据都反映在状态中，当收到Checkpoint barrier N 时也会直接对Checkpoint去做快照。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277198821_DA42B62744D7181CD6E2EB2785E54AA6" alt="图片说明" title="图片标题"> </p>
-<p>当快照完成后继续往下游走，Operator 2 也会接收到所有数据，然后搜索Checkpoint barrier N 的数据并直接反映到状态，当状态收到Checkpoint barrier N 之后也会直接写入到Checkpoint N 中。以上过程到此可以看到Checkpoint barrier N 已经完成了一个完整的表格，这个表格叫做Distributed Snapshots，即分布式快照。分布式快照可以用来做状态容错，任何一个节点挂掉的时候可以在之前的Checkpoint 中将其恢复。继续以上Process，当多个Checkpoint 同时进行，Checkpoint barrier N 已经流到Job manager 2，Flink job manager 可以触发其他的Checkpoint，比如Checkpoint N + 1，Checkpoint N + 2 等等也同步进行，利用这种机制，可以在不阻挡运算的状况下持续地产生Checkpoint。</p>
-<h2 id="2-状态维护"><a href="#2-状态维护" class="headerlink" title="2. 状态维护"></a>2. 状态维护</h2><p>状态维护即用一段代码在本地维护状态值，当状态值非常大时需要本地的状态后端来支持。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277236063_ACAF4389211CBB001A75DBDCC3FD8DC3" alt="图片说明" title="图片标题"><br>如图，在Flink 程序中，可以采用getRuntimeContext().getState(desc); 这组API 去注册状态。Flink 有多种状态后端，采用API 注册状态后，读取状态时都是通过状态后端来读取的。Flink 有两种不同的状态值，也有两种不同的状态后端：<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277259395_13B121DEE1F8C3DB4A0EC3EAFA480A97" alt="图片说明" title="图片标题"><br>JVM Heap状态后端，适合数量较小的状态，当状态量不大时就可以采用JVM Heap 的状态后端。JVM Heap 状态后端会在每一次运算值需要读取状态时，用Java object read / writes 进行读或写，不会产生较大代价，但当Checkpoint 需要将每一个运算值的本地状态放入Distributed Snapshots 的时候，就需要进行序列化了。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277284906_0E1ED0DC5B85939AFC377F6DB8FBE492" alt="图片说明" title="图片标题"><br>RocksDB状态后端，它是一种out of core 的状态后端。在Runtime 的本地状态后端让使用者去读取状态的时候会经过磁盘，相当于将状态维护在磁盘里，与之对应的代价可能就是每次读取状态时，都需要经过序列化和反序列化的过程。当需要进行快照时只将应用序列化即可，序列化后的数据直接传输到中央的共享DFS 中。</p>
-<p>Flink目前支持以上两种状态后端，一种是纯 Memory 的状态后端，另一种是有资源磁盘的状态后端，在维护状态时可以根据状态的数量选择相应的状态后端。</p>
-<h1 id="3-Event-–-Time"><a href="#3-Event-–-Time" class="headerlink" title="3. Event – Time"></a>3. Event – Time</h1><h2 id="3-1-不同时间种类"><a href="#3-1-不同时间种类" class="headerlink" title="3.1 不同时间种类"></a>3.1 不同时间种类</h2><p>在Flink 及其他进阶的流式处理引擎出现之前，大数据处理引擎一直只支持Processing-time 的处理。假设定义一个运算 Windows 的窗口，Windows 运算设定每小时进行结算。Processing-time 进行运算时，可以发现数据引擎将3 点至4 点间收到的数据进行结算。实际上在做报表或者分析结果时是想了解真实世界中3 点至4 点之间实际产生数据的输出结果，了解实际数据的输出结果就必须采用Event – Time 了。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277314899_C86B0E1CC29E09723ADD59312CE14E9E" alt="图片说明" title="图片标题"><br>如图，Event – Time 相当于事件，它在数据最源头产生时带有时间戳，后面都需要用时间戳来进行运算。用图来表示，最开始的队列收到数据，每小时对数据划分一个批次，这就是Event – Time Process 在做的事情。</p>
-<h2 id="3-2-Event-–-Time-处理"><a href="#3-2-Event-–-Time-处理" class="headerlink" title="3.2 Event – Time 处理"></a>3.2 Event – Time 处理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277337150_4A55B468AA19FDB340A1F54FE65E7B28" alt="图片说明" title="图片标题"><br>Event – Time 是用事件真实产生的时间戳去做Re-bucketing，把对应时间3 点到4 点的数据放在3 点到4 点的Bucket，然后Bucket 产生结果。所以Event – Time 跟Processing – time 的概念是这样对比的存在。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277366521_BE05EF9EB19A0CB3718F632FC6912425" alt="图片说明" title="图片标题"><br>Event – Time 的重要性在于记录引擎输出运算结果的时间。简单来说，流式引擎连续24 小时在运行、搜集资料，假设Pipeline 里有一个 Windows Operator 正在做运算，每小时能产生结果，何时输出 Windows的运算值，这个时间点就是Event – Time 处理的精髓，用来表示该收的数据已经收到。</p>
-<h2 id="3-3-Watermarks"><a href="#3-3-Watermarks" class="headerlink" title="3.3 Watermarks"></a>3.3 Watermarks</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277387632_B8E06B3E6F548DB536E4C97D9EF99105" alt="图片说明" title="图片标题"><br>Flink实际上是用 Watermarks 来实现Event – Time 的功能。Watermarks 在Flink 中也属于特殊事件，其精髓在于当某个运算值收到带有时间戳“ T ”的 Watermarks 时就意味着它不会接收到新的数据了。使用Watermarks 的好处在于可以准确预估收到数据的截止时间。举例，假设预期收到数据时间与输出结果时间的时间差延迟5 分钟，那么Flink 中所有的 Windows Operator 搜索3 点至4 点的数据，但因为存在延迟需要再多等5分钟直至收集完4：05 分的数据，此时方能判定4 点钟的资料收集完成了，然后才会产出3 点至4 点的数据结果。这个时间段的结果对应的就是 Watermarks 的部分。</p>
-<h2 id="4-状态保存与迁移"><a href="#4-状态保存与迁移" class="headerlink" title="4. 状态保存与迁移"></a>4. 状态保存与迁移</h2><p>流式处理应用无时无刻不在运行，运维上有几个重要考量：</p>
-<p>更改应用逻辑/修bug 等，如何将前一执行的状态迁移到新的执行？<br>如何重新定义运行的平行化程度？<br>如何升级运算丛集的版本号？</p>
-<p>Checkpoint完美符合以上需求，不过Flink 中还有另外一个名词保存点（Savepoint），当手动产生一个Checkpoint 的时候，就叫做一个Savepoint。Savepoint 跟Checkpoint 的差别在于Checkpoint是Flink 对于一个有状态应用在运行中利用分布式快照持续周期性的产生Checkpoint，而Savepoint 则是手动产生的Checkpoint，Savepoint 记录着流式应用中所有运算元的状态。<br><img src="https://uploadfiles.nowcoder.com/images/20191005/9094293_1570277415823_4638D1CF6191C1511AAFD86DB0A6CA2B" alt="图片说明" title="图片标题"><br>如图，Savepoint A 和Savepoint B，无论是变更底层代码逻辑、修bug 或是升级Flink 版本，重新定义应用、计算的平行化程度等，最先需要做的事情就是产生Savepoint。</p>
-<p>Savepoint产生的原理是在Checkpoint barrier 流动到所有的Pipeline 中手动插入从而产生分布式快照，这些分布式快照点即Savepoint。Savepoint 可以放在任何位置保存，当完成变更时，可以直接从Savepoint 恢复、执行。</p>
-<p>从Savepoint 的恢复执行需要注意，在变更应用的过程中时间在持续，如Kafka 在持续收集资料，当从Savepoint 恢复时，Savepoint 保存着Checkpoint 产生的时间以及Kafka 的相应位置，因此它需要恢复到最新的数据。无论是任何运算，Event – Time 都可以确保产生的结果完全一致。</p>
-<p>假设恢复后的重新运算用Process Event – Time，将 Windows 窗口设为1 小时，重新运算能够在10 分钟内将所有的运算结果都包含到单一的 Windows 中。而如果使用Event – Time，则类似于做Bucketing。在Bucketing 的状况下，无论重新运算的数量多大，最终重新运算的时间以及Windows 产生的结果都一定能保证完全一致。</p>
-]]></content>
-      <categories>
-        <category>Flink</category>
-      </categories>
-      <tags>
-        <tag>Flink</tag>
-        <tag>转载</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Apache Flink 简单的构建一个应用程序</title>
-    <url>/2020/06/12/Apache-Flink-%E7%AE%80%E5%8D%95%E7%9A%84%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
-    <content><![CDATA[<h1 id="简单的构建一个ApacheFlink的应用程序"><a href="#简单的构建一个ApacheFlink的应用程序" class="headerlink" title="简单的构建一个ApacheFlink的应用程序"></a>简单的构建一个ApacheFlink的应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Flink 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Flink相关的依赖。</p>
-<p>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191012/9094293_1570843930821_A4D48C34269A213CE6F6CE74BF95681C" alt="图片说明" title="图片标题"> </p>
-<h1 id="编写Flink程序"><a href="#编写Flink程序" class="headerlink" title="编写Flink程序"></a>编写Flink程序</h1><p>创建 SocketWindowWordCount.java 文件：</p>
-<pre><code>package FlinkDemo;
-import org.apache.flink.api.common.functions.FlatMapFunction;
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.util.Collector;
+    <title>Java线程死锁</title>
+    <url>/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/</url>
+    <content><![CDATA[<h1 id="Java线程死锁"><a href="#Java线程死锁" class="headerlink" title="Java线程死锁"></a>Java线程死锁</h1><blockquote><br>死锁是一种特定的程序状态，在实体之间，由于循环依赖导致彼此一直处于等待之中，没有 任何个体可以继续前进。死锁不仅仅是在线程之间会发生，存在资源独占的进程之间同样也 可能出现死锁。通常来说，我们大多是聚焦在多线程场景中的死锁，指两个或多个线程之 间，由于互相持有对方需要的锁，而永久处于阻塞的状态。<br><br></blockquote>
 
-public class SocketWindowWordCount {
 
-    public static void main(String[] args) throws Exception {
+<p><strong>Java线程死锁</strong>是一个经典的多线程问题，因为不同的线程都在等待那些根本不可能被释放的锁，从而导致所有的工作都无法完成。如图所示</p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁.png" alt="图片说明"> </p>
+<hr>
 
-        // 创建 execution environment
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
-        // 通过连接 socket 获取输入数据，这里连接到本地9000端口，如果9000端口已被占用，请换一个端口
-        DataStream&lt;String&gt; text = env.socketTextStream(&quot;localhost&quot;, 9000, &quot;\n&quot;);
-
-        // 解析数据，按 word 分组，开窗，聚合
-        DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; windowCounts = text
-                .flatMap(new FlatMapFunction&lt;String, Tuple2&lt;String, Integer&gt;&gt;() {
-                    @Override
-                    public void flatMap(String value, Collector&lt;Tuple2&lt;String, Integer&gt;&gt; out) {
-                        for (String word : value.split(&quot;\\s&quot;)) {
-                            out.collect(Tuple2.of(word, 1));
-                        }
-                    }
-                })
-                .keyBy(0)
-                .timeWindow(Time.seconds(5))
-                .sum(1);
-
-        // 将结果打印到控制台，注意这里使用的是单线程打印，而非多线程
-        windowCounts.print().setParallelism(1);
-
-        env.execute(&quot;Socket Window WordCount&quot;);
+<h2 id="如何去定位Java线程死锁呢？"><a href="#如何去定位Java线程死锁呢？" class="headerlink" title="如何去定位Java线程死锁呢？"></a>如何去定位Java线程死锁呢？</h2><p>定位死锁最常见的方式就是利用 jstack 等工具获取线程栈，然后定位互相之间的依赖关系，进而找到死锁。如果是比较明显的死锁，往往 jstack 等就能直接定位，类似 JConsole 甚至可以在图形界面进行有限的死锁检测。<br>既然了解了用什么工具去定位线程死锁，那我们模拟一个Java线程死锁的情况，实战定位线程死锁<br><strong>死锁代码：</strong></p>
+<pre><code>/**
+ * @Author:luomo
+ * @CreateTime: 2020/3/28
+ * @Description:模拟DeadLock
+ */
+public class deadLock implements Runnable{
+    public static  Object obj1=new Object();
+    public static  Object obj2=new Object();
+    private int flag;
+    deadLock(int flag){
+        this.flag=flag;
     }
+
+    @Override
+    public void run() {
+        if(flag==0){
+            synchronized (obj1){
+                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁1&quot;);
+                try {
+                    Thread.currentThread().sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁2&quot;);
+                synchronized (obj2){
+                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);
+
+
+                }
+            }
+        }else{
+            synchronized (obj2){
+                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);
+                try {
+                    Thread.currentThread().sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁1&quot;);
+                synchronized (obj1){
+                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);
+
+
+                }
+            }
+        }
+
+    }
+
+    public static void main(String[] args) {
+   deadLock d1=new deadLock(0);
+   deadLock d2=new deadLock(1);
+   Thread thread1=new Thread(d1);
+   Thread thread2=new Thread(d2);
+   thread1.start();
+   thread2.start();
+
+    }
+
 }
-</code></pre><h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>要运行示例程序，首先我们在终端启动 netcat 获得输入流：<br>nc -lk 9000<br>然后直接运行SocketWindowWordCount的 main 方法。</p>
-<p>只需要在 netcat 控制台输入单词，就能在 SocketWindowWordCount 的输出控制台看到每个单词的词频统计。如果想看到大于1的计数，请在5秒内反复键入相同的单词。<br>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191012/9094293_1570862262668_C587F81A2896284000DDEC3E5471605F" alt="图片说明" title="图片标题"> </p>
+
+
+</code></pre><p><strong>代码运行：</strong></p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁1.png" alt=" "> </p>
+<p>从运行结果我们看到Thread1和Thread0同时都在争用对方已经占有的锁，进而产生死锁。</p>
+<hr>
+
+<h2 id="如何定位死锁"><a href="#如何定位死锁" class="headerlink" title="如何定位死锁"></a>如何定位死锁</h2><p>如果程序发生了死锁，我们如何去定位死锁？我们可以通过JConsole工具来发现死锁。<br>打开cmd：输入 JConsole 回车<br>我们可以看到一个可视化的工具，找到死锁进程点击连接</p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁2.png" alt="图片说明"> </p>
+<p>我们可以看到有检查死锁的选项</p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁3.png" alt="图片说明"> </p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁4.png" alt="图片说明"> </p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁5.png" alt="图片说明"> </p>
+<p>通过上图我们可以发现产生死锁的线程，从而定位到发生死锁的代码。</p>
+<p>当然我们还可以使用Jstack + pid的方式来定位问题</p>
+<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁6.png" alt="图片说明"> </p>
 ]]></content>
       <categories>
-        <category>Flink</category>
+        <category>Java</category>
       </categories>
       <tags>
-        <tag>Flink</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Apache Flink 状态管理与容错机制</title>
-    <url>/2020/06/12/Apache-Flink-%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6/</url>
-    <content><![CDATA[<h1 id="转载"><a href="#转载" class="headerlink" title="转载"></a>转载</h1><h3 id="作者：孙梦瑶"><a href="#作者：孙梦瑶" class="headerlink" title="作者：孙梦瑶"></a>作者：孙梦瑶</h3><h3 id="整理：韩非"><a href="#整理：韩非" class="headerlink" title="整理：韩非"></a>整理：韩非</h3><h3 id="校对：邱从贤（山智）"><a href="#校对：邱从贤（山智）" class="headerlink" title="校对：邱从贤（山智）"></a>校对：邱从贤（山智）</h3><p><a href="https://ververica.cn/developers/state-management/" target="_blank" rel="noopener">https://ververica.cn/developers/state-management/</a><br>本文主要分享内容如下：</p>
-<p>状态管理的基本概念；</p>
-<p>状态的类型与使用示例；</p>
-<p>容错机制与故障恢复。</p>
-<h1 id="一-状态管理的基本概念"><a href="#一-状态管理的基本概念" class="headerlink" title="一. 状态管理的基本概念"></a>一. 状态管理的基本概念</h1><h2 id="1-什么是状态"><a href="#1-什么是状态" class="headerlink" title="1.什么是状态"></a>1.什么是状态</h2><p>  <img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571142947113_E857A8299D24A087FF0E55FCF75A5E09" alt="图片说明" title="图片标题">  </p>
-<p>首先举一个无状态计算的例子：消费延迟计算。假设现在有一个消息队列，消息队列中有一个生产者持续往消费队列写入消息，多个消费者分别从消息队列中读取消息。从图上可以看出，生产者已经写入 16 条消息，Offset 停留在 15 ；有 3 个消费者，有的消费快，而有的消费慢。消费快的已经消费了 13 条数据，消费者慢的才消费了 7、8 条数据。</p>
-<p>如何实时统计每个消费者落后多少条数据，如图给出了输入输出的示例。可以了解到输入的时间点有一个时间戳，生产者将消息写到了某个时间点的位置，每个消费者同一时间点分别读到了什么位置。刚才也提到了生产者写入了 15 条，消费者分别读取了 10、7、12 条。那么问题来了，怎么将生产者、消费者的进度转换为右侧示意图信息呢？</p>
-<p>consumer 0 落后了 5 条，consumer 1 落后了 8 条，consumer 2 落后了 3 条，根据 Flink 的原理，此处需进行 Map 操作。Map 首先把消息读取进来，然后分别相减，即可知道每个 consumer 分别落后了几条。Map 一直往下发，则会得出最终结果。</p>
-<p>大家会发现，在这种模式的计算中，无论这条输入进来多少次，输出的结果都是一样的，因为单条输入中已经包含了所需的所有信息。消费落后等于生产者减去消费者。生产者的消费在单条数据中可以得到，消费者的数据也可以在单条数据中得到，所以相同输入可以得到相同输出，这就是一个无状态的计算。</p>
-<p>相应的什么是有状态的计算？<br><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571142977408_909F1111218DA0F992FEE083105341CF" alt="图片说明" title="图片标题"><br>以访问日志统计量的例子进行说明，比如当前拿到一个 Nginx 访问日志，一条日志表示一个请求，记录该请求从哪里来，访问的哪个地址，需要实时统计每个地址总共被访问了多少次，也即每个 API 被调用了多少次。可以看到下面简化的输入和输出，输入第一条是在某个时间点请求 GET 了 /api/a；第二条日志记录了某个时间点 Post /api/b ;第三条是在某个时间点 GET了一个 /api/a，总共有 3 个 Nginx 日志。从这 3 条 Nginx 日志可以看出，第一条进来输出 /api/a 被访问了一次，第二条进来输出 /api/b 被访问了一次，紧接着又进来一条访问 api/a，所以 api/a 被访问了 2 次。不同的是，两条 /api/a 的 Nginx 日志进来的数据是一样的，但输出的时候结果可能不同，第一次输出 count=1 ，第二次输出 count=2，说明相同输入可能得到不同输出。输出的结果取决于当前请求的 API 地址之前累计被访问过多少次。第一条过来累计是 0 次，count = 1，第二条过来 API 的访问已经有一次了，所以 /api/a 访问累计次数 count=2。单条数据其实仅包含当前这次访问的信息，而不包含所有的信息。要得到这个结果，还需要依赖 API 累计访问的量，即状态。</p>
-<p>这个计算模式是将数据输入算子中，用来进行各种复杂的计算并输出数据。这个过程中算子会去访问之前存储在里面的状态。另外一方面，它还会把现在的数据对状态的影响实时更新，如果输入 200 条数据，最后输出就是 200 条结果。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143001685_B490A739A55C2916AA8993039A8E9D17" alt="图片说明" title="图片标题"><br>什么场景会用到状态呢？下面列举了常见的 4 种：</p>
-<p>去重：比如上游的系统数据可能会有重复，落到下游系统时希望把重复的数据都去掉。去重需要先了解哪些数据来过，哪些数据还没有来，也就是把所有的主键都记录下来，当一条数据到来后，能够看到在主键当中是否存在。</p>
-<p>窗口计算：比如统计每分钟 Nginx 日志 API 被访问了多少次。窗口是一分钟计算一次，在窗口触发前，如 08:00 ~ 08:01 这个窗口，前59秒的数据来了需要先放入内存，即需要把这个窗口之内的数据先保留下来，等到 8:01 时一分钟后，再将整个窗口内触发的数据输出。未触发的窗口数据也是一种状态。</p>
-<p>机器学习/深度学习：如训练的模型以及当前模型的参数也是一种状态，机器学习可能每次都用有一个数据集，需要在数据集上进行学习，对模型进行一个反馈。</p>
-<p>访问历史数据：比如与昨天的数据进行对比，需要访问一些历史数据。如果每次从外部去读，对资源的消耗可能比较大，所以也希望把这些历史数据也放入状态中做对比。</p>
-<h2 id="2-为什么要管理状态"><a href="#2-为什么要管理状态" class="headerlink" title="2. 为什么要管理状态"></a>2. 为什么要管理状态</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143038696_E074DE090177F98DB5E17EA0EEA487FD" alt="图片说明" title="图片标题"><br>管理状态最直接的方式就是将数据都放到内存中，这也是很常见的做法。比如在做 WordCount 时，Word 作为输入，Count 作为输出。在计算的过程中把输入不断累加到 Count。</p>
-<p>但对于流式作业有以下要求：</p>
-<p>7*24小时运行，高可靠；</p>
-<p>数据不丢不重，恰好计算一次；</p>
-<p>数据实时产出，不延迟；</p>
-<p>基于以上要求，内存的管理就会出现一些问题。由于内存的容量是有限制的。如果要做 24 小时的窗口计算，将 24 小时的数据都放到内存，可能会出现内存不足；另外，作业是 7*24，需要保障高可用，机器若出现故障或者宕机，需要考虑如何备份及从备份中去恢复，保证运行的作业不受影响；此外，考虑横向扩展，假如网站的访问量不高，统计每个 API 访问次数的程序可以用单线程去运行，但如果网站访问量突然增加，单节点无法处理全部访问数据，此时需要增加几个节点进行横向扩展，这时数据的状态如何平均分配到新增加的节点也问题之一。因此，将数据都放到内存中，并不是最合适的一种状态管理方式。</p>
-<h2 id="3-理想的状态管理"><a href="#3-理想的状态管理" class="headerlink" title="3. 理想的状态管理"></a>3. 理想的状态管理</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143056691_3C14E7779B855AD529EC7BDD67713F1A" alt="图片说明" title="图片标题"><br>最理想的状态管理需要满足易用、高效、可靠三点需求：</p>
-<p>易用，Flink 提供了丰富的数据结构、多样的状态组织形式以及简洁的扩展接口，让状态管理更加易用；<br>高效，实时作业一般需要更低的延迟，一旦出现故障，恢复速度也需要更快；当处理能力不够时，可以横向扩展，同时在处理备份时，不影响作业本身处理性能；<br>可靠，Flink 提供了状态持久化，包括不丢不重的语义以及具备自动的容错能力，比如 HA，当节点挂掉后会自动拉起，不需要人工介入。</p>
-<h1 id="二-Flink-状态的类型与使用示例"><a href="#二-Flink-状态的类型与使用示例" class="headerlink" title="二. Flink 状态的类型与使用示例"></a>二. Flink 状态的类型与使用示例</h1><h2 id="1-Managed-State-amp-Raw-State"><a href="#1-Managed-State-amp-Raw-State" class="headerlink" title="1. Managed State &amp; Raw State"></a>1. Managed State &amp; Raw State</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143093887_CDD5C3A073E8EDF8BCE5DBC3F331915E" alt="图片说明" title="图片标题"><br>Managed State 是 Flink 自动管理的 State，而 Raw State 是原生态 State，两者的区别如下：</p>
-<p>从状态管理方式的方式来说，Managed State 由 Flink Runtime 管理，自动存储，自动恢复，在内存管理上有优化；而 Raw State 需要用户自己管理，需要自己序列化，Flink 不知道 State 中存入的数据是什么结构，只有用户自己知道，需要最终序列化为可存储的数据结构。</p>
-<p>从状态数据结构来说，Managed State 支持已知的数据结构，如 Value、List、Map 等。而 Raw State只支持字节数组 ，所有状态都要转换为二进制字节数组才可以。</p>
-<p>从推荐使用场景来说，Managed State 大多数情况下均可使用，而 Raw State 是当 Managed State 不够用时，比如需要自定义 Operator 时，推荐使用 Raw State。</p>
-<h2 id="2-Keyed-State-amp-Operator-State"><a href="#2-Keyed-State-amp-Operator-State" class="headerlink" title="2. Keyed State &amp; Operator State"></a>2. Keyed State &amp; Operator State</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143125792_7A7126166D67C3FDDB90CEFFD7505ED8" alt="图片说明" title="图片标题"><br>Managed State 分为两种，一种是 Keyed State；另外一种是 Operator State。在Flink Stream模型中，Datastream 经过 keyBy 的操作可以变为 KeyedStream 。</p>
-<p>每个 Key 对应一个 State，即一个 Operator 实例处理多个 Key，访问相应的多个 State，并由此就衍生了 Keyed State。Keyed State 只能用在 KeyedStream 的算子中，即在整个程序中没有 keyBy 的过程就没有办法使用 KeyedStream。</p>
-<p>相比较而言，Operator State 可以用于所有算子，相对于数据源有一个更好的匹配方式，常用于 Source，例如 FlinkKafkaConsumer。相比 Keyed State，一个 Operator 实例对应一个 State，随着并发的改变，Keyed State 中，State 随着 Key 在实例间迁移，比如原来有 1 个并发，对应的 API 请求过来，/api/a 和 /api/b 都存放在这个实例当中；如果请求量变大，需要扩容，就会把 /api/a 的状态和 /api/b 的状态分别放在不同的节点。由于 Operator State 没有 Key，并发改变时需要选择状态如何重新分配。其中内置了 2 种分配方式：一种是均匀分配，另外一种是将所有 State 合并为全量 State 再分发给每个实例。</p>
-<p>在访问上，Keyed State 通过 RuntimeContext 访问，这需要 Operator 是一个Rich Function。Operator State 需要自己实现 CheckpointedFunction 或 ListCheckpointed 接口。在数据结构上，Keyed State 支持的数据结构，比如 ValueState、ListState、ReducingState、AggregatingState 和 MapState；而 Operator State 支持的数据结构相对较少，如 ListState。</p>
-<h2 id="3-Keyed-State-使用示例"><a href="#3-Keyed-State-使用示例" class="headerlink" title="3. Keyed State 使用示例"></a>3. Keyed State 使用示例</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143165677_9823447C87064C14565BD91D2B3A3434" alt="图片说明" title="图片标题"><br>Keyed State 有很多种，如图为几种 Keyed State 之间的关系。首先 State 的子类中一级子类有 ValueState、MapState、AppendingState。AppendingState 又有一个子类 MergingState。MergingState 又分为 3 个子类分别是ListState、ReducingState、AggregatingState。这个继承关系使它们的访问方式、数据结构也存在差异。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143194008_77861EEA917B2DB9735F3A5C9AC49413" alt="图片说明" title="图片标题"><br>几种 Keyed State 的差异具体体现在：</p>
-<p>ValueState 存储单个值，比如 Wordcount，用 Word 当 Key，State 就是它的 Count。这里面的单个值可能是数值或者字符串，作为单个值，访问接口可能有两种，get 和 set。在 State 上体现的是 update(T) / T value()。</p>
-<p>MapState 的状态数据类型是 Map，在 State 上有 put、remove等。需要注意的是在 MapState 中的 key 和 Keyed state 中的 key 不是同一个。</p>
-<p>ListState 状态数据类型是 List，访问接口如 add、update 等。</p>
-<p>ReducingState 和 AggregatingState 与 ListState 都是同一个父类，但状态数据类型上是单个值，原因在于其中的 add 方法不是把当前的元素追加到列表中，而是把当前元素直接更新进了 Reducing 的结果中。</p>
-<p>AggregatingState 的区别是在访问接口，ReducingState 中 add（T）和 T get() 进去和出来的元素都是同一个类型，但在 AggregatingState 输入的 IN，输出的是 OUT。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143217922_688BF6B699D86F2D4A0129F59E6CC1F5" alt="图片说明" title="图片标题"><br>下面以 ValueState 为例，来阐述一下具体如何使用，以状态机的案例来讲解 。</p>
-<p>源代码地址：<a href="https://github.com/apache/flink/blob/master/flink-examples/flink-examples-streaming/src/main/java/org/apache/flink/streaming/examples/statemachine/StateMachineExample.java" target="_blank" rel="noopener">https://github.com/apache/flink/blob/master/flink-examples/flink-examples-streaming/src/main/java/org/apache/flink/streaming/examples/statemachine/StateMachineExample.java</a></p>
-<p>感兴趣的同学可直接查看完整源代码，在此截取部分。如图为 Flink 作业的主方法与主函数中的内容，前面的输入、后面的输出以及一些个性化的配置项都已去掉，仅保留了主干。</p>
-<p>首先 events 是一个 DataStream，通过 env.addSource 加载数据进来，接下来有一个 DataStream 叫 alerts，先 keyby 一个 sourceAddress，然后在 flatMap 一个StateMachineMapper。StateMachineMapper 就是一个状态机，状态机指有不同的状态与状态间有不同的转换关系的结合，以买东西的过程简单举例。首先下订单，订单生成后状态为待付款，当再来一个事件状态付款成功，则事件的状态将会从待付款变为已付款，待发货。已付款，待发货的状态再来一个事件发货，订单状态将会变为配送中，配送中的状态再来一个事件签收，则该订单的状态就变为已签收。在整个过程中，随时都可以来一个事件，取消订单，无论哪个状态，一旦触发了取消订单事件最终就会将状态转移到已取消，至此状态就结束了。</p>
-<p>Flink 写状态机是如何实现的？首先这是一个 RichFlatMapFunction，要用 Keyed State getRuntimeContext，getRuntimeContext 的过程中需要 RichFunction，所以需要在 open 方法中获取 currentState ，然后 getState，currentState 保存的是当前状态机上的状态。</p>
-<p>如果刚下订单，那么 currentState 就是待付款状态，初始化后，currentState 就代表订单完成。订单来了后，就会走 flatMap 这个方法，在 flatMap 方法中，首先定义一个 State，从 currentState 取出，即 Value，Value 取值后先判断值是否为空，如果 sourceAddress state 是空，则说明没有被使用过，那么此状态应该为刚创建订单的初始状态，即待付款。然后赋值 state = State.Initial，注意此处的 State 是本地的变量，而不是 Flink 中管理的状态，将它的值从状态中取出。接下来在本地又会来一个变量，然后 transition，将事件对它的影响加上，刚才待付款的订单收到付款成功的事件，就会变成已付款，待发货，然后 nextState 即可算出。此外，还需要判断 State 是否合法，比如一个已签收的订单，又来一个状态叫取消订单，会发现已签收订单不能被取消，此时这个状态就会下发，订单状态为非法状态。</p>
-<p>如果不是非法的状态，还要看该状态是否已经无法转换，比如这个状态变为已取消时，就不会在有其他的状态再发生了，此时就会从 state 中 clear。clear 是所有的 Flink 管理 keyed state 都有的公共方法，意味着将信息删除，如果既不是一个非法状态也不是一个结束状态，后面可能还会有更多的转换，此时需要将订单的当前状态 update ，这样就完成了 ValueState 的初始化、取值、更新以及清零，在整个过程中状态机的作用就是将非法的状态进行下发，方便下游进行处理。其他的状态也是类似的使用方式。</p>
-<h1 id="三-容错机制与故障恢复"><a href="#三-容错机制与故障恢复" class="headerlink" title="三. 容错机制与故障恢复"></a>三. 容错机制与故障恢复</h1><h2 id="1-状态如何保存及恢复"><a href="#1-状态如何保存及恢复" class="headerlink" title="1. 状态如何保存及恢复"></a>1. 状态如何保存及恢复</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143252142_BE28DFB6669E19340E15658720E17D19" alt="图片说明" title="图片标题"><br>Flink 状态保存主要依靠 Checkpoint 机制，Checkpoint 会定时制作分布式快照，对程序中的状态进行备份。分布式快照是如何实现的可以参考【第二课时】的内容，这里就不再阐述分布式快照具体是如何实现的。分布式快照 Checkpoint 完成后，当作业发生故障了如何去恢复？假如作业分布跑在 3 台机器上，其中一台挂了。这个时候需要把进程或者线程移到 active 的 2 台机器上，此时还需要将整个作业的所有 Task 都回滚到最后一次成功 Checkpoint 中的状态，然后从该点开始继续处理。</p>
-<p>如果要从 Checkpoint 恢复，必要条件是数据源需要支持数据重新发送。Checkpoint恢复后， Flink 提供两种一致性语义，一种是恰好一次，一种是至少一次。在做 Checkpoint时，可根据 Barries 对齐来判断是恰好一次还是至少一次，如果对齐，则为恰好一次，否则没有对齐即为至少一次。如果只有一个上游，也就是说 Barries 是不需要对齐的的；如果只有一个 Checkpoint 在做，不管什么时候从 Checkpoint 恢复，都会恢复到刚才的状态；如果有多个上游，假如一个上游的 Barries 到了，另一个 Barries 还没有来，如果这个时候对状态进行快照，那么从这个快照恢复的时候其中一个上游的数据可能会有重复。</p>
-<p>Checkpoint 通过代码的实现方法如下：</p>
-<p>首先从作业的运行环境 env.enableCheckpointing 传入 1000，意思是做 2 个 Checkpoint 的事件间隔为 1 秒。Checkpoint 做的越频繁，恢复时追数据就会相对减少，同时 Checkpoint 相应的也会有一些 IO 消耗。</p>
-<p>接下来是设置 Checkpoint 的 model，即设置了 Exactly_Once 语义，表示需要 Barrier 对齐，这样可以保证消息不会丢失也不会重复。</p>
-<p>setMinPauseBetweenCheckpoints 是 2 个 Checkpoint 之间最少是要等 500ms，也就是刚做完一个 Checkpoint。比如某个 Checkpoint 做了700ms，按照原则过 300ms 应该是做下一个 Checkpoint，因为设置了 1000ms 做一次 Checkpoint 的，但是中间的等待时间比较短，不足 500ms 了，需要多等 200ms，因此以这样的方式防止 Checkpoint 太过于频繁而导致业务处理的速度下降。</p>
-<p>setCheckpointTimeout 表示做 Checkpoint 多久超时，如果 Checkpoint 在 1min 之内尚未完成，说明 Checkpoint 超时失败。</p>
-<p>setMaxConcurrentCheckpoints 表示同时有多少个 Checkpoint 在做快照，这个可以根据具体需求去做设置。</p>
-<p>enableExternalizedCheckpoints 表示下 Cancel 时是否需要保留当前的 Checkpoint，默认 Checkpoint 会在整个作业 Cancel 时被删除。Checkpoint 是作业级别的保存点。</p>
-<p>上面讲过，除了故障恢复之外，还需要可以手动去调整并发重新分配这些状态。手动调整并发，必须要重启作业并会提示 Checkpoint 已经不存在，那么作业如何恢复数据？</p>
-<p>一方面 Flink 在 Cancel 时允许在外部介质保留 Checkpoint ；另一方面，Flink 还有另外一个机制是 SavePoint。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143266754_72F6543E219A34B25A05F127BF7A64E8" alt="图片说明" title="图片标题"><br>Savepoint 与 Checkpoint 类似，同样是把状态存储到外部介质。当作业失败时，可以从外部恢复。Savepoint 与 Checkpoint 有什么区别呢？</p>
-<p>从触发管理方式来讲，Checkpoint 由 Flink 自动触发并管理，而 Savepoint 由用户手动触发并人肉管理；</p>
-<p>从用途来讲，Checkpoint 在 Task 发生异常时快速恢复，例如网络抖动或超时异常，而 Savepoint 有计划地进行备份，使作业能停止后再恢复，例如修改代码、调整并发；</p>
-<p>最后从特点来讲，Checkpoint 比较轻量级，作业出现问题会自动从故障中恢复，在作业停止后默认清除；而 Savepoint 比较持久，以标准格式存储，允许代码或配置发生改变，恢复需要启动作业手动指定一个路径恢复。</p>
-<h2 id="2-可选的状态存储方式"><a href="#2-可选的状态存储方式" class="headerlink" title="2. 可选的状态存储方式"></a>2. 可选的状态存储方式</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143282020_64E753626240D5EA470570F497051FEB" alt="图片说明" title="图片标题"><br>Checkpoint 的存储，第一种是内存存储，即 MemoryStateBackend，构造方法是设置最大的StateSize，选择是否做异步快照，这种存储状态本身存储在 TaskManager 节点也就是执行节点内存中的，因为内存有容量限制，所以单个 State maxStateSize 默认 5 M，且需要注意 maxStateSize &lt;= akka.framesize 默认 10 M。Checkpoint 存储在 JobManager 内存中，因此总大小不超过 JobManager 的内存。推荐使用的场景为：本地测试、几乎无状态的作业，比如 ETL、JobManager 不容易挂，或挂掉影响不大的情况。不推荐在生产场景使用。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191015/9094293_1571143322242_5498DC3E67A0518E3A1BA95DE5F26257" alt="图片说明" title="图片标题"><br>另一种就是在文件系统上的 FsStateBackend ，构建方法是需要传一个文件路径和是否异步快照。State 依然在 TaskManager 内存中，但不会像 MemoryStateBackend 有 5 M 的设置上限，Checkpoint 存储在外部文件系统（本地或 HDFS），打破了总大小 Jobmanager 内存的限制。容量限制上，单 TaskManager 上 State 总量不超过它的内存，总大小不超过配置的文件系统容量。推荐使用的场景、常规使用状态的作业、例如分钟级窗口聚合或 join、需要开启HA的作业。</p>
-<p>还有一种存储为 RocksDBStateBackend ，RocksDB 是一个 key/value 的内存存储系统，和其他的 key/value 一样，先将状态放到内存中，如果内存快满时，则写入到磁盘中，但需要注意 RocksDB 不支持同步的 Checkpoint，构造方法中没有同步快照这个选项。不过 RocksDB 支持增量的 Checkpoint，也是目前唯一增量 Checkpoint 的 Backend，意味着并不需要把所有 sst 文件上传到 Checkpoint 目录，仅需要上传新生成的 sst 文件即可。它的 Checkpoint 存储在外部文件系统（本地或HDFS），其容量限制只要单个 TaskManager 上 State 总量不超过它的内存+磁盘，单 Key最大 2G，总大小不超过配置的文件系统容量即可。推荐使用的场景为：超大状态的作业，例如天级窗口聚合、需要开启 HA 的作业、最好是对状态读写性能要求不高的作业。</p>
-<h1 id="四-总结"><a href="#四-总结" class="headerlink" title="四. 总结"></a>四. 总结</h1><h2 id="1-为什么要使用状态？"><a href="#1-为什么要使用状态？" class="headerlink" title="1. 为什么要使用状态？"></a>1. 为什么要使用状态？</h2><p>前面提到有状态的作业要有有状态的逻辑，有状态的逻辑是因为数据之间存在关联，单条数据是没有办法把所有的信息给表现出来。所以需要通过状态来满足业务逻辑。</p>
-<h2 id="2-为什么要管理状态？"><a href="#2-为什么要管理状态？" class="headerlink" title="2.为什么要管理状态？"></a>2.为什么要管理状态？</h2><p>使用了状态，为什么要管理状态？因为实时作业需要7*24不间断的运行，需要应对不可靠的因素而带来的影响。</p>
-<h2 id="3-如何选择状态的类型和存储方式？"><a href="#3-如何选择状态的类型和存储方式？" class="headerlink" title="3.如何选择状态的类型和存储方式？"></a>3.如何选择状态的类型和存储方式？</h2><p>那如何选择状态的类型和存储方式？结合前面的内容，可以看到，首先是要分析清楚业务场景；比如想要做什么，状态到底大不大。比较各个方案的利弊，选择根据需求合适的状态类型和存储方式即可。</p>
-]]></content>
-      <categories>
-        <category>Flink</category>
-      </categories>
-      <tags>
-        <tag>状态管理与容错机制</tag>
+        <tag>死锁</tag>
       </tags>
   </entry>
   <entry>
@@ -478,98 +573,21 @@ object WordCount {
       </categories>
   </entry>
   <entry>
-    <title>Java线程死锁</title>
-    <url>/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/</url>
-    <content><![CDATA[<h1 id="Java线程死锁"><a href="#Java线程死锁" class="headerlink" title="Java线程死锁"></a>Java线程死锁</h1><blockquote><br>死锁是一种特定的程序状态，在实体之间，由于循环依赖导致彼此一直处于等待之中，没有 任何个体可以继续前进。死锁不仅仅是在线程之间会发生，存在资源独占的进程之间同样也 可能出现死锁。通常来说，我们大多是聚焦在多线程场景中的死锁，指两个或多个线程之 间，由于互相持有对方需要的锁，而永久处于阻塞的状态。<br><br></blockquote>
-
-
-<p><strong>Java线程死锁</strong>是一个经典的多线程问题，因为不同的线程都在等待那些根本不可能被释放的锁，从而导致所有的工作都无法完成。如图所示</p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁.png" alt="图片说明"> </p>
-<hr>
-
-<h2 id="如何去定位Java线程死锁呢？"><a href="#如何去定位Java线程死锁呢？" class="headerlink" title="如何去定位Java线程死锁呢？"></a>如何去定位Java线程死锁呢？</h2><p>定位死锁最常见的方式就是利用 jstack 等工具获取线程栈，然后定位互相之间的依赖关系，进而找到死锁。如果是比较明显的死锁，往往 jstack 等就能直接定位，类似 JConsole 甚至可以在图形界面进行有限的死锁检测。<br>既然了解了用什么工具去定位线程死锁，那我们模拟一个Java线程死锁的情况，实战定位线程死锁<br><strong>死锁代码：</strong></p>
-<pre><code>/**
- * @Author:luomo
- * @CreateTime: 2020/3/28
- * @Description:模拟DeadLock
- */
-public class deadLock implements Runnable{
-    public static  Object obj1=new Object();
-    public static  Object obj2=new Object();
-    private int flag;
-    deadLock(int flag){
-        this.flag=flag;
-    }
-
-    @Override
-    public void run() {
-        if(flag==0){
-            synchronized (obj1){
-                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁1&quot;);
-                try {
-                    Thread.currentThread().sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁2&quot;);
-                synchronized (obj2){
-                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);
-
-
-                }
-            }
-        }else{
-            synchronized (obj2){
-                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);
-                try {
-                    Thread.currentThread().sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁1&quot;);
-                synchronized (obj1){
-                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);
-
-
-                }
-            }
-        }
-
-    }
-
-    public static void main(String[] args) {
-   deadLock d1=new deadLock(0);
-   deadLock d2=new deadLock(1);
-   Thread thread1=new Thread(d1);
-   Thread thread2=new Thread(d2);
-   thread1.start();
-   thread2.start();
-
-    }
-
-}
-
-
-</code></pre><p><strong>代码运行：</strong></p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁1.png" alt=" "> </p>
-<p>从运行结果我们看到Thread1和Thread0同时都在争用对方已经占有的锁，进而产生死锁。</p>
-<hr>
-
-<h2 id="如何定位死锁"><a href="#如何定位死锁" class="headerlink" title="如何定位死锁"></a>如何定位死锁</h2><p>如果程序发生了死锁，我们如何去定位死锁？我们可以通过JConsole工具来发现死锁。<br>打开cmd：输入 JConsole 回车<br>我们可以看到一个可视化的工具，找到死锁进程点击连接</p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁2.png" alt="图片说明"> </p>
-<p>我们可以看到有检查死锁的选项</p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁3.png" alt="图片说明"> </p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁4.png" alt="图片说明"> </p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁5.png" alt="图片说明"> </p>
-<p>通过上图我们可以发现产生死锁的线程，从而定位到发生死锁的代码。</p>
-<p>当然我们还可以使用Jstack + pid的方式来定位问题</p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁6.png" alt="图片说明"> </p>
+    <title>Java虚拟机运行时数据区域</title>
+    <url>/2020/06/15/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F/</url>
+    <content><![CDATA[<p>#概述<br>&emsp;&emsp;对于从事C、C++程序开发人员来说，在内存管理领域，他们既是拥有最高权力的“皇帝”又是从事最基础工作的“劳动人民”-既拥有每一个对象的“所有权”，又担负着每一个对象生命开始到终结的维护责任。<br>对于Java 程序员来说，在虚拟机自动内存管理机制的帮助下，不在需要为每一个new操作去写配对的delete/free代码，不容易出现内存泄漏和内存溢出问题，由虚拟机管理内存这一切看起来都很美好。然而一旦出现内存泄漏和溢出的问题，如果不了解虚拟机是怎样使用内存的，那么排查错误将异常艰难。Java虚拟机在执行Java程序的过程中会把它所管理的内存划分为若干个不同的数据区域。这些区域都有各自的<br>用途，以及创建和销毁的时间，有的区域随着虚拟机进程的启动而存在，有些区域则依赖用户线程的启动和结束而<br>建立和销毁。</p>
+<h2 id="运行时数据区域"><a href="#运行时数据区域" class="headerlink" title="运行时数据区域"></a>运行时数据区域</h2><p>&emsp;&emsp;Java 虚拟机在执行java程序的过程中会把它所管理的内存划分为若干个不同的数据区域。这些区域都有各自的用途，以及创建和销毁的时间。<br><img src="/2020/06/15/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F/JVM.png" alt="图片说明"> </p>
+<h3 id="程序计数器"><a href="#程序计数器" class="headerlink" title="程序计数器"></a>程序计数器</h3><p>&emsp;&emsp;程序计数器是一块较小的内存空间，它可以看作是当前线程所执行的字节码的行号指示器。在虚拟机的概念模型里，字节码解释器工作时就是通过改变这个计数器的值来选取下一条需要执行的字节码指令，分支、循环跳转、异常处理、线程恢复等基础功能都需要依赖这个技术器来完成。</p>
+<h3 id="虚拟机栈"><a href="#虚拟机栈" class="headerlink" title="虚拟机栈"></a>虚拟机栈</h3><p>&emsp;&emsp;与程序计数器一样，Java虚拟机栈也是线程私有的，它的生命周期与线程相同。虚拟机栈描述的时Java方法执行的内存模型：每个方法在执行的相同。虚拟机栈描述的是Java方法执行的内存模型：每个方法在执行的同时都会创建栈帧用于存储局部变量表、操作数栈、动态连接、方法出口等信息。每一个放法从调用直至执行完成的过程，就对应着一个栈帧在虚拟机栈中入栈出栈的过程。  </p>
+<h3 id="本地方法栈"><a href="#本地方法栈" class="headerlink" title="本地方法栈"></a>本地方法栈</h3><p>&emsp;&emsp;本地方法栈与虚拟机栈所发挥的作用是非常相似的，他们之间的区别不过是虚拟机栈为虚拟机执行方法（也就是字节码）服务，而本地方法栈则为虚拟机使用到的Native法服务。在虚拟机规范中对被地方法栈中方法使用的语言、使用方式与数据结构并没有强制规定，因此具体的虚拟机可以自由实现它。甚至有的虚拟机直接就把本地方法栈和虚拟机栈合二为一。与虚拟机栈一样，本地方法栈区域也会抛出StackOverflowError和OutofMemoryError异常。</p>
+<h3 id="Java堆"><a href="#Java堆" class="headerlink" title="Java堆"></a>Java堆</h3><p>&emsp;&emsp;对于大多数应用来说，Java堆是Java虚拟机所管理的内存中最大的一块。Java堆是被所有线程共享的一块内存区域，在虚拟机启动时创建。此内存区域的唯一目的就是存放对象实例都在这里分配内存。这一点在Java虚拟机规范中的描述是：所有对象实例以及数组都要在堆上分配,但是随着JIT<br>编译器的发展与逃逸分析技术逐渐成熟，栈上分配、标量替换[2]优化技术将会导致一些微妙的变化发生，所有的<br>对象都分配在堆上也渐渐变得不是那么“绝对”了。</p>
+<h3 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h3><p> &emsp;&emsp;   方法区与Java堆一样，是各个线程共享的内存区域，它用于存储已被虚拟机加载的类信息、常量、静态变量、即时编译器编译后的代码等数据。虽然Java虚拟机规范把方法区描述为堆的一个逻辑部分，但是它却有一个别名Non-Heap（非堆），目的应该是与Java堆区分开来</p>
 ]]></content>
       <categories>
-        <category>Java</category>
+        <category>JVM</category>
       </categories>
       <tags>
-        <tag>死锁</tag>
+        <tag>运行时数据区域</tag>
       </tags>
   </entry>
   <entry>
@@ -588,6 +606,21 @@ public class deadLock implements Runnable{
       </categories>
       <tags>
         <tag>Kafka</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spark Error</title>
+    <url>/2020/06/14/Spark-Error/</url>
+    <content><![CDATA[<h1 id="配置historyserver时："><a href="#配置historyserver时：" class="headerlink" title="配置historyserver时："></a>配置historyserver时：</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227263283_97221A1B1C45BED99055FB1996A900CE" alt="图片说明" title="图片标题"> </p>
+<p>因为端口被占用了</p>
+<h1 id="SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错"><a href="#SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错" class="headerlink" title="SparkStreaming updateStateByKeyde 使用时 –checkpoint报错"></a>SparkStreaming updateStateByKeyde 使用时 –checkpoint报错</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227382925_460CCA764930F915D29C8DC785013F26" alt="图片说明" title="图片标题"> </p>
+<p>原因在使用的时候，并没有设置checkPoint 检测点<br>检测点的目的就是为了保存上一次的结果数据。如果没有检测点的话，那么将无法保存上一次结果<br>如果要保证中间数据不丢失的话，可以借助其它的工具，如hdfs<br>ssc.checkpoint(“hdfs://kd0301:9000/spark_checkpoint/”)</p>
+]]></content>
+      <categories>
+        <category>Spark</category>
+      </categories>
+      <tags>
+        <tag>Error</tag>
       </tags>
   </entry>
   <entry>
@@ -759,21 +792,6 @@ object Serializable {
       </tags>
   </entry>
   <entry>
-    <title>Spark Error</title>
-    <url>/2020/06/14/Spark-Error/</url>
-    <content><![CDATA[<h1 id="配置historyserver时："><a href="#配置historyserver时：" class="headerlink" title="配置historyserver时："></a>配置historyserver时：</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227263283_97221A1B1C45BED99055FB1996A900CE" alt="图片说明" title="图片标题"> </p>
-<p>因为端口被占用了</p>
-<h1 id="SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错"><a href="#SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错" class="headerlink" title="SparkStreaming updateStateByKeyde 使用时 –checkpoint报错"></a>SparkStreaming updateStateByKeyde 使用时 –checkpoint报错</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227382925_460CCA764930F915D29C8DC785013F26" alt="图片说明" title="图片标题"> </p>
-<p>原因在使用的时候，并没有设置checkPoint 检测点<br>检测点的目的就是为了保存上一次的结果数据。如果没有检测点的话，那么将无法保存上一次结果<br>如果要保证中间数据不丢失的话，可以借助其它的工具，如hdfs<br>ssc.checkpoint(“hdfs://kd0301:9000/spark_checkpoint/”)</p>
-]]></content>
-      <categories>
-        <category>Spark</category>
-      </categories>
-      <tags>
-        <tag>Error</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Spark 概述</title>
     <url>/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/</url>
     <content><![CDATA[<h1 id="大数据处理框架"><a href="#大数据处理框架" class="headerlink" title="大数据处理框架"></a>大数据处理框架</h1><p>集群环境对于编程来说带来了很多挑战，首先就是并行化：这就要求我们以并行化的方式重写应用程序，以便我们可以利用更大范围节点的计算能力。集群环境的第二个挑战就是对单点失败的处理，节点宕机以及个别节点计算缓慢在集群环境中非常普遍，这会极大地影响程序的性能。最后一个挑战是集群在大多数情况下都会被多个用户分享，那么动态地进行计算资源的分配，也会干扰程序的执行。因此，针对集群环境出现了大量的大数据编程框架。首先我们要提到的就是Google的MapReduce，它给我们展示了一个简单通用和自动容错的批处理计算模型。<br>但是对于其他类型的计算，比如交互式和流式计算，MapReduce并不适合，这也导致了大量的不同于MapReduce的专有的数据处理模型的出现，比如Storm、Impala和GraphLab。随着新模型的不断出现，似乎对于大数据处理而言，我们应对不同类型的作业需要一系列不同的处理框架才能很好地完成。但是这些专有系统也有一些不足。</p>
@@ -814,58 +832,6 @@ object Serializable {
       </categories>
       <tags>
         <tag>Spark</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>如何判断对象是否死亡?</title>
-    <url>/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在堆里面存放着Java世界中几乎所有的对象实例，垃圾收集器在对堆进行回收前，第一件事情就是要确定这些对象之中哪些还“存活”着，哪些已经“死去”，判断对象的生死存活都有那些算法？</p>
-<h2 id="引用计数算法"><a href="#引用计数算法" class="headerlink" title="引用计数算法"></a>引用计数算法</h2><p>实现原理：给对象中添加一个引用计数器，每当一个地方引用它是，计数器值就加1；任何时刻计数器为0的对象就是不可能再被使用的。<br>但是主流的Java虚拟机里面没有选用引用计数算法来管理内存，其中主要的原因是它很难解决对象之间相互引用的问题。<br>如下一个简单的例子：请看测试代码：对象objA和objB都有字段instance，赋值令 objA.instance=objB及objB.instance=objA，实际上这两个对象已经不可能再被访问了，但是他们因为互相引用这对方，导致引用计数都不为0，于是引用计数算法无法通过GC收集器回收他们。</p>
-<pre><code>
-public class ReferenceCountingGC {
-    /**
-     * @Author: luomo
-     * @CreateTime: 2019/11/4
-     * @Description: 引用计数算法
-     */
-    public Object instance = null;
-    private  static final int _1MB=1024*1024;
-    /**
-     *  这个成员属性的唯一意义就是占点内存，以便能在GC日志中看清楚是否被回收
-     */
-    private  byte[] bigSize =new byte[2 * _1MB];
-    public static void testGC(){
-        ReferenceCountingGC objA =new  ReferenceCountingGC();
-        ReferenceCountingGC objB =new ReferenceCountingGC();
-        objA.instance=objB;
-        objB.instance=objA;
-        objA =null;
-        objB =null;
-        System.gc();
-
-
-    }
-    public  static void main(String[] args){
-        testGC();
-    }
-}
-
-</code></pre><p>程序运行结果如下：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/1.png" alt=" "><br>从运行结果中可以清楚看出虚拟机并没有因为互相引用就不回收他们，这也从侧面说明虚拟机并不是通过引用计数算法来判断对象是否存活的。</p>
-<h2 id="可达性分析算法"><a href="#可达性分析算法" class="headerlink" title="可达性分析算法"></a>可达性分析算法</h2><p>实现原理：在主流的语言的主流实现中，比如Java、C#、甚至是古老的Lisp都是使用的可达性分析算法来判断对象是否存活的。</p>
-<p>这个算法的核心思路就是通过一些列的“GC Roots”对象作为起始点，从这些对象开始往下搜索，搜索所经过的路径称之为“引用链”。</p>
-<p>当一个对象到GC Roots没有任何引用链相连的时候，证明此对象是可以被回收的。如下图所示：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/2.png" alt="图片说明"><br>在Java中，可作为GC Roots对象的列表：</p>
-<p>Java虚拟机栈中的引用对象。</p>
-<ul>
-<li>本地方法栈中JNI（既一般说的Native方法）引用的对象。</li>
-<li>方法区中类静态常量的引用对象。</li>
-<li>方法区中常量的引用对象。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>JVM</category>
-      </categories>
-      <tags>
-        <tag>JVM</tag>
       </tags>
   </entry>
   <entry>
@@ -926,6 +892,83 @@ rdd.saveAsTextFile(&quot;codec/gzip&quot;,classOf[GzipCodec])
       </categories>
       <tags>
         <tag>性能调优</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>垃圾收集算法</title>
+    <url>/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/</url>
+    <content><![CDATA[<h1 id="标记清除算法"><a href="#标记清除算法" class="headerlink" title="标记清除算法"></a>标记清除算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/1.png" alt="图片说明"><br>最基础的收集算法是“标记清除”算法，如同它的名字一样，算法分为“标记”和“清除”两个阶段：首先标记出所有需要回收的对象，在标记完成后统一回收所有被标记的对象，它的标记过程其实在前一节讲述对象标记判定时已经介绍过了。之所以说他是最基础的收集算法，是因为后续的收集算法都是基于这种思路并对其不足进行改进而得到的。<br>主要不足：</p>
+<ul>
+<li>效率问题，标记和清除两个过程的效率都不高；</li>
+<li>空间问题，标记清除之后会产生大量不连续的内存碎片，空间碎片太多可能导致以后再程序过程中需要分配较大的对象时，无法找到连续内存而不得不提前触发另一次垃圾收集动作</li>
+</ul>
+<h1 id="复制算法"><a href="#复制算法" class="headerlink" title="复制算法"></a>复制算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/2.png" alt="图片说明"><br>为了解决效率问题，一种称为复制的收集算法出现了，他将可用内存按容量划分为大小相等的两块，每次只使用其中的一块。当这一块内存用完了，就将还存活着的对象复制到另一块上面，然后再把已经使用过的内存空间一次清理掉。这样使得每次都是对整个半区进行内存回收，内存分配时也就不用考虑内存碎片等复杂的情况，只要移动堆顶指针，按顺序分配内存即可，实现简单，运行高效。<br>主要不足：</p>
+<ul>
+<li>将内存缩小为了原来的一半，在对象存活率较高时就要进行较多的复制操作，效率将会变低。</li>
+</ul>
+<h1 id="标记-整理算法"><a href="#标记-整理算法" class="headerlink" title="标记-整理算法"></a>标记-整理算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/3.png" alt="图片说明"><br>根据老年代的特点，有人提出了另外一种“标记-整理”算法，标记过程仍然与“标记-清除”算法一样，但后续步骤不是直接对可回收对象进行清理，而是让所有存活的对象都向一端移动，然后直接清理掉端边界以外的内存。<br>主要不足：</p>
+<ul>
+<li>它对内存变动更频繁，需要整理所有存活对象的引用地址，在效率上比复制算法要差很多。</li>
+</ul>
+<h1 id="分代收集算法"><a href="#分代收集算法" class="headerlink" title="分代收集算法"></a>分代收集算法</h1><p>当前商业虚拟机的垃圾收集器都采用“分代收集”算法，这种算法并没有什么新的思想，知识根据对象存活周期的不同将内存划分为几块。分代收集算法分代收集算法（Generational Collection）严格来说并不是一种思想或理论，而是融合上述3种基础的算法思想，而产生的针对不同情况所采用不同算法的一套组合拳。一般是把Java堆分为新生代和老年代，这样就可以根据各个年代的特点采用最适当的收集算法。在新生代中，每次垃圾收集时都发现有大批对象死去，只有少量存活，那就选用复制算法，没有额外空间对它进行分配担保，就必须使用“标记-清理”或者“标记-整理”算法来进行回收。</p>
+]]></content>
+      <categories>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>垃圾收集算法</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>如何判断对象是否死亡?</title>
+    <url>/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在堆里面存放着Java世界中几乎所有的对象实例，垃圾收集器在对堆进行回收前，第一件事情就是要确定这些对象之中哪些还“存活”着，哪些已经“死去”，判断对象的生死存活都有那些算法？</p>
+<h2 id="引用计数算法"><a href="#引用计数算法" class="headerlink" title="引用计数算法"></a>引用计数算法</h2><p>实现原理：给对象中添加一个引用计数器，每当一个地方引用它是，计数器值就加1；任何时刻计数器为0的对象就是不可能再被使用的。<br>但是主流的Java虚拟机里面没有选用引用计数算法来管理内存，其中主要的原因是它很难解决对象之间相互引用的问题。<br>如下一个简单的例子：请看测试代码：对象objA和objB都有字段instance，赋值令 objA.instance=objB及objB.instance=objA，实际上这两个对象已经不可能再被访问了，但是他们因为互相引用这对方，导致引用计数都不为0，于是引用计数算法无法通过GC收集器回收他们。</p>
+<pre><code>
+public class ReferenceCountingGC {
+    /**
+     * @Author: luomo
+     * @CreateTime: 2019/11/4
+     * @Description: 引用计数算法
+     */
+    public Object instance = null;
+    private  static final int _1MB=1024*1024;
+    /**
+     *  这个成员属性的唯一意义就是占点内存，以便能在GC日志中看清楚是否被回收
+     */
+    private  byte[] bigSize =new byte[2 * _1MB];
+    public static void testGC(){
+        ReferenceCountingGC objA =new  ReferenceCountingGC();
+        ReferenceCountingGC objB =new ReferenceCountingGC();
+        objA.instance=objB;
+        objB.instance=objA;
+        objA =null;
+        objB =null;
+        System.gc();
+
+
+    }
+    public  static void main(String[] args){
+        testGC();
+    }
+}
+
+</code></pre><p>程序运行结果如下：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/1.png" alt=" "><br>从运行结果中可以清楚看出虚拟机并没有因为互相引用就不回收他们，这也从侧面说明虚拟机并不是通过引用计数算法来判断对象是否存活的。</p>
+<h2 id="可达性分析算法"><a href="#可达性分析算法" class="headerlink" title="可达性分析算法"></a>可达性分析算法</h2><p>实现原理：在主流的语言的主流实现中，比如Java、C#、甚至是古老的Lisp都是使用的可达性分析算法来判断对象是否存活的。</p>
+<p>这个算法的核心思路就是通过一些列的“GC Roots”对象作为起始点，从这些对象开始往下搜索，搜索所经过的路径称之为“引用链”。</p>
+<p>当一个对象到GC Roots没有任何引用链相连的时候，证明此对象是可以被回收的。如下图所示：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/2.png" alt="图片说明"><br>在Java中，可作为GC Roots对象的列表：</p>
+<p>Java虚拟机栈中的引用对象。</p>
+<ul>
+<li>本地方法栈中JNI（既一般说的Native方法）引用的对象。</li>
+<li>方法区中类静态常量的引用对象。</li>
+<li>方法区中常量的引用对象。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>JVM</tag>
       </tags>
   </entry>
 </search>
