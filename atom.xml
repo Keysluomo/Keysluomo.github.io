@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://keysluomo.github.io/"/>
-  <updated>2020-06-15T12:09:10.673Z</updated>
+  <updated>2020-06-16T16:46:24.911Z</updated>
   <id>https://keysluomo.github.io/</id>
   
   <author>
@@ -15,6 +15,46 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>JConsole:Java监视与管理控制台</title>
+    <link href="https://keysluomo.github.io/2020/06/17/JConsole-Java%E7%9B%91%E8%A7%86%E4%B8%8E%E7%AE%A1%E7%90%86%E6%8E%A7%E5%88%B6%E5%8F%B0/"/>
+    <id>https://keysluomo.github.io/2020/06/17/JConsole-Java监视与管理控制台/</id>
+    <published>2020-06-16T16:45:19.000Z</published>
+    <updated>2020-06-16T16:46:24.911Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>JConsole（Java Monitoring and Management Console）是一种基于JMX的可视化监视、管理工具。<br>1.启动JConsole<br>通过JDK/bin目录下的“jconsole.exe”启动JConsole后，将自动搜索出本机运行的所有虚拟机进程，不需要用户自己再使用jps来查询了，如图双击选择其中一个进程即可开始监控了，也可以使用下面的“远程进程”功能来连接远程服务器，对远程虚拟机进行监控。</p><p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573274563736_6654F5DFA4EC7329FE86D88517B8FA93" alt="图片说明" title="图片标题"> </p><p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573275239073_438AC748ECDB4217D868DFDE95ECFD09" alt=" " title="图片标题"> </p><p>从图中可以看出机器运行了几个本地虚拟机进程，其中OOMTest是我准备的“反面教材”代码双击它进入JConsole主界面，包括“概述”、“内存”、“线程”、“类”、“VM概要”、“MBean”六个页签。如图所示</p><p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573278160273_562106A0F5A1D726229907F196EB6D40" alt="图片说明" title="图片标题"> </p><p>“概述”页签显示的是整个虚拟机主要运行数据的概览，其中包括“堆内存使用情况”、“类”、“CPU使用情况”四种信息的曲线图，这些曲线图是后面“内存”、“线程”、“类”页签的信息汇总。</p><p>2.内存监控<br>“内存”页签相当于可视化的jsat命令，用于监视收集器管理的虚拟机内存（Java堆和永久代）的变化趋势。我们通过运行代码“OOMTest”来体验一下监视功能，运行时设置的虚拟机参数为：-Xms100m -Xmx100m -XX:+UseSerialGC,这段代码的作用是以64KB/50毫秒的速度往Java堆中填充数据，一共填充1000次，使用JConsole的“内存”页签进行监视，观察曲线和柱状图指示图的变化。</p><pre><code>import java.util.ArrayList;import java.util.List;/** * @Author:luomo * @CreateTime:2019/11/9 * @Description:OOMTest */public class OOMTest {    /**     * 内存占位符对象，一个OOMObject大约占64KB     */    static class OOMobject{        public byte[] placeholder=new byte[64*1024];    }    public static void fillHeap(int num) throws InterruptedException{        List&lt;OOMobject&gt; list =new ArrayList&lt;OOMobject&gt;();        for(int i=0;i&lt;num;i++)        {            //稍作延时，令监视曲线的变化更加明显            Thread.sleep(50);            list.add(new OOMobject());        }        System.gc();    }    public static void main(String[] args)throws Exception{        fillHeap(1000);    }}</code></pre><p>程序运行后，在“内存”页签中可以看到内存池Eden区的运行趋势呈现折线状，如图。</p><p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573282506435_42550CBEF3FCED46D7B42799FAD4566A" alt="图片说明" title="图片标题"> </p><p>监视范围扩大至整个堆后，会发现曲线是一条向上增长的平滑曲线。</p><p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573282418309_B397F1590C7ED6E011AB02405287D0D0" alt="图片说明" title="图片标题"> </p><p>并且从柱状图可以看出，在1000次循环执行结束，运行了System.gc()后，虽然整个新生代Eden和Survivor区都基本被清空了，但是代表老年代的柱状图仍然保持峰值状态，说明被填充进堆中的数据在System.gc（）方法执行之后仍然存活。</p><p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573282569188_69314B5631685BFF2D1BB4774E598582" alt="图片说明" title="图片标题"> </p><p>这里有两个小问题供读者思考：<br>1.虚拟机启动参数只限制了Java堆为100MB，没有指定-Xmn参数，能否从监控图中估计出新生代有多大？<br>2.为何执行了System.gc（）之后，图中代表老年代的柱状图仍然显示峰值状态，代码需要如何调整才能让System.gc（）回收掉填充到堆中的对象？<br>问题一：我们可以从图中知道Eden空间大小，因为没有设置-XX：SurvivorRadio参数，所以Eden与Survivor空间比例默认值为8:1，整个新生代空间这样我们可以用Eden空间大小/占新生代空间的比例，得出新生代空间的大小。<br>问题二：执行完System.gc（）之后，空间未能回收是因为List<OOMObject>list对象仍然存活，fillHeap（）方法仍然没有退出，因此list对象在System.gc（）执行时仍然处于作用域之内。如果把System.gc移动到fillHeap()方法外调用就可以回收掉全部内存。 </OOMObject></p>]]></content>
+    
+    <summary type="html">
+    
+      JConsole（Java Monitoring and Management Console）是一种基于JMX的可视化监视、管理工具。
+    
+    </summary>
+    
+    
+      <category term="JVM" scheme="https://keysluomo.github.io/tags/JVM/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>HotSpot虚拟机对象探秘</title>
+    <link href="https://keysluomo.github.io/2020/06/17/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/"/>
+    <id>https://keysluomo.github.io/2020/06/17/HotSpot虚拟机对象探秘/</id>
+    <published>2020-06-16T16:42:22.000Z</published>
+    <updated>2020-06-16T16:43:50.166Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>我们以常用的虚拟机HotSpot和常用的内存区域Java堆为例，深入了解HotSpot虚拟机在Java堆中对象分配、布局和访问的全过程。</p><h2 id="对象的创建"><a href="#对象的创建" class="headerlink" title="对象的创建"></a>对象的创建</h2><p>虚拟机遇到一条new指令时，首先将去检查这个指令的参数是否能在常量池中定位到一个类的符号引用，并且检查这个符号引用代表的类是否已被加载、解析和初始化。如果没有先执行相应的类加载过程。<br>    在类加载检查通过后，接下来虚拟机将为新生对象分配内存。对象所需内存的大小在类加载完成后便可完全确定，为对象分配空间的任务等同把一块确定大小的内存从Java堆中划分出来。假设堆中内存是绝对完整的，所有的内存都放在一边，空闲的内存放在另一边，中间放着一个指针作为分界点的指示器，所有用过的内存都放在一边，中间放着一个值指针作为分界点的指示器，这种分配方式成为“指针碰撞”。如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191108/9094293_1573227083274_A840BD9C2CEC84B3EC48E4358DCDAED0 &quot;图片标题&quot;" alt="图片说明"> </p><p>如果Java堆中的内存并不是规整的，已使用的内存和空闲的内存相互交错，那就没有办法简单地进行指针碰撞了，虚拟机就必须维护一个实例，并更新列表上的记录，这种分配方式称为“空闲列表”。如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191108/9094293_1573228003290_CEBD16961637C0135ADE58567B01219F &quot;图片标题&quot;" alt="图片说明"> </p><p>选择哪种分配方式是由Java堆是否规整决定，而Java堆是否规整又由所采用的垃圾收集器是否带有压缩功能决定。因此，在使用serial、ParNew等带Compact过程的收集器时，系统采用的分配算法是指针碰撞，而使用CMS这种基于Mark-Sweep算法的收集器时，通常采用空闲列表。</p><h2 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h2><p>在HotSpot虚拟机中，对象在内存中存储的布局可以分为3块区域：对象头（Header）、实例数据（InstanceData）和对齐填充（Padding）。<br>HotSpot虚拟机的对象头包括两部分信息，第一部分用于存储对象自身的运行时数据，如哈希码（HashCode）、GC分代年龄、锁状态标志、线程持有的锁、偏向线程ID、偏向时间戳等，这部分数据的长度在32位和64位的虚拟机（未开启压缩指针）中分别为32bit和64bit，官方称它为“Mark Word”。对象头的另外一部分是类型指针，即对象指向它的类元数据的指针，虚拟机通过这个指针来确定这个对象是哪<br>个类的实例。并不是所有的虚拟机实现都必须在对象数据上保留类型指针，换句话说，查找对象的元数据信息并不<br>一定要经过对象本身<br>第二部分实例数据是对象真正存储的有效信息，也是在程序代码中所定义的各种类型的字段内容。无论是从父类继承下来的，还是在子类中定义的，都需要记录起来。<br>第三部分对齐填充并不是必然存在的，也没有特别的含义，它仅仅起着占位符的作用。由于HotSpot VM的自动内存管理系统要求对象起始地址必须是8字节的整数倍，换句话说，就是对象的大小必须是8字节的整数倍。而对象头部分正好是8字节的倍数（1倍或者2倍），因此，当对象实例数据部分没有对齐时，就需要通过对齐填充来补全。</p><h2 id="对象的访问定位"><a href="#对象的访问定位" class="headerlink" title="对象的访问定位"></a>对象的访问定位</h2><p>建立对象是为了使用对象，我们的Java程序需要通过栈上的reference数据来操作堆上的具体对象。由于reference类型在Java虚拟机规范中只规定了一个指向对象的引用，并没有定义这个引用应该通过何种方式去定位、访问堆中的对象的具***置，所以对象访问方式也是取决于虚拟机实现而定的。目前主流的访问方式有使用句柄和直接指针两种。</p><p>如果使用句柄访问的话，那么Java堆中将会划分出一块内存来作为句柄池，reference中存储的就是对象的句柄地址，而句柄中包含了对象实例数据与类型数据各自的具体地址信息，</p><p>如果使用直接指针访问，那么Java堆对象的布局中就必须考虑如何放置访问类型数据的相关信息，而reference中存储的直接就是对象地址，</p>]]></content>
+    
+    <summary type="html">
+    
+      我们以常用的虚拟机HotSpot和常用的内存区域Java堆为例，深入了解HotSpot虚拟机在Java堆中对象分配、布局和访问的全过程。
+    
+    </summary>
+    
+    
+      <category term="JVM" scheme="https://keysluomo.github.io/tags/JVM/"/>
+    
+  </entry>
   
   <entry>
     <title>垃圾收集算法</title>
@@ -43,9 +83,9 @@
     <link href="https://keysluomo.github.io/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/"/>
     <id>https://keysluomo.github.io/2020/06/15/如何判断对象是否死亡/</id>
     <published>2020-06-15T11:30:34.000Z</published>
-    <updated>2020-06-15T11:53:29.773Z</updated>
+    <updated>2020-06-15T12:24:20.305Z</updated>
     
-    <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在堆里面存放着Java世界中几乎所有的对象实例，垃圾收集器在对堆进行回收前，第一件事情就是要确定这些对象之中哪些还“存活”着，哪些已经“死去”，判断对象的生死存活都有那些算法？</p><h2 id="引用计数算法"><a href="#引用计数算法" class="headerlink" title="引用计数算法"></a>引用计数算法</h2><p>实现原理：给对象中添加一个引用计数器，每当一个地方引用它是，计数器值就加1；任何时刻计数器为0的对象就是不可能再被使用的。<br>但是主流的Java虚拟机里面没有选用引用计数算法来管理内存，其中主要的原因是它很难解决对象之间相互引用的问题。<br>如下一个简单的例子：请看测试代码：对象objA和objB都有字段instance，赋值令 objA.instance=objB及objB.instance=objA，实际上这两个对象已经不可能再被访问了，但是他们因为互相引用这对方，导致引用计数都不为0，于是引用计数算法无法通过GC收集器回收他们。</p><pre><code>public class ReferenceCountingGC {    /**     * @Author: luomo     * @CreateTime: 2019/11/4     * @Description: 引用计数算法     */    public Object instance = null;    private  static final int _1MB=1024*1024;    /**     *  这个成员属性的唯一意义就是占点内存，以便能在GC日志中看清楚是否被回收     */    private  byte[] bigSize =new byte[2 * _1MB];    public static void testGC(){        ReferenceCountingGC objA =new  ReferenceCountingGC();        ReferenceCountingGC objB =new ReferenceCountingGC();        objA.instance=objB;        objB.instance=objA;        objA =null;        objB =null;        System.gc();    }    public  static void main(String[] args){        testGC();    }}</code></pre><p>程序运行结果如下：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/1.png" alt=" "><br>从运行结果中可以清楚看出虚拟机并没有因为互相引用就不回收他们，这也从侧面说明虚拟机并不是通过引用计数算法来判断对象是否存活的。</p><h2 id="可达性分析算法"><a href="#可达性分析算法" class="headerlink" title="可达性分析算法"></a>可达性分析算法</h2><p>实现原理：在主流的语言的主流实现中，比如Java、C#、甚至是古老的Lisp都是使用的可达性分析算法来判断对象是否存活的。</p><p>这个算法的核心思路就是通过一些列的“GC Roots”对象作为起始点，从这些对象开始往下搜索，搜索所经过的路径称之为“引用链”。</p><p>当一个对象到GC Roots没有任何引用链相连的时候，证明此对象是可以被回收的。如下图所示：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/2.png" alt="图片说明"><br>在Java中，可作为GC Roots对象的列表：</p><p>Java虚拟机栈中的引用对象。</p><ul><li>本地方法栈中JNI（既一般说的Native方法）引用的对象。</li><li>方法区中类静态常量的引用对象。</li><li>方法区中常量的引用对象。</li></ul>]]></content>
+    <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在堆里面存放着Java世界中几乎所有的对象实例，垃圾收集器在对堆进行回收前，第一件事情就是要确定这些对象之中哪些还“存活”着，哪些已经“死去”，判断对象的生死存活都有那些算法？</p><h2 id="引用计数算法"><a href="#引用计数算法" class="headerlink" title="引用计数算法"></a>引用计数算法</h2><p>实现原理：给对象中添加一个引用计数器，每当一个地方引用它是，计数器值就加1；任何时刻计数器为0的对象就是不可能再被使用的。<br>但是主流的Java虚拟机里面没有选用引用计数算法来管理内存，其中主要的原因是它很难解决对象之间相互引用的问题。<br>如下一个简单的例子：请看测试代码：对象objA和objB都有字段instance，赋值令 objA.instance=objB及objB.instance=objA，实际上这两个对象已经不可能再被访问了，但是他们因为互相引用这对方，导致引用计数都不为0，于是引用计数算法无法通过GC收集器回收他们。</p><pre><code>public class ReferenceCountingGC {    /**     * @Author: luomo     * @CreateTime: 2019/11/4     * @Description: 引用计数算法     */    public Object instance = null;    private  static final int _1MB=1024*1024;    /**     *  这个成员属性的唯一意义就是占点内存，以便能在GC日志中看清楚是否被回收     */    private  byte[] bigSize =new byte[2 * _1MB];    public static void testGC(){        ReferenceCountingGC objA =new  ReferenceCountingGC();        ReferenceCountingGC objB =new ReferenceCountingGC();        objA.instance=objB;        objB.instance=objA;        objA =null;        objB =null;        System.gc();    }    public  static void main(String[] args){        testGC();    }}</code></pre><p>程序运行结果如下：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/1.png" alt=" "><br>从运行结果中可以清楚看出虚拟机并没有因为互相引用就不回收他们，这也从侧面说明虚拟机并不是通过引用计数算法来判断对象是否存活的。</p><h2 id="可达性分析算法"><a href="#可达性分析算法" class="headerlink" title="可达性分析算法"></a>可达性分析算法</h2><p>实现原理：在主流的语言的主流实现中，比如Java、C#、甚至是古老的Lisp都是使用的可达性分析算法来判断对象是否存活的。</p><p>这个算法的核心思路就是通过一些列的“GC Roots”对象作为起始点，从这些对象开始往下搜索，搜索所经过的路径称之为“引用链”。</p><p>当一个对象到GC Roots没有任何引用链相连的时候，证明此对象是可以被回收的。如下图所示：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/2.png" alt="图片说明"><br>在Java中，可作为GC Roots对象的列表：</p><ul><li>Java虚拟机栈中的引用对象。</li><li>本地方法栈中JNI（既一般说的Native方法）引用的对象。</li><li>方法区中类静态常量的引用对象。</li><li>方法区中常量的引用对象。</li></ul>]]></content>
     
     <summary type="html">
     
