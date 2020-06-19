@@ -141,7 +141,7 @@
                         
                             <li><a  href="/categories/Zeppelin">Zeppelin</a></li>
                         
-                            <li><a  href="/categories/tools">Tools</a></li>
+                            <li><a  href="/categories/Tools">Tools</a></li>
                         
                         </ul>
                     </nav>
@@ -230,7 +230,7 @@
                 
                     <li><a href="/categories/Zeppelin">Zeppelin</a></li>
                 
-                    <li><a href="/categories/tools">Tools</a></li>
+                    <li><a href="/categories/Tools">Tools</a></li>
                 
                 <div class="clearfix"></div>
                 </ul>
@@ -420,7 +420,7 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-              预览描述
+              Scala 是 Scalable Language 的简写，是一门多范式的编程语言
           
       
     </div>
@@ -840,87 +840,8 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>VisualVM (All-in-One Java Troubleshooting Tool)是到目前为止随JDK发布的功能最强大的运行监视和故障处理程序，并且可以预见在未来一段时间内都是官方助力发展的虚拟机故障处理工具。官方在VisualVM的软件说明中写上了“All in One”的描述字样，预示着它除了运行监视，故障处理 外，还提供了很多其他方面的功能。如性能分析，VisualVM的性能分析功能甚至比起JProfiler、YourKit等专业收费的Profiling工具都不会逊色多少，而且VisualVM的还有一个很大的优点：不需要被监视的程序基于特殊Agent运行，因此它对应用程序的实际性能的影响很小，使用它可以直接应用在生产环境中。这个有点事JProfiler、YourKit等工具无法与之媲美的。</p>
-<h2 id="Visual兼容范围与插件安装"><a href="#Visual兼容范围与插件安装" class="headerlink" title="Visual兼容范围与插件安装"></a>Visual兼容范围与插件安装</h2><p>VisualVM基于NetBeans平台开发，因此它一开始就具备了插件扩展功能的特性，通过插件扩展支持，VisualVM可以做到：</p>
-<ul>
-<li>显示虚拟机进程以及进程的配置、环境信息。</li>
-<li>监视应用程序的CPU、GC、堆、方法区以及线程的信息（jstat、jstack）。</li>
-<li>dump以及分析堆转储快照。</li>
-<li>方法级的程序运行性能分析，找出被调用最多、运行时间最长的方法。</li>
-<li>离线程序快照：收集程序的运行时配置、线程dump、内存dump等信息建立一个快照，可以将快照发送开发者处进行Bug反馈。</li>
-<li>其他plugins的无限的可能性。。<br>主要特性的兼容性见表：</li>
-</ul>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573376421667_0603DDC2187E3F359DFF1C4A07BF61DF" alt="图片说明" title="图片标题"> </p>
-<p>首先我们在jdk1.8/bin目录下启动jvisualvm,我们先不着急找应用程序进行监测，因为现在VisualVM还没有加载任何插件，虽然基本的监视、线程面板的功能主程序都以默认插件的形式提供了但是不给VisualVM装任何扩展插件，就相当于放弃了它最精华的功能，和没有安装任何应用软件操作系统差不多。<br>插件我们进行手工安装：<br>打开“工具 -&gt; 插件 -&gt; 可用插件 “选中“Visual GC”默认进行安装<br>安装成功后：</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573377093671_1269F967A1AE25FDC458A14CB4CB4B37" alt="图片说明" title="图片标题"> </p>
-<p>大家可以根据自己的工作需要和兴趣选择合适的插件，然后点击安装即可。<br>安装完插件，选择一个需要监视的程序就进入程序的主界面了，如图所示。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573377517433_B76A4E6CB4F70B4F3FD192B97C655C83" alt="图片说明" title="图片标题"> </p>
-<p>VisualVM中“概述”、“监视”、“线程”、“MBeans”的功能与前面介绍的JConsole差别不大，下面介绍几个特色的功能、插件。</p>
-<h2 id="2-生成、浏览堆转储快照"><a href="#2-生成、浏览堆转储快照" class="headerlink" title="2.生成、浏览堆转储快照"></a>2.生成、浏览堆转储快照</h2><p>在VisualVM中生成dump文件有两种方式，可以执行下列任一操作：</p>
-<ul>
-<li>在“应用程序”窗口中右键”单击应用程序节点，然后选择“堆Dump”。</li>
-<li>在“应用程序”窗口中双击应用程序节点以打开应用程序标签，然后在“监视”标签中单击“堆Dump”。<br>生成dump文件之后，应用程序页签将在该堆的应用程序下增加一个以[heapdump]开头的子节点，并且在主页签中打开了该转储快照，如图。如果需要把dump文件保存或发送出去，要在heapdump节点上右键选择“另存为”菜单，否则当VisualVM关闭时，生成的dump文件会被当做临时文件删除掉。要打开一个已经存在的dump文件，通过菜单“装入”功能，选择硬盘上的dump文件即可。</li>
-</ul>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573378591042_FAB281188970DB420E1323E98D38BBAA" alt="图片说明" title="图片标题"> </p>
-<h2 id="分析程序性能"><a href="#分析程序性能" class="headerlink" title="分析程序性能"></a>分析程序性能</h2><p>在Profiler页签中，VisualVM提供了程序运行期间方法级的CPU执行时间分析以及内存分析，做Profiling分析肯定会对程序运行性能有较大的影响，所以一般不在生产环境中使用这项功能。<br>要开始分析，先选择“CPU”和“内存”按钮中的一个，然后切换到应用程序中对程序进行操作，VisualVM会记录到这段时间中应用程序执行过的方法。如果是CPU分析，将会统计每个方法的执行次数、执行耗时；如果是内存分析，则会统计每个方法关联的对象数以及这些对象所占的空间。分析结束后，点击“停止”按钮结束监控过程，如图：</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573379709800_6C3B2CC29B95904A4B0C47224C44304A" alt="图片说明" title="图片标题"> </p>
-<h2 id="4-BTrace动态日志跟踪"><a href="#4-BTrace动态日志跟踪" class="headerlink" title="4.BTrace动态日志跟踪"></a>4.BTrace动态日志跟踪</h2><p>BTrace是一个很“有趣”的VisualVM插件，本身也是可以独立运行的程序，它的作用是在不停止目标程序运行的前提下，通过HotSpot虚拟机的HotSwap技术动态缴入原本并不存在的调试代码。这项功能对实际生产中的程序很有意义：经常遇到程序出现问题，但排查错误的一些必要信息，譬如方法参数、返回值等，在开发时并没有打印到日止之中，以至于不得不停掉服务，通过调试增量来加入日志代码以解决问题。当遇到生产环境服务无法随便停止是，缺一两句日志导致排错进行不下去是一件非常郁闷的事情。<br>在VisualVM中安装了BTrace插件后，在应用程序面板中右键点击要调试的程序，会出现“Trace Application。。。”菜单，点击将进入BTrace面板。这个面板里面看起来就像一个简单的Java程序开发环境，里面还有一段Java代码。如图：</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191111/9094293_1573475795296_506A122025C95B87465048F8325621A5" alt="图片说明" title="图片标题"> </p>
-<p>这里准备了一个Demo来演示BTrace的功能：产生 两个1000以内的随机整数，输出两个数字相加的结果代码如下：</p>
-<pre><code>import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-
-/**
- * @Author: luomo
- * @CreateTime: 2019/11/11
- * @Description: 对BTrace插件简单的使用
- */
-public class BTraceTest {
-    public int add(int a,int b){
-        return a+b;
-    }
-    public static void main(String[] args)throws IOException {
-        BTraceTest test=new BTraceTest();
-        BufferedReader reader=new BufferedReader(new InputStreamReader(System.in));
-        for(int i=0;i&lt;10;i++)
-        {
-            reader.readLine();
-            int a=(int) Math.round(Math.random()*1000);
-            int b=(int) Math.round(Math.random()*1000);
-            System.out.println(test.add(a,b));
-        }
-
-
-    }
-}
-
-</code></pre><p>程序运行后，在VisualVM中打开该程序的监视，在BTrace页签填充TracingScript内容，输入的调试代码如下：</p>
-<pre><code>/* BTrace Script Template */
-import com.sun.btrace.annotations.*;
-import static com.sun.btrace.BTraceUtils.*;
-
-@BTrace
-public class TracingScript {
-    /* put your code here */
-    @OnMethod(
-        clazz=&quot;BTraceTest&quot;,
-        method=&quot;add&quot;,
-        location=@Location(Kind.RETURN)
-)
-public static void func(@Self BTraceTest instance,int a,int b,@Return int result){
-println(&quot;调用堆栈：&quot;);
-jstack();
-println(strcat(&quot;方法参数A：&quot;,str(a)));
-println(strcat(&quot;方法参数B:&quot;,str(b)));
-println(strcat(&quot;方法结果：&quot;,str(result)));
-
-}
-}
-</code></pre><p>点击“Start”按钮后稍等片刻，编译完成后，可见Output面板上出现“BTrace code sucessfuly deployed”的字样。程序运行的时候在Output面板将会输出如图的调试信息。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191111/9094293_1573477699767_FA5FB94755C7F76228C24ADC9E5CF1A9" alt="图片说明" title="图片标题"> </p>
-<p>BTrace的用法还有许多，打印调用堆栈、参数、返回值只是最基本的应用，在他的网站上有使用BTrace进行性能监视、定位连接泄漏和内存泄漏、解决多线程竞争问题等例子。</p>
-
+              VisualVM (All-in-One Java Troubleshooting Tool)是到目前为止随JDK发布的功能最强大的运行监视和故障处理程序，并且可以预见在未来一段时间内都是官方助力发展的虚拟机故障处理工具。官方在VisualVM的软件说明中写上了“All in One”的描述字样，预示着它除了运行监视，故障处理 外，还提供了很多其他方面的功能。如性能分析，VisualVM的性能分析功能甚至比起JProfiler、YourKit等专业收费的Profiling工具都不会逊色多少，而且VisualVM的还有一个很大的优点：不需要被监视的程序基于特殊Agent运行，因此它对应用程序的实际性能的影响很小，使用它可以直接应用在生产环境中。这个是JProfiler、YourKit等工具无法与之媲美的。
+          
       
     </div>
     
@@ -929,6 +850,10 @@ println(strcat(&quot;方法结果：&quot;,str(result)));
       
 
       
+      
+        <p class="article-more-link">
+          <a   href="/2020/06/17/VisualVM-%E5%A4%9A%E5%90%88%E4%B8%80%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7/#more">more >></a>
+        </p>
       
       <div class="clearfix"></div>
     </div>
