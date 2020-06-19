@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>落墨</title>
   
-  
+  <subtitle>凡心所向，素履以往</subtitle>
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://keysluomo.github.io/"/>
@@ -193,6 +193,27 @@
   </entry>
   
   <entry>
+    <title>VisualVM:多合一故障处理工具</title>
+    <link href="https://keysluomo.github.io/2020/06/17/VisualVM-%E5%A4%9A%E5%90%88%E4%B8%80%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7/"/>
+    <id>https://keysluomo.github.io/2020/06/17/VisualVM-多合一故障处理工具/</id>
+    <published>2020-06-16T16:47:40.000Z</published>
+    <updated>2020-06-19T04:12:13.460Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>VisualVM (All-in-One Java Troubleshooting Tool)是到目前为止随JDK发布的功能最强大的运行监视和故障处理程序，并且可以预见在未来一段时间内都是官方助力发展的虚拟机故障处理工具。官方在VisualVM的软件说明中写上了“All in One”的描述字样，预示着它除了运行监视，故障处理 外，还提供了很多其他方面的功能。如性能分析，VisualVM的性能分析功能甚至比起JProfiler、YourKit等专业收费的Profiling工具都不会逊色多少，而且VisualVM的还有一个很大的优点：不需要被监视的程序基于特殊Agent运行，因此它对应用程序的实际性能的影响很小，使用它可以直接应用在生产环境中。这个有点事JProfiler、YourKit等工具无法与之媲美的。</p><h2 id="Visual兼容范围与插件安装"><a href="#Visual兼容范围与插件安装" class="headerlink" title="Visual兼容范围与插件安装"></a>Visual兼容范围与插件安装</h2><p>VisualVM基于NetBeans平台开发，因此它一开始就具备了插件扩展功能的特性，通过插件扩展支持，VisualVM可以做到：</p><ul><li>显示虚拟机进程以及进程的配置、环境信息。</li><li>监视应用程序的CPU、GC、堆、方法区以及线程的信息（jstat、jstack）。</li><li>dump以及分析堆转储快照。</li><li>方法级的程序运行性能分析，找出被调用最多、运行时间最长的方法。</li><li>离线程序快照：收集程序的运行时配置、线程dump、内存dump等信息建立一个快照，可以将快照发送开发者处进行Bug反馈。</li><li>其他plugins的无限的可能性。。<br>主要特性的兼容性见表：</li></ul><p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573376421667_0603DDC2187E3F359DFF1C4A07BF61DF" alt="图片说明" title="图片标题"> </p><p>首先我们在jdk1.8/bin目录下启动jvisualvm,我们先不着急找应用程序进行监测，因为现在VisualVM还没有加载任何插件，虽然基本的监视、线程面板的功能主程序都以默认插件的形式提供了但是不给VisualVM装任何扩展插件，就相当于放弃了它最精华的功能，和没有安装任何应用软件操作系统差不多。<br>插件我们进行手工安装：<br>打开“工具 -&gt; 插件 -&gt; 可用插件 “选中“Visual GC”默认进行安装<br>安装成功后：</p><p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573377093671_1269F967A1AE25FDC458A14CB4CB4B37" alt="图片说明" title="图片标题"> </p><p>大家可以根据自己的工作需要和兴趣选择合适的插件，然后点击安装即可。<br>安装完插件，选择一个需要监视的程序就进入程序的主界面了，如图所示。</p><p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573377517433_B76A4E6CB4F70B4F3FD192B97C655C83" alt="图片说明" title="图片标题"> </p><p>VisualVM中“概述”、“监视”、“线程”、“MBeans”的功能与前面介绍的JConsole差别不大，下面介绍几个特色的功能、插件。</p><h2 id="2-生成、浏览堆转储快照"><a href="#2-生成、浏览堆转储快照" class="headerlink" title="2.生成、浏览堆转储快照"></a>2.生成、浏览堆转储快照</h2><p>在VisualVM中生成dump文件有两种方式，可以执行下列任一操作：</p><ul><li>在“应用程序”窗口中右键”单击应用程序节点，然后选择“堆Dump”。</li><li>在“应用程序”窗口中双击应用程序节点以打开应用程序标签，然后在“监视”标签中单击“堆Dump”。<br>生成dump文件之后，应用程序页签将在该堆的应用程序下增加一个以[heapdump]开头的子节点，并且在主页签中打开了该转储快照，如图。如果需要把dump文件保存或发送出去，要在heapdump节点上右键选择“另存为”菜单，否则当VisualVM关闭时，生成的dump文件会被当做临时文件删除掉。要打开一个已经存在的dump文件，通过菜单“装入”功能，选择硬盘上的dump文件即可。</li></ul><p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573378591042_FAB281188970DB420E1323E98D38BBAA" alt="图片说明" title="图片标题"> </p><h2 id="分析程序性能"><a href="#分析程序性能" class="headerlink" title="分析程序性能"></a>分析程序性能</h2><p>在Profiler页签中，VisualVM提供了程序运行期间方法级的CPU执行时间分析以及内存分析，做Profiling分析肯定会对程序运行性能有较大的影响，所以一般不在生产环境中使用这项功能。<br>要开始分析，先选择“CPU”和“内存”按钮中的一个，然后切换到应用程序中对程序进行操作，VisualVM会记录到这段时间中应用程序执行过的方法。如果是CPU分析，将会统计每个方法的执行次数、执行耗时；如果是内存分析，则会统计每个方法关联的对象数以及这些对象所占的空间。分析结束后，点击“停止”按钮结束监控过程，如图：</p><p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573379709800_6C3B2CC29B95904A4B0C47224C44304A" alt="图片说明" title="图片标题"> </p><h2 id="4-BTrace动态日志跟踪"><a href="#4-BTrace动态日志跟踪" class="headerlink" title="4.BTrace动态日志跟踪"></a>4.BTrace动态日志跟踪</h2><p>BTrace是一个很“有趣”的VisualVM插件，本身也是可以独立运行的程序，它的作用是在不停止目标程序运行的前提下，通过HotSpot虚拟机的HotSwap技术动态缴入原本并不存在的调试代码。这项功能对实际生产中的程序很有意义：经常遇到程序出现问题，但排查错误的一些必要信息，譬如方法参数、返回值等，在开发时并没有打印到日止之中，以至于不得不停掉服务，通过调试增量来加入日志代码以解决问题。当遇到生产环境服务无法随便停止是，缺一两句日志导致排错进行不下去是一件非常郁闷的事情。<br>在VisualVM中安装了BTrace插件后，在应用程序面板中右键点击要调试的程序，会出现“Trace Application。。。”菜单，点击将进入BTrace面板。这个面板里面看起来就像一个简单的Java程序开发环境，里面还有一段Java代码。如图：</p><p><img src="https://uploadfiles.nowcoder.com/images/20191111/9094293_1573475795296_506A122025C95B87465048F8325621A5" alt="图片说明" title="图片标题"> </p><p>这里准备了一个Demo来演示BTrace的功能：产生 两个1000以内的随机整数，输出两个数字相加的结果代码如下：</p><pre><code>import java.io.BufferedReader;import java.io.IOException;import java.io.InputStreamReader;/** * @Author: luomo * @CreateTime: 2019/11/11 * @Description: 对BTrace插件简单的使用 */public class BTraceTest {    public int add(int a,int b){        return a+b;    }    public static void main(String[] args)throws IOException {        BTraceTest test=new BTraceTest();        BufferedReader reader=new BufferedReader(new InputStreamReader(System.in));        for(int i=0;i&lt;10;i++)        {            reader.readLine();            int a=(int) Math.round(Math.random()*1000);            int b=(int) Math.round(Math.random()*1000);            System.out.println(test.add(a,b));        }    }}</code></pre><p>程序运行后，在VisualVM中打开该程序的监视，在BTrace页签填充TracingScript内容，输入的调试代码如下：</p><pre><code>/* BTrace Script Template */import com.sun.btrace.annotations.*;import static com.sun.btrace.BTraceUtils.*;@BTracepublic class TracingScript {    /* put your code here */    @OnMethod(        clazz=&quot;BTraceTest&quot;,        method=&quot;add&quot;,        location=@Location(Kind.RETURN))public static void func(@Self BTraceTest instance,int a,int b,@Return int result){println(&quot;调用堆栈：&quot;);jstack();println(strcat(&quot;方法参数A：&quot;,str(a)));println(strcat(&quot;方法参数B:&quot;,str(b)));println(strcat(&quot;方法结果：&quot;,str(result)));}}</code></pre><p>点击“Start”按钮后稍等片刻，编译完成后，可见Output面板上出现“BTrace code sucessfuly deployed”的字样。程序运行的时候在Output面板将会输出如图的调试信息。</p><p><img src="https://uploadfiles.nowcoder.com/images/20191111/9094293_1573477699767_FA5FB94755C7F76228C24ADC9E5CF1A9" alt="图片说明" title="图片标题"> </p><p>BTrace的用法还有许多，打印调用堆栈、参数、返回值只是最基本的应用，在他的网站上有使用BTrace进行性能监视、定位连接泄漏和内存泄漏、解决多线程竞争问题等例子。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h1 id=&quot;前言&quot;&gt;&lt;a href=&quot;#前言&quot; class=&quot;headerlink&quot; title=&quot;前言&quot;&gt;&lt;/a&gt;前言&lt;/h1&gt;&lt;p&gt;VisualVM (All-in-One Java Troubleshooting Tool)是到目前为止随JDK发布的功能最强大的运行监视
+      
+    
+    </summary>
+    
+    
+  </entry>
+  
+  <entry>
     <title>JConsole:Java监视与管理控制台</title>
     <link href="https://keysluomo.github.io/2020/06/17/JConsole-Java%E7%9B%91%E8%A7%86%E4%B8%8E%E7%AE%A1%E7%90%86%E6%8E%A7%E5%88%B6%E5%8F%B0/"/>
     <id>https://keysluomo.github.io/2020/06/17/JConsole-Java监视与管理控制台/</id>
@@ -229,6 +250,48 @@
     
     
       <category term="JVM" scheme="https://keysluomo.github.io/tags/JVM/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Zeppelin 安装</title>
+    <link href="https://keysluomo.github.io/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/"/>
+    <id>https://keysluomo.github.io/2020/06/17/Zeppelin-安装/</id>
+    <published>2020-06-16T16:39:36.000Z</published>
+    <updated>2020-06-19T04:09:57.418Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Apache Zeppelin 是一个可以进行大数据可视化分析的交互式开发系统，可以承担数据接入、数据发现、数据分析、数据可视化、数据协作等任务，其前端提供丰富的可视化图形库，不限于SparkSQL，后端支持HBase、Flink 等大数据系统以插件扩展的方式，并支持Spark、Python、JDBC、Markdown、Shell 等各种常用Interpreter，这使得开发者可以方便地使用SQL 在 Zeppelin 中做数据开发。</p><h3 id="安装环境："><a href="#安装环境：" class="headerlink" title="安装环境："></a>安装环境：</h3><p>Centos6.8、jdk1.8、zeppelin-0.8.1-bin-all</p><h3 id="安装步骤"><a href="#安装步骤" class="headerlink" title="安装步骤"></a>安装步骤</h3><p>打开下面链接进行下载:<br><a href="http://zeppelin.apache.org/download.html" target="_blank" rel="noopener">http://zeppelin.apache.org/download.html</a></p><p><img src="https://uploadfiles.nowcoder.com/images/20191221/9094293_1576934232225_661F8A0D774EB9DAD0A0FF6B199D09B2 &quot;图片标题&quot;" alt="图片说明"> </p><p>选择zeppelin-0.8.2-bin-all下载并将其解压缩到您选择的目录中，即可开始使用。</p><p><img src="https://uploadfiles.nowcoder.com/images/20191221/9094293_1576934402694_3957934B226D16BCCBB5002A37C0C9F2 &quot;图片标题&quot;" alt="图片说明"> </p><p>执行 bin/zeppelin-daemon.sh start<br>Zeppelin成功启动后，使用Web浏览器转到http：// localhost：8080。如图：</p><p><img src="https://uploadfiles.nowcoder.com/images/20191221/9094293_1576934591022_525C923A1928B243734BF77EDBE762B9 &quot;图片标题&quot;" alt="图片说明"> </p><p>安装成功。</p><h3 id="如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决："><a href="#如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决：" class="headerlink" title="如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决："></a>如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决：</h3><p>1.防火墙是否关闭<br>使用以下命令永久关闭防火墙<br>chkconfig iptables off<br>2.查看是否是端口被占用<br>lsof -i:端口号 //查看是否被占用<br>如果被占用可以尝试修改默认端口 zeppelin-site.xml.template</p><p>vi zeppelin-site.xml.template</p><p><img src="https://uploadfiles.nowcoder.com/images/20191221/9094293_1576939567384_473987733CF363A7FF2E4A5B5D7331C8 &quot;图片标题&quot;" alt="图片说明"> </p><h2 id="这里展示一下Zeppelin连接数据库的一个demo"><a href="#这里展示一下Zeppelin连接数据库的一个demo" class="headerlink" title="这里展示一下Zeppelin连接数据库的一个demo"></a>这里展示一下Zeppelin连接数据库的一个demo</h2><p>1.首先进入Zeppelin的首页</p><p><img src="https://uploadfiles.nowcoder.com/images/20191221/9094293_1576940488584_B53F717876753F19FDC74278150BFF13 &quot;图片标题&quot;" alt="图片说明"> </p><p>2.点击 anonymous -&gt; Interpreter 输入jdbc回车</p><p><img src="https://uploadfiles.nowcoder.com/images/20191221/9094293_1576940618336_5EEA460F52DFD103F9B382CD473329A5 &quot;图片标题&quot;" alt="图片说明"> </p><p>3.点击 edit 编辑红框选中选项</p><p><img src="https://uploadfiles.nowcoder.com/images/20191221/9094293_1576940779628_DE3E46F6329053070D5F1637C503D306 &quot;图片标题&quot;" alt="图片说明"> </p><p>然后添加你的mysql驱动位置</p><p><img src="https://uploadfiles.nowcoder.com/images/20191221/9094293_1576940839779_0D3A7AE30B4319E690865E4D04316CF4 &quot;图片标题&quot;" alt="图片说明"> </p><p>4.创建一个新的node，点击 create new note：输入NoteName和Default Interpreter</p><p><img src="https://uploadfiles.nowcoder.com/images/20191221/9094293_1576941002525_E3E77AA5B8C6592BB73D3CA8B43977B9 &quot;图片标题&quot;" alt="图片说明"> </p><p><img src="https://uploadfiles.nowcoder.com/images/20191221/9094293_1576940976666_E4471AB554E677A1CDB8B92599381623 &quot;图片标题&quot;" alt="图片说明"> </p><p>5.在框中输入SQL语句，点击执行</p><p><img src="https://uploadfiles.nowcoder.com/images/20191221/9094293_1576941180033_AA9CD2FF397D100C517358195C76549C &quot;图片标题&quot;" alt="图片说明"> </p><p>我们还可以根据自己的需要进行选择图表的展示方式。</p>]]></content>
+    
+    <summary type="html">
+    
+      Apache Zeppelin 是一个可以进行大数据可视化分析的交互式开发系统，可以承担数据接入、数据发现、数据分析、数据可视化、数据协作等任务，其前端提供丰富的可视化图形库，不限于SparkSQL，后端支持HBase、Flink 等大数据系统以插件扩展的方式，并支持Spark、Python、JDBC、Markdown、Shell 等各种常用Interpreter，这使得开发者可以方便地使用SQL 在 Zeppelin 中做数据开发。
+    
+    </summary>
+    
+      <category term="Zeppelin" scheme="https://keysluomo.github.io/categories/Zeppelin/"/>
+    
+    
+      <category term="Zeppelin 安装" scheme="https://keysluomo.github.io/tags/Zeppelin-%E5%AE%89%E8%A3%85/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Zeppelin</title>
+    <link href="https://keysluomo.github.io/2020/06/17/Zeppelin/"/>
+    <id>https://keysluomo.github.io/2020/06/17/Zeppelin/</id>
+    <published>2020-06-16T16:36:08.000Z</published>
+    <updated>2020-06-19T04:11:50.513Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="什么是ApacheZeppelin？"><a href="#什么是ApacheZeppelin？" class="headerlink" title="什么是ApacheZeppelin？"></a>什么是ApacheZeppelin？</h1><p>Apache Zeppelin 是一个可以进行大数据可视化分析的交互式开发系统，可以承担数据接入、数据发现、数据分析、数据可视化、数据协作等任务，其前端提供丰富的可视化图形库，不限于SparkSQL，后端支持HBase、Flink 等大数据系统以插件扩展的方式，并支持Spark、Python、JDBC、Markdown、Shell 等各种常用Interpreter，这使得开发者可以方便地使用SQL 在 Zeppelin 中做数据开发。在 Zeppelin 中还可以完成机器学习的数据预处理、算法开发和调试、算法作业调度的工作，同时，Zeppelin 还提供了单机 Docker、分布式、K8s、Yarn 四种系统运行模式，以适应各类团队的需求。</p><h1 id="多功能笔记本"><a href="#多功能笔记本" class="headerlink" title="多功能笔记本"></a>多功能笔记本</h1><p>1）数据摄取<br>2）数据发现<br>3）数据可视化与协作<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025783514_8CF155AE412A82C78071201381CEAC20" alt="图片说明" title="图片标题"> </p><h1 id="多语言后端"><a href="#多语言后端" class="headerlink" title="多语言后端"></a>多语言后端</h1><p>Apache Zeppelin解释器概念允许将任何语言数据/数据处理后端插入Zeppelin。当前，Apache Zeppelin支持许多解释器，例如Apache Spark，Python，JDBC，Markdown和Shell。</p><h1 id="Apache-Spark集成"><a href="#Apache-Spark集成" class="headerlink" title="Apache Spark集成"></a>Apache Spark集成</h1><p>特别是，Apache Zeppelin提供了内置的Apache Spark集成。不需要为其构建单独的模块，插件或库。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025811557_14FF85F448A85399AA74361F7B957506" alt="图片说明" title="图片标题"><br>Apache Zeppelin与Spark集成提供<br>Apache Zeppelin与Spark集成提供<br>自动SparkContext和SQLContext注入<br>从本地文件系统或Maven存储库加载运行时jar依赖项。<br>取消作业并显示其进度</p><h1 id="数据可视化"><a href="#数据可视化" class="headerlink" title="数据可视化"></a>数据可视化</h1><p>Apache Zeppelin中已经包含一些基本图表，可视化不仅限于SparkSQL查询，任何语言后端的任何输出都可以被识别和可视化<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025841915_3FDB2A16838FA1D3A8DE66597442CDB1" alt="图片说明" title="图片标题"> </p><h2 id="枢轴图表"><a href="#枢轴图表" class="headerlink" title="枢轴图表"></a>枢轴图表</h2><p>Apache Zeppelin 汇总值并通过简单的拖放将其显示在数据透视图中。您可以轻松地创建具有多个汇总值的图表，包括综合，计数，平均值，最小值，最大值。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025877924_B5510C7235B1E872B0A8BF2CADE4D1CA" alt="图片说明" title="图片标题"><br>在Apache Zeppelin中了解有关基本显示系统和Angular API（frontend，backend）的更多信息。</p><h1 id="动态表格"><a href="#动态表格" class="headerlink" title="动态表格"></a>动态表格</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025899397_63E60EDEB1CCD12D3A765295F3FE0018" alt="图片说明" title="图片标题"> </p><h1 id="通过共享您的笔记本和段落进行协作"><a href="#通过共享您的笔记本和段落进行协作" class="headerlink" title="通过共享您的笔记本和段落进行协作"></a>通过共享您的笔记本和段落进行协作</h1><p>您的笔记本URL可以在协作者之间共享。然后，Apache Zeppelin将实时广播所有更改，就像Google文档中的协作一样。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025913843_7E9D16C843B30DC30C36EBED3FC80485" alt="图片说明" title="图片标题"> </p>]]></content>
+    
+    <summary type="html">
+    
+      Apache Zeppelin 是一个可以进行大数据可视化分析的交互式开发系统，可以承担数据接入、数据发现、数据分析、数据可视化、数据协作等任务，其前端提供丰富的可视化图形库，不限于SparkSQL，后端支持HBase、Flink 等大数据系统以插件扩展的方式，并支持Spark、Python、JDBC、Markdown、Shell 等各种常用Interpreter，这使得开发者可以方便地使用SQL 在 Zeppelin 中做数据开发。在 Zeppelin 中还可以完成机器学习的数据预处理、算法开发和调试、算法作业调度的工作，同时，Zeppelin 还提供了单机 Docker、分布式、K8s、Yarn 四种系统运行模式，以适应各类团队的需求。
+    
+    </summary>
+    
+      <category term="Zeppelin" scheme="https://keysluomo.github.io/categories/Zeppelin/"/>
+    
     
   </entry>
   
@@ -383,70 +446,6 @@
     
     
       <category term="Serializable" scheme="https://keysluomo.github.io/tags/Serializable/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Apache Spark简单构建一个应用程序</title>
-    <link href="https://keysluomo.github.io/2020/06/14/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/"/>
-    <id>https://keysluomo.github.io/2020/06/14/Apache-Spark简单构建一个应用程序/</id>
-    <published>2020-06-14T03:52:44.000Z</published>
-    <updated>2020-06-14T04:02:37.891Z</updated>
-    
-    <content type="html"><![CDATA[<h1 id="简单的构建一个Apache-Spark应用程序"><a href="#简单的构建一个Apache-Spark应用程序" class="headerlink" title="简单的构建一个Apache Spark应用程序"></a>简单的构建一个Apache Spark应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Spark 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Spark相关的依赖。<br>pom如下：</p><pre><code>&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot; xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd&quot;&gt;  &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;  &lt;groupId&gt;SparkDemo&lt;/groupId&gt;  &lt;artifactId&gt;SparkDemo&lt;/artifactId&gt;  &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;  &lt;inceptionYear&gt;2008&lt;/inceptionYear&gt;  &lt;properties&gt;    &lt;scala.version&gt;2.11.1&lt;/scala.version&gt;  &lt;/properties&gt;  &lt;repositories&gt;    &lt;repository&gt;      &lt;id&gt;scala-tools.org&lt;/id&gt;      &lt;name&gt;Scala-Tools Maven2 Repository&lt;/name&gt;      &lt;url&gt;http://scala-tools.org/repo-releases&lt;/url&gt;    &lt;/repository&gt;  &lt;/repositories&gt;  &lt;pluginRepositories&gt;    &lt;pluginRepository&gt;      &lt;id&gt;scala-tools.org&lt;/id&gt;      &lt;name&gt;Scala-Tools Maven2 Repository&lt;/name&gt;      &lt;url&gt;http://scala-tools.org/repo-releases&lt;/url&gt;    &lt;/pluginRepository&gt;  &lt;/pluginRepositories&gt;  &lt;dependencies&gt;    &lt;dependency&gt;      &lt;groupId&gt;org.scala-lang&lt;/groupId&gt;      &lt;artifactId&gt;scala-library&lt;/artifactId&gt;      &lt;version&gt;${scala.version}&lt;/version&gt;    &lt;/dependency&gt;    &lt;!-- https://mvnrepository.com/artifact/org.apache.spark/spark-core --&gt;    &lt;dependency&gt;      &lt;groupId&gt;org.apache.spark&lt;/groupId&gt;      &lt;artifactId&gt;spark-core_2.11&lt;/artifactId&gt;      &lt;version&gt;2.2.0&lt;/version&gt;    &lt;/dependency&gt;    &lt;dependency&gt;      &lt;groupId&gt;junit&lt;/groupId&gt;      &lt;artifactId&gt;junit&lt;/artifactId&gt;      &lt;version&gt;4.4&lt;/version&gt;      &lt;scope&gt;test&lt;/scope&gt;    &lt;/dependency&gt;    &lt;dependency&gt;      &lt;groupId&gt;org.specs&lt;/groupId&gt;      &lt;artifactId&gt;specs&lt;/artifactId&gt;      &lt;version&gt;1.2.5&lt;/version&gt;      &lt;scope&gt;test&lt;/scope&gt;    &lt;/dependency&gt;  &lt;/dependencies&gt;  &lt;build&gt;    &lt;sourceDirectory&gt;src/main/scala&lt;/sourceDirectory&gt;    &lt;testSourceDirectory&gt;src/test/scala&lt;/testSourceDirectory&gt;    &lt;plugins&gt;      &lt;plugin&gt;        &lt;groupId&gt;org.scala-tools&lt;/groupId&gt;        &lt;artifactId&gt;maven-scala-plugin&lt;/artifactId&gt;        &lt;executions&gt;          &lt;execution&gt;            &lt;goals&gt;              &lt;goal&gt;compile&lt;/goal&gt;              &lt;goal&gt;testCompile&lt;/goal&gt;            &lt;/goals&gt;          &lt;/execution&gt;        &lt;/executions&gt;        &lt;configuration&gt;          &lt;scalaVersion&gt;${scala.version}&lt;/scalaVersion&gt;          &lt;args&gt;            &lt;arg&gt;-target:jvm-1.5&lt;/arg&gt;          &lt;/args&gt;        &lt;/configuration&gt;      &lt;/plugin&gt;      &lt;plugin&gt;        &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;        &lt;artifactId&gt;maven-eclipse-plugin&lt;/artifactId&gt;        &lt;configuration&gt;          &lt;downloadSources&gt;true&lt;/downloadSources&gt;          &lt;buildcommands&gt;            &lt;buildcommand&gt;ch.epfl.lamp.sdt.core.scalabuilder&lt;/buildcommand&gt;          &lt;/buildcommands&gt;          &lt;additionalProjectnatures&gt;            &lt;projectnature&gt;ch.epfl.lamp.sdt.core.scalanature&lt;/projectnature&gt;          &lt;/additionalProjectnatures&gt;          &lt;classpathContainers&gt;            &lt;classpathContainer&gt;org.eclipse.jdt.launching.JRE_CONTAINER&lt;/classpathContainer&gt;            &lt;classpathContainer&gt;ch.epfl.lamp.sdt.launching.SCALA_CONTAINER&lt;/classpathContainer&gt;          &lt;/classpathContainers&gt;        &lt;/configuration&gt;      &lt;/plugin&gt;    &lt;/plugins&gt;  &lt;/build&gt;  &lt;reporting&gt;    &lt;plugins&gt;      &lt;plugin&gt;        &lt;groupId&gt;org.scala-tools&lt;/groupId&gt;        &lt;artifactId&gt;maven-scala-plugin&lt;/artifactId&gt;        &lt;configuration&gt;          &lt;scalaVersion&gt;${scala.version}&lt;/scalaVersion&gt;        &lt;/configuration&gt;      &lt;/plugin&gt;    &lt;/plugins&gt;  &lt;/reporting&gt;&lt;/project&gt;</code></pre><p>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571913840705_C0C094E4A298BFA098F8123797C7F7CC" alt="图片说明" title="图片标题"><br>编写Spark程序：<br>创建WordCount程序：</p><pre><code>package SparkDemoimport org.apache.spark.{SparkConf, SparkContext}import org.apache.spark.rdd.RDD/**  * @Author: luomo  * @CreateTime: 2019/10/24  * @Description:WordCount  */object WordCount {  def main(args: Array[String]): Unit = {    //配置文件    val conf = new SparkConf().      setAppName(&quot;wordcount&quot;) // 运行时候的作业名称      .setMaster(&quot;local&quot;)    //上下文 拿着Conf信息创建出来 写spark应用程序的对象  通往集群的入口    val sc = new SparkContext(conf)    //传入文件对象 返回RDD集合    val input = sc.textFile(&quot;E:///test.txt&quot;)    //对文件行数据 按照空格切割 返回RDD集合 得到每个单词    val lines = input.flatMap(line =&gt; line.split(&quot; &quot;))    //统计单词数量 计数 得到RDD集合 按照相同的Key先分组，之后再对组内的Value进行操作    val count = lines.map(word =&gt; (word, 1)).reduceByKey(_ + _)    //将结果遍历打印到控制台    count.foreach(x =&gt;{      println(x)    })    //将结果输出到文件中    val output = count.saveAsTextFile(&quot;E:///wordCount&quot;)    //关闭流 在内存中释放这个spark对象    //sc.stop()  }}</code></pre><p>运行程序如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571914229568_474EA976C3A9A912CB36A0631F855823" alt="图片说明" title="图片标题"> </p>]]></content>
-    
-    <summary type="html">
-    
-      预览描述
-    
-    </summary>
-    
-      <category term="Spark" scheme="https://keysluomo.github.io/categories/Spark/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>Spark Error</title>
-    <link href="https://keysluomo.github.io/2020/06/14/Spark-Error/"/>
-    <id>https://keysluomo.github.io/2020/06/14/Spark-Error/</id>
-    <published>2020-06-14T03:45:08.000Z</published>
-    <updated>2020-06-14T03:48:29.263Z</updated>
-    
-    <content type="html"><![CDATA[<h1 id="配置historyserver时："><a href="#配置historyserver时：" class="headerlink" title="配置historyserver时："></a>配置historyserver时：</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227263283_97221A1B1C45BED99055FB1996A900CE" alt="图片说明" title="图片标题"> </p><p>因为端口被占用了</p><h1 id="SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错"><a href="#SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错" class="headerlink" title="SparkStreaming updateStateByKeyde 使用时 –checkpoint报错"></a>SparkStreaming updateStateByKeyde 使用时 –checkpoint报错</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227382925_460CCA764930F915D29C8DC785013F26" alt="图片说明" title="图片标题"> </p><p>原因在使用的时候，并没有设置checkPoint 检测点<br>检测点的目的就是为了保存上一次的结果数据。如果没有检测点的话，那么将无法保存上一次结果<br>如果要保证中间数据不丢失的话，可以借助其它的工具，如hdfs<br>ssc.checkpoint(“hdfs://kd0301:9000/spark_checkpoint/”)</p>]]></content>
-    
-    <summary type="html">
-    
-      预览描述
-    
-    </summary>
-    
-      <category term="Spark" scheme="https://keysluomo.github.io/categories/Spark/"/>
-    
-    
-      <category term="Error" scheme="https://keysluomo.github.io/tags/Error/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Spark压缩文件性能分析</title>
-    <link href="https://keysluomo.github.io/2020/06/14/Spark%E5%8E%8B%E7%BC%A9%E6%96%87%E4%BB%B6%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/"/>
-    <id>https://keysluomo.github.io/2020/06/14/Spark压缩文件性能分析/</id>
-    <published>2020-06-14T02:52:53.000Z</published>
-    <updated>2020-06-14T05:03:14.696Z</updated>
-    
-    <content type="html"><![CDATA[<h1 id="Spark压缩文件性能分析"><a href="#Spark压缩文件性能分析" class="headerlink" title="Spark压缩文件性能分析"></a>Spark压缩文件性能分析</h1><p>HDFS上分布式文件存储，成为大数据平台首选存储平台。而Spark往往以HDFS文件为输入，为保持兼容性，Spark支持多种格式文件读取，大数据场景下，性能瓶颈往往是IO，而不是CPU算力，所以对文件的压缩处理成为了很必要的手段。Spark为提供兼容性，同时支持多种压缩包直接读取，方便于用户使用，不用提前对压缩格式处理，但各种压缩格式各有优缺点，若不注意将导致Spark的能力无法发挥出来。故对Spark计算压缩文件做一个分析。</p><h1 id="支持的压缩格式"><a href="#支持的压缩格式" class="headerlink" title="支持的压缩格式"></a>支持的压缩格式</h1><p>首先来看一下Spark读取HDFS文件常用的压缩格式：<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106237246_09ACB263F52577BA2C36F0D60E304A75" alt="图片说明" title="图片标题"></p><h1 id="执行对比分析"><a href="#执行对比分析" class="headerlink" title="执行对比分析"></a>执行对比分析</h1><p>实验数据：同一个文件包，json格式文件数据<br>处理逻辑：增加列，然后发送到kafka中。<br>DAG逻辑划分：两个job（read动作一个job，foreach动作一个job），每个job下面各一个stage，每个stage下面task若干<br>程序执行参数：–master yarn –deploy-mode client –executor-cores 4 –executor-memory 4G –num-executors 4</p><h2 id="非压缩文件"><a href="#非压缩文件" class="headerlink" title="非压缩文件"></a>非压缩文件</h2><p>文件大小：33.7GB<br>运行时间：9min</p><h3 id="read阶段："><a href="#read阶段：" class="headerlink" title="read阶段："></a>read阶段：</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106293920_47AEB6D162BF532944DBDAB53E3D2EAB" alt="图片说明" title="图片标题"><br>可以看到所有节点都在读取，分布式读取，速度很快。<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106336406_317ADCB2DB2F35A583847F38535B7718" alt="图片说明" title="图片标题"></p><p>Stage里面共计分成了252个task，每个读取128MB数据。</p><h3 id="foreach阶段"><a href="#foreach阶段" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106365520_C40B30CD2EE17428DAC6E44372D32E64" alt="图片说明" title="图片标题"><br>依然并行全力计算<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106387308_25162C0F4A622B24CE97415EFFDE198A" alt="图片说明" title="图片标题"><br>每个执行节点上4个core都在并发运行。</p><h2 id="GZIP"><a href="#GZIP" class="headerlink" title="GZIP"></a>GZIP</h2><p>文件大小：10.6GB<br>运行时间：2.2h</p><p>###read阶段<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106404340_1FCD14A02942D89F2391B8A13BF3F1BF" alt="图片说明" title="图片标题"><br>只有单节点读取</p><p>同时该节点上也只有一个核心在运行<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106440480_1A2BEF1D5E0E50929495F9B550115FBA" alt="图片说明" title="图片标题"><br>foreach阶段</p><p>也是只有单节点、单core运行</p><h2 id="BZIP2"><a href="#BZIP2" class="headerlink" title="BZIP2"></a>BZIP2</h2><p>文件大小：7.7GB<br>运行时间：12min</p><h3 id="read阶段"><a href="#read阶段" class="headerlink" title="read阶段"></a>read阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106466729_53072EE252372595149335F751CD1394" alt="图片说明" title="图片标题"><br>与非压缩一致，并行进行</p><h3 id="foreach阶段-1"><a href="#foreach阶段-1" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106481625_67EEB8DB9FD25C46B3486090E777B5D7" alt="图片说明" title="图片标题"><br>同样并发执行</p><h2 id="SNAPPY"><a href="#SNAPPY" class="headerlink" title="SNAPPY"></a>SNAPPY</h2><p>文件大小：16.5GB<br>运行时间：2.1h<br>这里直接采用的整文件压缩，所以文件不可分割。</p><h3 id="read阶段-1"><a href="#read阶段-1" class="headerlink" title="read阶段"></a>read阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106498372_E01A7A3A8C35CDBBFDFD4A58BA865021" alt="图片说明" title="图片标题"></p><p>单节点单核心读取，非并行。</p><h3 id="foreach阶段-2"><a href="#foreach阶段-2" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p>同上类似，单节点单核心运行<br>结果<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106539620_64157194D9DFAFAA77BE73D5A02CE37B" alt="图片说明" title="图片标题"><br>gzip和snappy无法采用并行计算，也就是说在spark平台上，这两种格式只能采用串行单进程执行，于本文开头表格对应，无法分割（splittable）的压缩格式只能顺序一个进程读取，而读取后多文件又在一个executor上，其他executor无文件导致无法并行的foreach。<br>bz2和非压缩格式支持分割，也就是说可以并行读取以及计算。<br>不可分割的压缩格式文件不可并行读取，完全无法发挥spark的并行计算优势，并且若压缩包过大，对单节点的物理性能要求较高。<br>建议<br>snappy采用分块压缩方式使其可以并行读取计算。<br>gzip格式最好提前进行分割成小文件或者换格式，因多个文件可以并行读取。另一个办法是read文件后调用repartition操作强制将读取多数据重新均匀分配到不同的executor上，但这个操作会导致大量单节点性能占用，因此该格式建议不在spark上使用。<br>bz2表现相同于非压缩，但解压操作需要耗费时间。<br><strong>非压缩性能表现最佳，但会占用过大HDFS存储。</strong><br>spark输出压缩文件<br>实际生产环境需要spark输出文件到HDFS，并且为了节省空间会使用压缩格式，以下介绍几种常用的压缩格式<br>文本文件压缩</p><h2 id="bzip2"><a href="#bzip2" class="headerlink" title="bzip2"></a>bzip2</h2><p>压缩率最高，压缩解压速度较慢，支持split。</p><pre><code>import org.apache.hadoop.io.compress.BZip2Codec//rdd.saveAsTextFile(&quot;codec/bzip2&quot;,classOf[BZip2Codec])</code></pre><h2 id="snappy"><a href="#snappy" class="headerlink" title="snappy"></a>snappy</h2><p>json文本压缩率 38.2%，压缩和解压缩时间短。</p><pre><code>import org.apache.hadoop.io.compress.SnappyCodec//rdd.saveAsTextFile(&quot;codec/snappy&quot;,classOf[SnappyCodec])</code></pre><h2 id="gzip"><a href="#gzip" class="headerlink" title="gzip"></a>gzip</h2><p>压缩率高，压缩和解压速度较快，不支持split，如果不对文件大小进行控制，下次分析可能可能会造成效率低下的问题。<br>json文本压缩率23.5%，适合使用率低，长期存储的文件。</p><pre><code>import org.apache.hadoop.io.compress.GzipCodec//rdd.saveAsTextFile(&quot;codec/gzip&quot;,classOf[GzipCodec])</code></pre><h2 id="parquet文件压缩"><a href="#parquet文件压缩" class="headerlink" title="parquet文件压缩"></a>parquet文件压缩</h2><p>列式存储布局（比如 Parquet）可以加速查询，因为它只检查所有需要的列并对它们的值执行计算，因此只读取一个数据文件或表的小部分数据。Parquet 还支持灵活的压缩选项，因此可以显著减少磁盘上的存储。<br>如果您在 HDFS 上拥有基于文本的数据文件或表，而且正在使用 Spark SQL 对它们执行查询，那么强烈推荐将文本数据文件转换为 Parquet 数据文件，以实现性能和存储收益。当然，转换需要时间，但查询性能的提升在某些情况下可能达到 30 倍或更高，存储的节省可高达 75%！<br>转换 1 TB 数据将花费多长时间？<br>50 分钟，在一个 6 数据节点的 Spark v1.5.1 集群上可达到约 20 GB/分的吞吐量。使用的总内存约为 500GB。HDFS 上最终的 Parquet 文件的格式为：</p><pre><code>.../user/spark/data/parquet/catalog_page/part-r-00000-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet/user/spark/data/parquet/catalog_page/part-r-00001-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet...</code></pre><h3 id="存储节省"><a href="#存储节省" class="headerlink" title="存储节省"></a>存储节省</h3><p>以下 Linux 输出显示了 TEXT 和 PARQUET 在 HDFS 上的大小比较：</p><pre><code>% hadoop fs -du -h -s /user/spark/hadoopds1000g897.9 G /user/spark/hadoopds1000g% hadoop fs -du -h -s /user/spark/data/parquet231.4 G /user/spark/data/parquet</code></pre><p>1 TB 数据的存储节省了将近 75%！<br>parquet为文件提供了列式存储，查询时只会取出需要的字段和分区，对IO性能的提升非常大，同时占用空间较小，即使是parquet的uncompressed存储方式也比普通的文本要小的多。<br>spark中通过对parquet文件进行存储，spark2.0后默认使用snappy压缩，1.6.3及以前版本默认使用的gzip压缩方式。</p><p>dataset.write().parquet(“path”);</p><p>可以通过<br>spark.sql.parquet.compression.codec</p><p>参数或是在代码中进行修改配置压缩方式。<br>sparkConf.set(“spark.sql.parquet.compression.codec”,”gzip”)</p><p>parquet存储提供了<br>lzo gzip snappy uncompressed</p><p>参考文章<br><a href="https://zturn.cc/?p=24" target="_blank" rel="noopener">https://zturn.cc/?p=24</a><br><a href="https://blog.csdn.net/bajinsheng/article/details/100031359" target="_blank" rel="noopener">https://blog.csdn.net/bajinsheng/article/details/100031359</a><br><a href="https://www.ibm.com/developerworks/cn/analytics/blog/ba-parquet-for-spark-sql/index.html" target="_blank" rel="noopener">https://www.ibm.com/developerworks/cn/analytics/blog/ba-parquet-for-spark-sql/index.html</a></p>]]></content>
-    
-    <summary type="html">
-    
-      HDFS上分布式文件存储，成为大数据平台首选存储平台。而Spark往往以HDFS文件为输入，为保持兼容性，Spark支持多种格式文件读取，大数据场景下，性能瓶颈往往是IO，而不是CPU算力，所以对文件的压缩处理成为了很必要的手段。Spark为提供兼容性，同时支持多种压缩包直接读取，方便于用户使用，不用提前对压缩格式处理，但各种压缩格式各有优缺点，若不注意将导致Spark的能力无法发挥出来。故对Spark计算压缩文件做一个分析。
-    
-    </summary>
-    
-      <category term="Spark" scheme="https://keysluomo.github.io/categories/Spark/"/>
-    
-    
-      <category term="性能调优" scheme="https://keysluomo.github.io/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/"/>
     
   </entry>
   

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="baidu-site-verification" content="L6Lm9d5Crl"/>
+  
+  
+  
+  
+  <title>HDFS(1.0)与(2.0) | 落墨</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="当数据集超过一个单独的物理计算机的存储能力时，便有必要将它分部到多个独立的计算机。管理跨计算机网络存储的文件系统成为分布式文件系统。因为它们是基于网络的，所有网络编程的复杂性都会随之而来，所以分布式文件系统比普通磁盘文件系统更复杂。使这个文件系统能容忍节点故障而不损失数据就是一个极大的挑战。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HDFS(1.0)与(2.0)">
+<meta property="og:url" content="https://keysluomo.github.io/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/index.html">
+<meta property="og:site_name" content="落墨">
+<meta property="og:description" content="当数据集超过一个单独的物理计算机的存储能力时，便有必要将它分部到多个独立的计算机。管理跨计算机网络存储的文件系统成为分布式文件系统。因为它们是基于网络的，所有网络编程的复杂性都会随之而来，所以分布式文件系统比普通磁盘文件系统更复杂。使这个文件系统能容忍节点故障而不损失数据就是一个极大的挑战。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191113/9094293_1573653745515_C6385AA30EAE8DF42909F448F818796D%20&quot;%E5%9B%BE%E7%89%87%E6%A0%87%E9%A2%98&quot;">
+<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191113/9094293_1573657152422_869474068105B25BFF5141288796FA00%20&quot;%E5%9B%BE%E7%89%87%E6%A0%87%E9%A2%98&quot;">
+<meta property="article:published_time" content="2020-06-17T10:44:41.000Z">
+<meta property="article:modified_time" content="2020-06-17T10:46:18.971Z">
+<meta property="article:author" content="落墨">
+<meta property="article:tag" content="Hadoop">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://uploadfiles.nowcoder.com/images/20191113/9094293_1573653745515_C6385AA30EAE8DF42909F448F818796D%20&quot;%E5%9B%BE%E7%89%87%E6%A0%87%E9%A2%98&quot;">
+  
+    <link rel="alternative" href="/atom.xml" title="落墨" type="application/atom+xml">
+  
+  
+  
+  
+<link rel="stylesheet" href="//cdn.bootcss.com/animate.css/3.5.0/animate.min.css">
+
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  <link rel="stylesheet" href="/font-awesome/css/font-awesome.min.css">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  
+  
+      <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  
+  <!-- 加载特效 -->
+    <script src="/js/pace.js"></script>
+    <link href="/css/pace/pace-theme-flash.css" rel="stylesheet" />
+  <script>
+      var yiliaConfig = {
+          fancybox: true,
+          animate: true,
+          isHome: false,
+          isPost: true,
+          isArchive: false,
+          isTag: false,
+          isCategory: false,
+          open_in_new: false
+      }
+  </script>
+<meta name="generator" content="Hexo 4.2.1"></head>
+<body>
+  <div id="container">
+    <div class="left-col">
+    <div class="overlay"></div>
+<div class="intrude-less">
+    <header id="header" class="inner">
+        
+<script src="https://7.url.cn/edu/jslib/comb/require-2.1.6,jquery-1.9.1.min.js"></script>
+
+        <a href="/" class="profilepic">
+            
+            <img lazy-src="/img/avatar.png" class="js-avatar">
+            
+        </a>
+        <hgroup>
+          <h1 class="header-author"><a href="/">落墨</a></h1>
+        </hgroup>
+        
+        <p class="header-subtitle">凡心所向，素履以往</p>
+        
+        
+        
+        
+            <div id="switch-btn" class="switch-btn">
+                <div class="icon">
+                    <div class="icon-ctn">
+                        <div class="icon-wrap icon-house" data-idx="0">
+                            <div class="birdhouse"></div>
+                            <div class="birdhouse_holes"></div>
+                        </div>
+                        <div class="icon-wrap icon-ribbon hide" data-idx="1">
+                            <div class="ribbon"></div>
+                        </div>
+                        
+                        <div class="icon-wrap icon-link hide" data-idx="2">
+                            <div class="loopback_l"></div>
+                            <div class="loopback_r"></div>
+                        </div>
+                        
+                        
+                        <div class="icon-wrap icon-me hide" data-idx="3">
+                            <div class="user"></div>
+                            <div class="shoulder"></div>
+                        </div>
+                        
+                    </div>
+                </div>
+                <div class="tips-box hide">
+                    <div class="tips-arrow"></div>
+                    <ul class="tips-inner">
+                        <li>菜单</li>
+                        <li>标签</li>
+                        
+                        <li>友情链接</li>
+                        
+                        
+                        <li>关于我</li>
+                        
+                    </ul>
+                </div>
+            </div>
+        
+        <div id="switch-area" class="switch-area">
+            <div class="switch-wrap">
+                <section class="switch-part switch-part1">
+                    <nav class="header-menu">
+                        <ul>
+                        
+                            <li><a  href="/archives/">所有文章</a></li>
+                        
+                            <li><a  href="/categories/Flink/">Flink</a></li>
+                        
+                            <li><a  href="/categories/Spark/">Spark</a></li>
+                        
+                            <li><a  href="/categories/Java/">Java</a></li>
+                        
+                            <li><a  href="/categories/JVM">JVM</a></li>
+                        
+                            <li><a  href="/categories/Scala/">Scala</a></li>
+                        
+                            <li><a  href="/categories/Kafka">Kafka</a></li>
+                        
+                            <li><a  href="/categories/Hadoop">Hadoop生态圈</a></li>
+                        
+                            <li><a  href="/categories/Zookeeper">Zookeeper</a></li>
+                        
+                            <li><a  href="/categories/Zeppelin">Zeppelin</a></li>
+                        
+                            <li><a  href="/categories/tools">Tools</a></li>
+                        
+                        </ul>
+                    </nav>
+                    <nav class="header-nav">
+                        <ul class="social">
+                            
+                                <a class="fl github"  target="_blank" href="/xxxxx" title="github">github</a>
+                            
+                                <a class="fl weibo"  target="_blank" href="/xxxxxxxx" title="weibo">weibo</a>
+                            
+                                <a class="fl rss"  target="_blank" href="/atom.xml" title="rss">rss</a>
+                            
+                        </ul>
+                    </nav>
+                </section>
+                
+                <section class="switch-part switch-part2">
+                    <div class="widget tagcloud" id="js-tagcloud">
+                        <a href="/tags/Error/" style="font-size: 10px;">Error</a> <a href="/tags/Flink/" style="font-size: 20px;">Flink</a> <a href="/tags/Hadoop/" style="font-size: 15px;">Hadoop</a> <a href="/tags/Hadoop%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">Hadoop部署</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kafka/" style="font-size: 10px;">Kafka</a> <a href="/tags/Serializable/" style="font-size: 10px;">Serializable</a> <a href="/tags/Spark/" style="font-size: 10px;">Spark</a> <a href="/tags/VMware/" style="font-size: 10px;">VMware</a> <a href="/tags/Zeppelin-%E5%AE%89%E8%A3%85/" style="font-size: 10px;">Zeppelin 安装</a> <a href="/tags/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/" style="font-size: 10px;">垃圾收集器</a> <a href="/tags/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/" style="font-size: 10px;">垃圾收集算法</a> <a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" style="font-size: 10px;">性能调优</a> <a href="/tags/%E6%AD%BB%E9%94%81/" style="font-size: 10px;">死锁</a> <a href="/tags/%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6/" style="font-size: 10px;">状态管理与容错机制</a> <a href="/tags/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/" style="font-size: 10px;">编程语言</a> <a href="/tags/%E8%BD%AC%E8%BD%BD/" style="font-size: 15px;">转载</a> <a href="/tags/%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F/" style="font-size: 10px;">运行时数据区域</a> <a href="/tags/%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7/" style="font-size: 10px;">集群监控</a> <a href="/tags/%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">集群部署</a> <a href="/tags/%E9%9B%B6%E6%8B%B7%E8%B4%9D/" style="font-size: 10px;">零拷贝</a>
+                    </div>
+                </section>
+                
+                
+                <section class="switch-part switch-part3">
+                    <div id="js-friends">
+                    
+                      <a target="_blank"  class="main-nav-link switch-friends-link" href="http://blog.csdn.net/baidu_21483933">csdn</a>
+                    
+                      <a target="_blank"  class="main-nav-link switch-friends-link" href="https://segmentfault.com/blog/maocg_web">segmentfault</a>
+                    
+                      <a target="_blank"  class="main-nav-link switch-friends-link" href="http://www.jianshu.com/users/eb37ef89c746/latest_articles">简书</a>
+                    
+                    </div>
+                </section>
+                
+                
+                
+                <section class="switch-part switch-part4">
+                
+                    <div id="js-aboutme">爱动漫,爱游戏,爱编程,爱运动,爱的太多了!</div>
+                </section>
+                
+            </div>
+        </div>
+    </header>
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+      <div class="overlay">
+          <div class="slider-trigger"></div>
+          <h1 class="header-author js-mobile-header hide"><a href="/" title="回到主页">落墨</a></h1>
+      </div>
+    <div class="intrude-less">
+        <header id="header" class="inner">
+            <a href="/" class="profilepic">
+                
+                    <img lazy-src="/img/avatar.png" class="js-avatar">
+                
+            </a>
+            <hgroup>
+              <h1 class="header-author"><a href="/" title="回到主页">落墨</a></h1>
+            </hgroup>
+            
+            <p class="header-subtitle">凡心所向，素履以往</p>
+            
+            <nav class="header-menu">
+                <ul>
+                
+                    <li><a href="/archives/">所有文章</a></li>
+                
+                    <li><a href="/categories/Flink/">Flink</a></li>
+                
+                    <li><a href="/categories/Spark/">Spark</a></li>
+                
+                    <li><a href="/categories/Java/">Java</a></li>
+                
+                    <li><a href="/categories/JVM">JVM</a></li>
+                
+                    <li><a href="/categories/Scala/">Scala</a></li>
+                
+                    <li><a href="/categories/Kafka">Kafka</a></li>
+                
+                    <li><a href="/categories/Hadoop">Hadoop生态圈</a></li>
+                
+                    <li><a href="/categories/Zookeeper">Zookeeper</a></li>
+                
+                    <li><a href="/categories/Zeppelin">Zeppelin</a></li>
+                
+                    <li><a href="/categories/tools">Tools</a></li>
+                
+                <div class="clearfix"></div>
+                </ul>
+            </nav>
+            <nav class="header-nav">
+                <div class="social">
+                    
+                        <a class="github" target="_blank" href="/xxxxx" title="github">github</a>
+                    
+                        <a class="weibo" target="_blank" href="/xxxxxxxx" title="weibo">weibo</a>
+                    
+                        <a class="rss" target="_blank" href="/atom.xml" title="rss">rss</a>
+                    
+                </div>
+            </nav>
+        </header>
+    </div>
+</nav>
+      <div class="body-wrap"><article id="post-HDFS-1-0-与-2-0" class="article article-type-post" itemscope itemprop="blogPost">
+  
+    <div class="article-meta">
+      <a  href="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/" class="article-date">
+      <time datetime="2020-06-17T10:44:41.000Z" itemprop="datePublished">2020-06-17</time>
+</a>
+
+    </div>
+  
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      HDFS(1.0)与(2.0)
+    </h1>
+  
+
+
+      </header>
+      
+      <div class="article-info article-info-post">
+        
+    <div class="article-category tagcloud">
+    <a class="article-category-link" href="/categories/Hadoop/">Hadoop</a>
+    </div>
+
+
+        
+    <div class="article-tag tagcloud">
+        <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hadoop/" rel="tag">Hadoop</a></li></ul>
+    </div>
+
+        <div class="clearfix"></div>
+      </div>
+      
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+          
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>当数据集超过一个单独的物理计算机的存储能力时，便有必要将它分部到多个独立的计算机。管理跨计算机网络存储的文件系统成为分布式文件系统。因为它们是基于网络的，所有网络编程的复杂性都会随之而来，所以分布式文件系统比普通磁盘文件系统更复杂。使这个文件系统能容忍节点故障而不损失数据就是一个极大的挑战。</p>
+<h2 id="HDFS的设计"><a href="#HDFS的设计" class="headerlink" title="HDFS的设计"></a>HDFS的设计</h2><p>HDFS是为以流式出局访问模式存储超大文件而设计的文件系统，在商用硬件的集群上运行。让我们看看它的优势：<br><strong>超大文件</strong><br>“超大文件”在这里指几百MB，几百GB甚至几百TB大小的文件。目前已经有Hadoop集群存储PB级的数据了。<br><strong>流式数据</strong><br>HDFS建立在这样一个思想上：一次写入、多次读取模式是最高效的。一个数据集通常由数据源生成或复制，接着在此基础上进行各种各样的分析。每个分析至少都会涉及数据集中的大部分数据（甚至全部）。<br><strong>商用硬件</strong><br>Hadoop不需要运行在昂贵并且高可靠的硬件上。它被设计运行在商用硬件（在各种零售店都能买到的普通硬件）的集群上，因此至少对于大的集群来说，节点故障的几率还是较高的。HDFS在面对这种故障时，被设计为能够继续运行而让用户察觉不到明显的中断。</p>
+<h2 id="HDFS-1-0架构："><a href="#HDFS-1-0架构：" class="headerlink" title="HDFS 1.0架构："></a>HDFS 1.0架构：</h2><p> HDFS采用的是Master/Slave架构一个 HDFS 集群包含一个单独的 NameNode 和多个 DataNode 节点。</p>
+<h2 id="HDFS-1-0-的问题"><a href="#HDFS-1-0-的问题" class="headerlink" title="HDFS 1.0 的问题"></a>HDFS 1.0 的问题</h2><p>进入了 PB 级的大数据时代，HDFS 1.0的设计缺陷已经无法满足生产的需求，最致命的问题有以下两点：</p>
+<ul>
+<li>NameNode 的单点问题，如果 NameNode 挂掉了，数据读写都会受到影响，HDFS 整体将变得不可用，这在生产环境中是不可接受的；</li>
+<li>水平扩展问题，随着集群规模的扩大，1.0 时集群规模达到3000时，会导致整个集群管理的文件数目达到上限（因为 NameNode 要管理整个集群 block 元信息、数据目录信息等）。  </li>
+</ul>
+<p>为了解决上面的两个问题，Hadoop2.0 提供一套统一的解决方案：</p>
+<ul>
+<li>HA（High Availability 高可用方案）：这个是为了解决 NameNode 单点问题；</li>
+<li>NameNode Federation：是用来解决 HDFS 集群的线性扩展能力。  </li>
+</ul>
+<h2 id="HDFS-2-0-的-HA-实现"><a href="#HDFS-2-0-的-HA-实现" class="headerlink" title="HDFS 2.0 的 HA 实现"></a>HDFS 2.0 的 HA 实现</h2><p>这里先看下 HDFS 高可用解决方案的架构设计，如下图</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191113/9094293_1573653745515_C6385AA30EAE8DF42909F448F818796D &quot;图片标题&quot;" alt="图片说明"> </p>
+<p>这里与前面 1.0 的架构已经有很大变化，简单介绍一下的组件：</p>
+<ol>
+<li>Active NameNode 和 Standby NameNode：两台 NameNode 形成互备，一台处于 Active 状态，为主 NameNode，另外一台处于 Standby 状态，为备 NameNode，只有主 NameNode 才能对外提供读写服务；</li>
+<li>ZKFailoverController（主备切换控制器，FC）：ZKFailoverController 作为独立的进程运行，对 NameNode 的主备切换进行总体控。ZKFailoverController 能及时检测到 NameNode 的健康状况，在主 NameNode 故障时借助 Zookeeper 实现自动的主备选举和切换（当然 NameNode 目前也支持不依赖于Zookeeper 的手动主备切换）；</li>
+<li>Zookeeper 集群：为主备切换控制器提供主备选举支持；</li>
+<li>共享存储系统：共享存储系统是实现 NameNode 的高可用最为关键的部分，共享存储系统保存了 NameNode 在运行过程中所产生的 HDFS 的元数据。主 NameNode 和备NameNode 通过共享存储系统实现元数据同步。在进行主备切换的时候，新的主 NameNode 在确认元数据完全同步之后才能继续对外提供服务。</li>
+<li>DataNode 节点：因为主 NameNode 和备 NameNode 需要共享 HDFS 的数据块和 DataNode 之间的映射关系，为了使故障切换能够快速进行，DataNode 会同时向主 NameNode 和备 NameNode 上报数据块的位置信息。</li>
+</ol>
+<h2 id="HDFS-2-0-Federation-实现"><a href="#HDFS-2-0-Federation-实现" class="headerlink" title="HDFS 2.0 Federation 实现"></a>HDFS 2.0 Federation 实现</h2><p>在 1.0 中，HDFS 的架构设计有以下缺点：</p>
+<p>namespace 扩展性差：在单一的 NN 情况下，因为所有 namespace 数据都需要加载到内存，所以物理机内存的大小限制了整个 HDFS 能够容纳文件的最大个数（namespace 指的是 HDFS 中树形目录和文件结构以及文件对应的 block 信息）；<br>性能可扩展性差：由于所有请求都需要经过 NN，单一 NN 导致所有请求都由一台机器进行处理，很容易达到单台机器的吞吐；<br>隔离性差：多租户的情况下，单一 NN 的架构无法在租户间进行隔离，会造成不可避免的相互影响。<br>而 Federation 的设计就是为了解决这些问题，采用 Federation 的最主要原因是设计实现简单，而且还能解决问题。</p>
+<h2 id="Federation-架构"><a href="#Federation-架构" class="headerlink" title="Federation 架构"></a>Federation 架构</h2><p>Federation 的架构设计如下图所示（图片来自 HDFS Federation）：<br><img src="https://uploadfiles.nowcoder.com/images/20191113/9094293_1573657152422_869474068105B25BFF5141288796FA00 &quot;图片标题&quot;" alt="图片说明"> </p>
+<h3 id="HDFS-Federation-架构实现"><a href="#HDFS-Federation-架构实现" class="headerlink" title="HDFS Federation 架构实现"></a>HDFS Federation 架构实现</h3><p>Federation 的核心设计思想<br>Federation 的核心思想是将一个大的 namespace 划分多个子 namespace，并且每个 namespace 分别由单独的 NameNode 负责，这些 NameNode 之间互相独立，不会影响，不需要做任何协调工作（其实跟拆集群有一些相似），集群的所有 DataNode 会被多个 NameNode 共享。</p>
+<p>其中，每个子 namespace 和 DataNode 之间会由数据块管理层作为中介建立映射关系，数据块管理层由若干数据块池（Pool）构成，每个数据块只会唯一属于某个固定的数据块池，而一个子 namespace 可以对应多个数据块池。每个 DataNode 需要向集群中所有的 NameNode 注册，且周期性地向所有 NameNode 发送心跳和块报告，并执行来自所有 NameNode 的命令。</p>
+<ol>
+<li>一个 block pool 由属于同一个 namespace 的数据块组成，每个 DataNode 可能会存储集群中所有 block pool 的数据块；</li>
+<li>每个 block pool 内部自治，也就是说各自管理各自的 block，不会与其他 block pool 交流，如果一个 NameNode 挂掉了，不会影响其他 NameNode;</li>
+<li>某个 NameNode 上的 namespace 和它对应的 block pool 一起被称为 namespace volume，它是管理的基本单位。当一个 NameNode/namespace 被删除后，其所有 DataNode 上对应的 block pool 也会被删除，当集群升级时，每个 namespace volume 可以作为一个基本单元进行升级。<br>参考链接：<br><a href="https://www.ibm.com/developerworks/cn/opensource/os-cn-hadoop-name-node/" target="_blank" rel="noopener">https://www.ibm.com/developerworks/cn/opensource/os-cn-hadoop-name-node/</a><br><a href="http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/Federation.html" target="_blank" rel="noopener">http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/Federation.html</a></li>
+</ol>
+
+      
+    </div>
+    
+  </div>
+  
+    
+         
+
+
+
+<nav id="article-nav">
+  
+    <a  href="/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption"><</strong>
+      <div class="article-nav-title">
+        
+          HDFS NameNode的工作机制
+        
+      </div>
+    </a>
+  
+  
+    <a  href="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Flume监控之Ganglia</div>
+      <strong class="article-nav-caption">></strong>
+    </a>
+  
+</nav>
+
+
+  
+</article>
+
+    <div id="toc" class="toc-article">
+    <strong class="toc-title">文章目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#前言"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#HDFS的设计"><span class="toc-number">1.1.</span> <span class="toc-text">HDFS的设计</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HDFS-1-0架构："><span class="toc-number">1.2.</span> <span class="toc-text">HDFS 1.0架构：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HDFS-1-0-的问题"><span class="toc-number">1.3.</span> <span class="toc-text">HDFS 1.0 的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HDFS-2-0-的-HA-实现"><span class="toc-number">1.4.</span> <span class="toc-text">HDFS 2.0 的 HA 实现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HDFS-2-0-Federation-实现"><span class="toc-number">1.5.</span> <span class="toc-text">HDFS 2.0 Federation 实现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Federation-架构"><span class="toc-number">1.6.</span> <span class="toc-text">Federation 架构</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#HDFS-Federation-架构实现"><span class="toc-number">1.6.1.</span> <span class="toc-text">HDFS Federation 架构实现</span></a></li></ol></li></ol></li></ol>
+</div>
+<style>
+    .left-col .switch-btn {
+        display: none;
+    }
+    .left-col .switch-area {
+        display: none;
+    }
+</style>
+<input type="button" id="tocButton" value="隐藏目录"  title="点击按钮隐藏或者显示文章目录">
+
+<script src="https://7.url.cn/edu/jslib/comb/require-2.1.6,jquery-1.9.1.min.js"></script>
+
+<script>
+    var valueHide = "隐藏目录";
+    var valueShow = "显示目录";
+    if ($(".left-col").is(":hidden")) {
+        $("#tocButton").attr("value", valueShow);
+    }
+    $("#tocButton").click(function() {
+        if ($("#toc").is(":hidden")) {
+            $("#tocButton").attr("value", valueHide);
+            $("#toc").slideDown(320);
+            $(".switch-btn, .switch-area").fadeOut(300);
+        }
+        else {
+            $("#tocButton").attr("value", valueShow);
+            $("#toc").slideUp(350);
+            $(".switch-btn, .switch-area").fadeIn(500);
+        }
+    })
+    if ($(".toc").length < 1) {
+        $("#toc, #tocButton").hide();
+        $(".switch-btn, .switch-area").show();
+    }
+</script>
+
+
+
+
+
+
+    
+        <section class="changyan" id="comments">
+  <!--<div id="uyan_frame"></div>-->
+  <div id="SOHUCS"></div>
+  <script charset="utf-8" type="text/javascript" src="https://changyan.sohu.com/upload/changyan.js"></script>
+  <script type="text/javascript">
+    window.changyan.api.config({
+      appid: 'xxxx',
+      conf: 'xxxxxxxxx'
+    });
+  </script>
+</section>
+    
+
+
+
+    <div class="scroll" id="post-nav-button">
+        
+            <a  href="/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/" title="上一篇: HDFS NameNode的工作机制">
+                <i class="fa fa-angle-left"></i>
+            </a>
+        
+        <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
+        
+            <a  href="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/" title="下一篇: Flume监控之Ganglia">
+                <i class="fa fa-angle-right"></i>
+            </a>
+        
+    </div>
+    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/06/19/Hadoop%E5%AE%89%E8%A3%85/">Hadoop安装</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/19/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/">VMwareWorkstation pro无法在Windows上运行的问题</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/19/Scala/">Scala</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/17/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/">垃圾收集器</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/">HDFS NameNode的工作机制</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/">HDFS(1.0)与(2.0)</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/">Flume监控之Ganglia</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/17/Zookeeper%E5%88%86%E5%B8%83%E5%BC%8F%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2/">Zookeeper分布式集群部署</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/17/VisualVM-%E5%A4%9A%E5%90%88%E4%B8%80%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7/">VisualVM:多合一故障处理工具</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/17/JConsole-Java%E7%9B%91%E8%A7%86%E4%B8%8E%E7%AE%A1%E7%90%86%E6%8E%A7%E5%88%B6%E5%8F%B0/">JConsole:Java监视与管理控制台</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/17/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/">HotSpot虚拟机对象探秘</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/">Zeppelin 安装</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/17/Zeppelin/">Zeppelin</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/">垃圾收集算法</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/">如何判断对象是否死亡?</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/15/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F/">Java虚拟机运行时数据区域</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/">Java线程死锁</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/15/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/">Kafka实现高吞吐之零拷贝</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/14/Kafka-%E6%A6%82%E8%BF%B0/">Kafka 概述</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/14/Spark-Demo-Serializable/">Spark Demo(Serializable)</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/14/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/">Apache Spark简单构建一个应用程序</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/14/Spark-Error/">Spark Error</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/14/Spark%E5%8E%8B%E7%BC%A9%E6%96%87%E4%BB%B6%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/">Spark压缩文件性能分析</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/">Spark 概述</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/12/Apache-Flink-%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6/">Apache Flink 状态管理与容错机制</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/12/Apache-Flink-%E7%AE%80%E5%8D%95%E7%9A%84%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/">Apache Flink 简单的构建一个应用程序</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/12/Apache-Flink-DataStream-API-%E7%BC%96%E7%A8%8B/">Apache Flink DataStream API 编程</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/03/Apache-Flink%E6%A6%82%E5%BF%B5/">Apache Flink概念</a></li></ul>
+    
+<script src="https://7.url.cn/edu/jslib/comb/require-2.1.6,jquery-1.9.1.min.js"></script>
+
+    <script>
+        $(".post-list").addClass("toc-article");
+        // $(".post-list-item a").attr("target","_blank");
+        $("#post-nav-button > a:nth-child(2)").click(function() {
+            $(".fa-bars, .fa-times").toggle();
+            $(".post-list").toggle(300);
+            if ($(".toc").length > 0) {
+                $("#toc, #tocButton").toggle(200, function() {
+                    if ($(".switch-area").is(":visible")) {
+                        $("#toc, .switch-btn, .switch-area").toggle();
+                        $("#tocButton").attr("value", valueHide);
+                        }
+                    })
+            }
+            else {
+                $(".switch-btn, .switch-area").fadeToggle(300);
+            }
+        })
+    </script>
+
+
+
+
+    <script>
+        
+    </script>
+
+</div>
+      <footer id="footer">
+    <div class="outer">
+        <div id="footer-info">
+            <div class="footer-left">
+                &copy; 2020 落墨
+            </div>
+         
+        </div>
+        
+            <div class="visit">
+                
+                    <span id="busuanzi_container_site_pv" style='display:none'>
+                        <span id="site-visit" >极客到访数: 
+                            <span id="busuanzi_value_site_uv"></span>
+                        </span>
+                    </span>
+                
+                
+                    <span>, </span>
+                
+                
+                    <span id="busuanzi_container_page_pv" style='display:none'>
+                        <span id="page-visit">本页阅读量: 
+                            <span id="busuanzi_value_page_pv"></span>
+                        </span>
+                    </span>
+                
+            </div>
+        
+    </div>
+</footer>
+
+    </div>
+    
+<script src="https://7.url.cn/edu/jslib/comb/require-2.1.6,jquery-1.9.1.min.js"></script>
+
+
+<script src="/js/main.js"></script>
+
+
+    <script>
+        $(document).ready(function() {
+            var backgroundnum = 1;
+            var backgroundimg = "url(/background/bg-x.jpg)".replace(/x/gi, Math.ceil(Math.random() * backgroundnum));
+            $("#mobile-nav").css({"background-image": backgroundimg,"background-size": "cover","background-position": "center"});
+            $(".left-col").css({"background-image": backgroundimg,"background-size": "cover","background-position": "center"});
+        })
+    </script>
+
+
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'xxxxx', 'auto');
+ga('send', 'pageview');
+
+</script>
+<!-- End Google Analytics -->
+
+
+
+	<script>
+	var _hmt = _hmt || [];
+	(function() {
+	  var hm = document.createElement("script");
+	  hm.src = "//hm.baidu.com/hm.js?xxxxxx";
+	  var s = document.getElementsByTagName("script")[0]; 
+	  s.parentNode.insertBefore(hm, s);
+	})();
+	</script>
+
+
+
+<div class="scroll" id="scroll">
+    <a href="#"><i class="fa fa-arrow-up"></i></a>
+    <a href="#comments"><i class="fa fa-comments-o"></i></a>
+    <a href="#footer"><i class="fa fa-arrow-down"></i></a>
+</div>
+<script>
+    $(document).ready(function() {
+        if ($("#comments").length < 1) {
+            $("#scroll > a:nth-child(2)").hide();
+        };
+    })
+</script>
+
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js">
+</script>
+
+  <script language="javascript">
+    $(function() {
+        $("a[title]").each(function() {
+            var a = $(this);
+            var title = a.attr('title');
+            if (title == undefined || title == "") return;
+            a.data('title', title).removeAttr('title').hover(
+            function() {
+                var offset = a.offset();
+                $("<div id=\"anchortitlecontainer\"></div>").appendTo($("body")).html(title).css({
+                    top: offset.top - a.outerHeight() - 15,
+                    left: offset.left + a.outerWidth()/2 + 1
+                }).fadeIn(function() {
+                    var pop = $(this);
+                    setTimeout(function() {
+                        pop.remove();
+                    }, pop.text().length * 800);
+                });
+            }, function() {
+                $("#anchortitlecontainer").remove();
+            });
+        });
+    });
+</script>
+
+
+  </div>
+</body>
+</html>
