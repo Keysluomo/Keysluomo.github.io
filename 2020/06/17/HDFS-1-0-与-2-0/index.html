@@ -16,14 +16,14 @@
 <meta property="og:site_name" content="落墨">
 <meta property="og:description" content="当数据集超过一个单独的物理计算机的存储能力时，便有必要将它分部到多个独立的计算机。管理跨计算机网络存储的文件系统成为分布式文件系统。因为它们是基于网络的，所有网络编程的复杂性都会随之而来，所以分布式文件系统比普通磁盘文件系统更复杂。使这个文件系统能容忍节点故障而不损失数据就是一个极大的挑战。">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191113/9094293_1573653745515_C6385AA30EAE8DF42909F448F818796D%20&quot;%E5%9B%BE%E7%89%87%E6%A0%87%E9%A2%98&quot;">
-<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191113/9094293_1573657152422_869474068105B25BFF5141288796FA00%20&quot;%E5%9B%BE%E7%89%87%E6%A0%87%E9%A2%98&quot;">
+<meta property="og:image" content="https://keysluomo.github.io/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/1.png">
+<meta property="og:image" content="https://keysluomo.github.io/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/2.png">
 <meta property="article:published_time" content="2020-06-17T10:44:41.000Z">
-<meta property="article:modified_time" content="2020-06-17T10:46:18.971Z">
+<meta property="article:modified_time" content="2020-06-19T05:44:30.821Z">
 <meta property="article:author" content="落墨">
 <meta property="article:tag" content="Hadoop">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://uploadfiles.nowcoder.com/images/20191113/9094293_1573653745515_C6385AA30EAE8DF42909F448F818796D%20&quot;%E5%9B%BE%E7%89%87%E6%A0%87%E9%A2%98&quot;">
+<meta name="twitter:image" content="https://keysluomo.github.io/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/1.png">
   
     <link rel="alternative" href="/atom.xml" title="落墨" type="application/atom+xml">
   
@@ -310,7 +310,7 @@
 <li>NameNode Federation：是用来解决 HDFS 集群的线性扩展能力。  </li>
 </ul>
 <h2 id="HDFS-2-0-的-HA-实现"><a href="#HDFS-2-0-的-HA-实现" class="headerlink" title="HDFS 2.0 的 HA 实现"></a>HDFS 2.0 的 HA 实现</h2><p>这里先看下 HDFS 高可用解决方案的架构设计，如下图</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191113/9094293_1573653745515_C6385AA30EAE8DF42909F448F818796D &quot;图片标题&quot;" alt="图片说明"> </p>
+<p><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/1.png" alt="图片说明"> </p>
 <p>这里与前面 1.0 的架构已经有很大变化，简单介绍一下的组件：</p>
 <ol>
 <li>Active NameNode 和 Standby NameNode：两台 NameNode 形成互备，一台处于 Active 状态，为主 NameNode，另外一台处于 Standby 状态，为备 NameNode，只有主 NameNode 才能对外提供读写服务；</li>
@@ -321,7 +321,7 @@
 </ol>
 <h2 id="HDFS-2-0-Federation-实现"><a href="#HDFS-2-0-Federation-实现" class="headerlink" title="HDFS 2.0 Federation 实现"></a>HDFS 2.0 Federation 实现</h2><p>在 1.0 中，HDFS 的架构设计有以下缺点：</p>
 <p>namespace 扩展性差：在单一的 NN 情况下，因为所有 namespace 数据都需要加载到内存，所以物理机内存的大小限制了整个 HDFS 能够容纳文件的最大个数（namespace 指的是 HDFS 中树形目录和文件结构以及文件对应的 block 信息）；<br>性能可扩展性差：由于所有请求都需要经过 NN，单一 NN 导致所有请求都由一台机器进行处理，很容易达到单台机器的吞吐；<br>隔离性差：多租户的情况下，单一 NN 的架构无法在租户间进行隔离，会造成不可避免的相互影响。<br>而 Federation 的设计就是为了解决这些问题，采用 Federation 的最主要原因是设计实现简单，而且还能解决问题。</p>
-<h2 id="Federation-架构"><a href="#Federation-架构" class="headerlink" title="Federation 架构"></a>Federation 架构</h2><p>Federation 的架构设计如下图所示（图片来自 HDFS Federation）：<br><img src="https://uploadfiles.nowcoder.com/images/20191113/9094293_1573657152422_869474068105B25BFF5141288796FA00 &quot;图片标题&quot;" alt="图片说明"> </p>
+<h2 id="Federation-架构"><a href="#Federation-架构" class="headerlink" title="Federation 架构"></a>Federation 架构</h2><p>Federation 的架构设计如下图所示（图片来自 HDFS Federation）：<br><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/2.png" alt="图片说明"> </p>
 <h3 id="HDFS-Federation-架构实现"><a href="#HDFS-Federation-架构实现" class="headerlink" title="HDFS Federation 架构实现"></a>HDFS Federation 架构实现</h3><p>Federation 的核心设计思想<br>Federation 的核心思想是将一个大的 namespace 划分多个子 namespace，并且每个 namespace 分别由单独的 NameNode 负责，这些 NameNode 之间互相独立，不会影响，不需要做任何协调工作（其实跟拆集群有一些相似），集群的所有 DataNode 会被多个 NameNode 共享。</p>
 <p>其中，每个子 namespace 和 DataNode 之间会由数据块管理层作为中介建立映射关系，数据块管理层由若干数据块池（Pool）构成，每个数据块只会唯一属于某个固定的数据块池，而一个子 namespace 可以对应多个数据块池。每个 DataNode 需要向集群中所有的 NameNode 注册，且周期性地向所有 NameNode 发送心跳和块报告，并执行来自所有 NameNode 的命令。</p>
 <ol>
