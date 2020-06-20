@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://keysluomo.github.io/"/>
-  <updated>2020-06-19T03:10:44.312Z</updated>
+  <updated>2020-06-20T01:48:39.374Z</updated>
   <id>https://keysluomo.github.io/</id>
   
   <author>
@@ -15,6 +15,28 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>代码测试</title>
+    <link href="https://keysluomo.github.io/2020/06/20/%E4%BB%A3%E7%A0%81%E6%B5%8B%E8%AF%95/"/>
+    <id>https://keysluomo.github.io/2020/06/20/代码测试/</id>
+    <published>2020-06-20T01:39:12.000Z</published>
+    <updated>2020-06-20T01:48:39.374Z</updated>
+    
+    <content type="html"><![CDATA[<p>`<code>javapublic static \`</code></p><p>`<code>cppthis is cpp code\`</code></p><p>`<code>cthis is cpp code\`</code></p>]]></content>
+    
+    <summary type="html">
+    
+      预览描述
+    
+    </summary>
+    
+      <category term="Flink" scheme="https://keysluomo.github.io/categories/Flink/"/>
+    
+    
+      <category term="test" scheme="https://keysluomo.github.io/tags/test/"/>
+    
+  </entry>
   
   <entry>
     <title>Hadoop安装</title>
@@ -421,28 +443,6 @@
     
     
       <category term="Kafka" scheme="https://keysluomo.github.io/tags/Kafka/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Spark Demo(Serializable)</title>
-    <link href="https://keysluomo.github.io/2020/06/14/Spark-Demo-Serializable/"/>
-    <id>https://keysluomo.github.io/2020/06/14/Spark-Demo-Serializable/</id>
-    <published>2020-06-14T04:44:46.000Z</published>
-    <updated>2020-06-14T04:46:44.718Z</updated>
-    
-    <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在本文中将介绍spark中Task执行序列化的开发问题</p><h1 id="开发环境准备"><a href="#开发环境准备" class="headerlink" title="开发环境准备"></a>开发环境准备</h1><p>本实验Spark运行在Windows上，为了开发Spark应用程序，在本地机器上需要有Jdk1.8和Maven环境。<br>确保我们的环境配置正常，我们可以使用快捷键 Win+R 输入cmd：<br>环境如下：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341256892_8D8973B8667179A2319B041328F690BD" alt="图片说明" title="图片标题"><br>程序开发工具我们使用IDEA，创建maven项目，添加pom依赖</p><h1 id="编写Spark程序"><a href="#编写Spark程序" class="headerlink" title="编写Spark程序"></a>编写Spark程序</h1><h2 id="目录结构如下"><a href="#目录结构如下" class="headerlink" title="目录结构如下:"></a>目录结构如下:</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341490332_07386CADB58D4E8A80763A83F9F6B34D" alt="图片说明" title="图片标题"> </p><h2 id="创建Serializable-scala"><a href="#创建Serializable-scala" class="headerlink" title="创建Serializable.scala:"></a>创建Serializable.scala:</h2><p>首先我们需要了解RDD中的函数传递：<br>在实际开发中我们往往需要自己定义一些对于RDD的操作，那么此时需要主要的是，初始化工作是在Driver端进行的，而实际运行程序是在Executor端进行的，这就涉及到了跨进程通信，是需要序列化的。<br>如果我们对我们自定义的类不进行序列化：</p><pre><code>package SparkDemoimport org.apache.spark.rdd.RDDimport org.apache.spark.{SparkConf, SparkContext}/**  * @Author: luomo  * @CreateTime: 2019/10/29  * @Description: Serializable from Driver to Executor  */object Serializable {  def main(args: Array[String]): Unit = {    //创建Spark上下文对象    val config:SparkConf =new SparkConf().setMaster(&quot;local[*]&quot;).setAppName(&quot;Serializable&quot;)    //创建Spark上下文对象    val sc = new SparkContext(config)    val rdd:RDD[String] = sc.parallelize(Array(&quot;hadoop&quot;,&quot;spark&quot;,&quot;hive&quot;,&quot;Flink&quot;))    val search = new Search(&quot;h&quot;)    val match1:RDD[String] =search.getMatch1(rdd)    match1.collect().foreach(println)    sc.stop()  }  class Search(query:String){    //过滤出包含字符串的数据    def  isMatch(s:String):Boolean ={      s.contains(query)    }    //过滤出包含字符串的RDD    def getMatch1(rdd:RDD[String]) :RDD[String] = {      rdd.filter(isMatch)    }    //过滤出包含字符串的RDD    def getMatche2(rdd: RDD[String]): RDD[String] ={      rdd.filter(x=&gt; x.contains(query))    }  }}</code></pre><p>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572346997711_619AA778B91D5D25CAB063D1C7D53FFE" alt="图片说明" title="图片标题"> </p><p>可见，对于自己定义的普通类，Spark是无法直接将其序列化的。<br>需要我们自定义的类继承java.io.Serializable</p><pre><code>package SparkDemoimport org.apache.spark.rdd.RDDimport org.apache.spark.{SparkConf, SparkContext}/**  * @Author: luomo  * @CreateTime: 2019/10/29  * @Description: Serializable from Driver to Executor  */object Serializable {  def main(args: Array[String]): Unit = {    //创建Spark上下文对象    val config:SparkConf =new SparkConf().setMaster(&quot;local[*]&quot;).setAppName(&quot;Serializable&quot;)    //创建Spark上下文对象    val sc = new SparkContext(config)    val rdd:RDD[String] = sc.parallelize(Array(&quot;hadoop&quot;,&quot;spark&quot;,&quot;hive&quot;,&quot;Flink&quot;))    val search = new Search(&quot;h&quot;)    val match1:RDD[String] =search.getMatch1(rdd)    match1.collect().foreach(println)    sc.stop()  }  //自定义类  class Search(query:String) extends  java.io.Serializable {    //过滤出包含字符串的数据    def  isMatch(s:String):Boolean ={      s.contains(query)    }    //过滤出包含字符串的RDD    def getMatch1(rdd:RDD[String]) :RDD[String] = {      rdd.filter(isMatch)    }    //过滤出包含字符串的RDD    def getMatche2(rdd: RDD[String]): RDD[String] ={      rdd.filter(x=&gt; x.contains(query))    }  }}</code></pre><h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>如图我们过滤出包含字符h的字符串：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572351464995_DFD27DCB713FEB02D8628E6C67FD4273" alt="图片说明" title="图片标题"> </p>]]></content>
-    
-    <summary type="html">
-    
-      在本文中将介绍spark中Task执行序列化的开发问题
-    
-    </summary>
-    
-      <category term="Spark" scheme="https://keysluomo.github.io/categories/Spark/"/>
-    
-    
-      <category term="Serializable" scheme="https://keysluomo.github.io/tags/Serializable/"/>
     
   </entry>
   

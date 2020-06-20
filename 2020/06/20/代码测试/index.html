@@ -7,22 +7,20 @@
   
   
   
-  <title>Apache Spark简单构建一个应用程序 | 落墨</title>
+  <title>代码测试 | 落墨</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="Spark Application">
+  <meta name="description" content="预览描述">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Apache Spark简单构建一个应用程序">
-<meta property="og:url" content="https://keysluomo.github.io/2020/06/14/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/index.html">
+<meta property="og:title" content="代码测试">
+<meta property="og:url" content="https://keysluomo.github.io/2020/06/20/%E4%BB%A3%E7%A0%81%E6%B5%8B%E8%AF%95/index.html">
 <meta property="og:site_name" content="落墨">
-<meta property="og:description" content="Spark Application">
+<meta property="og:description" content="预览描述">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571913840705_C0C094E4A298BFA098F8123797C7F7CC">
-<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571914229568_474EA976C3A9A912CB36A0631F855823">
-<meta property="article:published_time" content="2020-06-14T03:52:44.000Z">
-<meta property="article:modified_time" content="2020-06-19T04:40:43.530Z">
+<meta property="article:published_time" content="2020-06-20T01:39:12.000Z">
+<meta property="article:modified_time" content="2020-06-20T01:48:39.374Z">
 <meta property="article:author" content="落墨">
+<meta property="article:tag" content="test">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571913840705_C0C094E4A298BFA098F8123797C7F7CC">
   
     <link rel="alternative" href="/atom.xml" title="落墨" type="application/atom+xml">
   
@@ -255,11 +253,11 @@
         </header>
     </div>
 </nav>
-      <div class="body-wrap"><article id="post-Apache-Spark简单构建一个应用程序" class="article article-type-post" itemscope itemprop="blogPost">
+      <div class="body-wrap"><article id="post-代码测试" class="article article-type-post" itemscope itemprop="blogPost">
   
     <div class="article-meta">
-      <a  href="/2020/06/14/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/" class="article-date">
-      <time datetime="2020-06-14T03:52:44.000Z" itemprop="datePublished">2020-06-14</time>
+      <a  href="/2020/06/20/%E4%BB%A3%E7%A0%81%E6%B5%8B%E8%AF%95/" class="article-date">
+      <time datetime="2020-06-20T01:39:12.000Z" itemprop="datePublished">2020-06-20</time>
 </a>
 
     </div>
@@ -273,7 +271,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      Apache Spark简单构建一个应用程序
+      代码测试
     </h1>
   
 
@@ -283,11 +281,15 @@
       <div class="article-info article-info-post">
         
     <div class="article-category tagcloud">
-    <a class="article-category-link" href="/categories/Spark/">Spark</a>
+    <a class="article-category-link" href="/categories/Flink/">Flink</a>
     </div>
 
 
         
+    <div class="article-tag tagcloud">
+        <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/test/" rel="tag">test</a></li></ul>
+    </div>
+
         <div class="clearfix"></div>
       </div>
       
@@ -295,152 +297,15 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-        <h1 id="简单的构建一个Apache-Spark应用程序"><a href="#简单的构建一个Apache-Spark应用程序" class="headerlink" title="简单的构建一个Apache Spark应用程序"></a>简单的构建一个Apache Spark应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Spark 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Spark相关的依赖。<br>pom如下：</p>
-<pre><code>&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot; xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd&quot;&gt;
-  &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
-  &lt;groupId&gt;SparkDemo&lt;/groupId&gt;
-  &lt;artifactId&gt;SparkDemo&lt;/artifactId&gt;
-  &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;
-  &lt;inceptionYear&gt;2008&lt;/inceptionYear&gt;
-  &lt;properties&gt;
-    &lt;scala.version&gt;2.11.1&lt;/scala.version&gt;
-  &lt;/properties&gt;
-
-  &lt;repositories&gt;
-    &lt;repository&gt;
-      &lt;id&gt;scala-tools.org&lt;/id&gt;
-      &lt;name&gt;Scala-Tools Maven2 Repository&lt;/name&gt;
-      &lt;url&gt;http://scala-tools.org/repo-releases&lt;/url&gt;
-    &lt;/repository&gt;
-  &lt;/repositories&gt;
-
-  &lt;pluginRepositories&gt;
-    &lt;pluginRepository&gt;
-      &lt;id&gt;scala-tools.org&lt;/id&gt;
-      &lt;name&gt;Scala-Tools Maven2 Repository&lt;/name&gt;
-      &lt;url&gt;http://scala-tools.org/repo-releases&lt;/url&gt;
-    &lt;/pluginRepository&gt;
-  &lt;/pluginRepositories&gt;
-
-  &lt;dependencies&gt;
-    &lt;dependency&gt;
-      &lt;groupId&gt;org.scala-lang&lt;/groupId&gt;
-      &lt;artifactId&gt;scala-library&lt;/artifactId&gt;
-      &lt;version&gt;${scala.version}&lt;/version&gt;
-    &lt;/dependency&gt;
-
-    &lt;!-- https://mvnrepository.com/artifact/org.apache.spark/spark-core --&gt;
-    &lt;dependency&gt;
-      &lt;groupId&gt;org.apache.spark&lt;/groupId&gt;
-      &lt;artifactId&gt;spark-core_2.11&lt;/artifactId&gt;
-      &lt;version&gt;2.2.0&lt;/version&gt;
-    &lt;/dependency&gt;
-
-
-    &lt;dependency&gt;
-      &lt;groupId&gt;junit&lt;/groupId&gt;
-      &lt;artifactId&gt;junit&lt;/artifactId&gt;
-      &lt;version&gt;4.4&lt;/version&gt;
-      &lt;scope&gt;test&lt;/scope&gt;
-    &lt;/dependency&gt;
-    &lt;dependency&gt;
-      &lt;groupId&gt;org.specs&lt;/groupId&gt;
-      &lt;artifactId&gt;specs&lt;/artifactId&gt;
-      &lt;version&gt;1.2.5&lt;/version&gt;
-      &lt;scope&gt;test&lt;/scope&gt;
-    &lt;/dependency&gt;
-  &lt;/dependencies&gt;
-
-  &lt;build&gt;
-    &lt;sourceDirectory&gt;src/main/scala&lt;/sourceDirectory&gt;
-    &lt;testSourceDirectory&gt;src/test/scala&lt;/testSourceDirectory&gt;
-    &lt;plugins&gt;
-      &lt;plugin&gt;
-        &lt;groupId&gt;org.scala-tools&lt;/groupId&gt;
-        &lt;artifactId&gt;maven-scala-plugin&lt;/artifactId&gt;
-        &lt;executions&gt;
-          &lt;execution&gt;
-            &lt;goals&gt;
-              &lt;goal&gt;compile&lt;/goal&gt;
-              &lt;goal&gt;testCompile&lt;/goal&gt;
-            &lt;/goals&gt;
-          &lt;/execution&gt;
-        &lt;/executions&gt;
-        &lt;configuration&gt;
-          &lt;scalaVersion&gt;${scala.version}&lt;/scalaVersion&gt;
-          &lt;args&gt;
-            &lt;arg&gt;-target:jvm-1.5&lt;/arg&gt;
-          &lt;/args&gt;
-        &lt;/configuration&gt;
-      &lt;/plugin&gt;
-      &lt;plugin&gt;
-        &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
-        &lt;artifactId&gt;maven-eclipse-plugin&lt;/artifactId&gt;
-        &lt;configuration&gt;
-          &lt;downloadSources&gt;true&lt;/downloadSources&gt;
-          &lt;buildcommands&gt;
-            &lt;buildcommand&gt;ch.epfl.lamp.sdt.core.scalabuilder&lt;/buildcommand&gt;
-          &lt;/buildcommands&gt;
-          &lt;additionalProjectnatures&gt;
-            &lt;projectnature&gt;ch.epfl.lamp.sdt.core.scalanature&lt;/projectnature&gt;
-          &lt;/additionalProjectnatures&gt;
-          &lt;classpathContainers&gt;
-            &lt;classpathContainer&gt;org.eclipse.jdt.launching.JRE_CONTAINER&lt;/classpathContainer&gt;
-            &lt;classpathContainer&gt;ch.epfl.lamp.sdt.launching.SCALA_CONTAINER&lt;/classpathContainer&gt;
-          &lt;/classpathContainers&gt;
-        &lt;/configuration&gt;
-      &lt;/plugin&gt;
-    &lt;/plugins&gt;
-  &lt;/build&gt;
-  &lt;reporting&gt;
-    &lt;plugins&gt;
-      &lt;plugin&gt;
-        &lt;groupId&gt;org.scala-tools&lt;/groupId&gt;
-        &lt;artifactId&gt;maven-scala-plugin&lt;/artifactId&gt;
-        &lt;configuration&gt;
-          &lt;scalaVersion&gt;${scala.version}&lt;/scalaVersion&gt;
-        &lt;/configuration&gt;
-      &lt;/plugin&gt;
-    &lt;/plugins&gt;
-  &lt;/reporting&gt;
-&lt;/project&gt;
-
-</code></pre><p>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571913840705_C0C094E4A298BFA098F8123797C7F7CC" alt="图片说明" title="图片标题"><br>编写Spark程序：<br>创建WordCount程序：</p>
-<pre><code>package SparkDemo
-
-import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.rdd.RDD
-/**
-  * @Author: luomo
-  * @CreateTime: 2019/10/24
-  * @Description:WordCount
-  */
-object WordCount {
-  def main(args: Array[String]): Unit = {
-    //配置文件
-    val conf = new SparkConf().
-      setAppName(&quot;wordcount&quot;) // 运行时候的作业名称
-      .setMaster(&quot;local&quot;)
-    //上下文 拿着Conf信息创建出来 写spark应用程序的对象  通往集群的入口
-    val sc = new SparkContext(conf)
-    //传入文件对象 返回RDD集合
-    val input = sc.textFile(&quot;E:///test.txt&quot;)
-    //对文件行数据 按照空格切割 返回RDD集合 得到每个单词
-    val lines = input.flatMap(line =&gt; line.split(&quot; &quot;))
-    //统计单词数量 计数 得到RDD集合 按照相同的Key先分组，之后再对组内的Value进行操作
-    val count = lines.map(word =&gt; (word, 1)).reduceByKey(_ + _)
-    //将结果遍历打印到控制台
-    count.foreach(x =&gt;{
-      println(x)
-    })
-    //将结果输出到文件中
-    val output = count.saveAsTextFile(&quot;E:///wordCount&quot;)
-    //关闭流 在内存中释放这个spark对象
-    //sc.stop()
-  }
-}
-
-</code></pre><p>运行程序如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571914229568_474EA976C3A9A912CB36A0631F855823" alt="图片说明" title="图片标题"> </p>
+        <p>`<code>java
+public static 
+\`</code></p>
+<p>`<code>cpp
+this is cpp code
+\`</code></p>
+<p>`<code>c
+this is cpp code
+\`</code></p>
 
       
     </div>
@@ -454,18 +319,9 @@ object WordCount {
 
 <nav id="article-nav">
   
-    <a  href="/2020/06/14/Spark-Demo-Serializable/" id="article-nav-newer" class="article-nav-link-wrap">
-      <strong class="article-nav-caption"><</strong>
-      <div class="article-nav-title">
-        
-          Spark Demo(Serializable)
-        
-      </div>
-    </a>
   
-  
-    <a  href="/2020/06/14/Spark-Error/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">Spark Error</div>
+    <a  href="/2020/06/19/Hadoop%E5%AE%89%E8%A3%85/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Hadoop安装</div>
       <strong class="article-nav-caption">></strong>
     </a>
   
@@ -477,7 +333,7 @@ object WordCount {
 
     <div id="toc" class="toc-article">
     <strong class="toc-title">文章目录</strong>
-    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#简单的构建一个Apache-Spark应用程序"><span class="toc-number">1.</span> <span class="toc-text">简单的构建一个Apache Spark应用程序</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#开发环境的准备："><span class="toc-number">1.1.</span> <span class="toc-text">开发环境的准备：</span></a></li></ol></li></ol>
+    
 </div>
 <style>
     .left-col .switch-btn {
@@ -538,13 +394,11 @@ object WordCount {
 
     <div class="scroll" id="post-nav-button">
         
-            <a  href="/2020/06/14/Spark-Demo-Serializable/" title="上一篇: Spark Demo(Serializable)">
-                <i class="fa fa-angle-left"></i>
-            </a>
+            <a  href="/" title="回到主页"><i class="fa fa-home"></i></a>
         
         <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
         
-            <a  href="/2020/06/14/Spark-Error/" title="下一篇: Spark Error">
+            <a  href="/2020/06/19/Hadoop%E5%AE%89%E8%A3%85/" title="下一篇: Hadoop安装">
                 <i class="fa fa-angle-right"></i>
             </a>
         
