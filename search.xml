@@ -1,64 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>Apache Flink DataStream API 编程</title>
-    <url>/2020/06/12/Apache-Flink-DataStream-API-%E7%BC%96%E7%A8%8B/</url>
-    <content><![CDATA[<p>#转载<br>作者：崔星灿<br>整理：高赟<br><a href="https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/" target="_blank" rel="noopener">https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/</a></p>
-<h1 id="1-流处理基本概念"><a href="#1-流处理基本概念" class="headerlink" title="1. 流处理基本概念"></a>1. 流处理基本概念</h1><p>对于什么是流处理，从不同的角度有不同的定义。其实流处理与批处理这两个概念是对立统一的，它们的关系有点类似于对于 Java 中的 ArrayList 中的元素，是直接看作一个有限数据集并用下标去访问，还是用迭代器去访问。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537175558_C8AF084FBC88BD49BD6B715195F1B6C1" alt="图片说明" title="图片标题"> </p>
-<p>图1. 左图硬币分类器。硬币分类器也可以看作一个流处理系统，用于硬币分类的各部分组件提前串联在一起，硬币不断进入系统，并最终被输出到不同的队列中供后续使用。右图同理。<br>流处理系统本身有很多自己的特点。一般来说，由于需要支持无限数据集的处理，流处理系统一般采用一种数据驱动的处理方式。它会提前设置一些算子，然后等到数据到达后对数据进行处理。为了表达复杂的计算逻辑，包括 Flink 在内的分布式流处理引擎一般采用 DAG 图来表示整个计算逻辑，其中 DAG 图中的每一个点就代表一个基本的逻辑单元，也就是前面说的算子。由于计算逻辑被组织成有向图，数据会按照边的方向，从一些特殊的 Source 节点流入系统，然后通过网络传输、本地传输等不同的数据传输方式在算子之间进行发送和处理，最后会通过另外一些特殊的 Sink 节点将计算结果发送到某个外部系统或数据库中。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537192886_27A88C12397D0EF8F47E865DFEE4A173" alt="图片说明" title="图片标题"> </p>
-<p>图2. 一个 DAG 计算逻辑图与实际的物理时模型。<br>逻辑图中的每个算子在物理图中可能有多个并发。<br>对于实际的分布式流处理引擎，它们的实际运行时物理模型要更复杂一些，这是由于每个算子都可能有多个实例。如图 2 所示，作为 Source 的 A 算子有两个实例，中间算子 C 也有两个实例。在逻辑模型中，A 和 B 是 C 的上游节点，而在对应的物理逻辑中，C 的所有实例和 A、B 的所有实例之间可能都存在数据交换。在物理模型中，我们会根据计算逻辑，采用系统自动优化或人为指定的方式将计算工作分布到不同的实例中。只有当算子实例分布到不同进程上时，才需要通过网络进行数据传输，而同一进程中的多个实例之间的数据传输通常是不需要通过网络的。</p>
-<p>▼示例1. Apache Storm 构造 DAG 计算图。Apache Storm 的接口定义更加“面向操作”，因此更加底层。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">TopologyBuilder builder &#x3D; new TopologyBuilder();</span><br><span class="line"></span><br><span class="line">builder.setSpout(&quot;spout&quot;, new RandomSentenceSpout(), 5);</span><br><span class="line">builder.setBolt(&quot;split&quot;, new SplitSentence(), 8).shuffleGrouping(&quot;spout&quot;);</span><br><span class="line">builder.setBolt(&quot;count&quot;, new WordCount(), 12).fieldsGrouping(&quot;split&quot;, new Fields(&quot;word&quot;));</span><br></pre></td></tr></table></figure>
-<p>▼ 示例2. Apache Flink 构造 DAG 计算图。Apache Flink 的接口定义更加“面向数据”，因此更加高层。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line"></span><br><span class="line">DataStream&lt;String&gt; text &#x3D; env.readTextFile (&quot;input&quot;);</span><br><span class="line">DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; counts &#x3D; text.flatMap(new Tokenizer()).keyBy(0).sum(1);</span><br><span class="line">counts.writeAsText(&quot;output&quot;);</span><br></pre></td></tr></table></figure>
-<p>由于流处理的计算逻辑是通过 DAG 图来表示的，因此它们的大部分 API 都是围绕构建这种计算逻辑图来设计的。例如，对于几年前非常流行的 Apache Storm，它的 Word Count 的示例如表 1 所示。基于 Apache Storm 用户需要在图中添加 Spout 或 Bolt 这种算子，并指定算子之前的连接方式。这样，在完成整个图的构建之后，就可以将图提交到远程或本地集群运行。</p>
-<p>与之对比，Apache Flink 的接口虽然也是在构建计算逻辑图，但是 Flink 的 API 定义更加面向数据本身的处理逻辑，它把数据流抽象成为一个无限集，然后定义了一组集合上的操作，然后在底层自动构建相应的 DAG 图。可以看出，Flink 的 API 要更“上层”一些。许多研究者在进行实验时，可能会更喜欢自由度高的 Storm，因为它更容易保证实现预想的图结构；而在工业界则更喜欢 Flink 这类高级 API，因为它使用更加简单。</p>
-<h1 id="2-Flink-DataStream-API-概览"><a href="#2-Flink-DataStream-API-概览" class="headerlink" title="2. Flink DataStream API 概览"></a>2. Flink DataStream API 概览</h1><p>基于前面对流处理的基本概念，本节将详细介绍 Flink DataStream API 的使用方式。我们首先还是从一个简单的例子开始看起。表3是一个流式 Word Count 的示例，虽然它只有 5 行代码，但是它给出了基于 Flink DataStream API 开发程序的基本结构。</p>
-<p>▼ 示例2. 基于 Flink DataStream API 的 Word Count 示例。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#x2F;&#x2F;1、设置运行环境</span><br><span class="line">StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">&#x2F;&#x2F;2、配置数据源读取数据</span><br><span class="line">DataStream&lt;String&gt; text &#x3D; env.readTextFile (&quot;input&quot;);</span><br><span class="line">&#x2F;&#x2F;3、进行一系列转换</span><br><span class="line">DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; counts &#x3D; text.flatMap(new Tokenizer()).keyBy(0).sum(1);</span><br><span class="line">&#x2F;&#x2F;4、配置数据汇写出数据</span><br><span class="line">counts.writeAsText(&quot;output&quot;);</span><br><span class="line">&#x2F;&#x2F;5、提交执行</span><br><span class="line">env.execute(&quot;Streaming WordCount&quot;);</span><br></pre></td></tr></table></figure>
-<p>为了实现流式 Word Count，我们首先要先获得一个 StreamExecutionEnvironment 对象。它是我们构建图过程中的上下文对象。基于这个对象，我们可以添加一些算子。对于流处理程度，我们一般需要首先创建一个数据源去接入数据。在这个例子中，我们使用了 Environment 对象中内置的读取文件的数据源。这一步之后，我们拿到的是一个 DataStream 对象，它可以看作一个无限的数据集，可以在该集合上进行一序列的操作。例如，在 Word Count 例子中，我们首先将每一条记录（即文件中的一行）分隔为单词，这是通过 FlatMap 操作来实现的。调用 FlatMap 将会在底层的 DAG 图中添加一个 FlatMap 算子。然后，我们得到了一个记录是单词的流。我们将流中的单词进行分组（keyBy），然后累积计算每一个单词的数据（sum(1)）。计算出的单词的数据组成了一个新的流，我们将它写入到输出文件中。</p>
-<p>最后，我们需要调用 env#execute 方法来开始程序的执行。需要强调的是，前面我们调用的所有方法，都不是在实际处理数据，而是在构通表达计算逻辑的 DAG 图。只有当我们将整个图构建完成并显式的调用 Execute 方法后，框架才会把计算图提供到集群中，接入数据并执行实际的逻辑。</p>
-<p>基于流式 Word Count 的例子可以看出，基于 Flink 的 DataStream API 来编写流处理程序一般需要三步：通过 Source 接入数据、进行一系统列的处理以及将数据写出。最后，不要忘记显式调用 Execute 方式，否则前面编写的逻辑并不会真正执行。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537294810_1004D3B6DA52ECDB957ACA30B9C3F264" alt="图片说明" title="图片标题"> </p>
-<p>图3. Flink DataStream 操作概览<br>从上面的例子中还可以看出，Flink DataStream API 的核心，就是代表流数据的 DataStream 对象。整个计算逻辑图的构建就是围绕调用 DataStream 对象上的不同操作产生新的 DataStream 对象展开的。整体来说，DataStream 上的操作可以分为四类。第一类是对于单条记录的操作，比如筛除掉不符合要求的记录（Filter 操作），或者将每条记录都做一个转换（Map 操作）。第二类是对多条记录的操作。比如说统计一个小时内的订单总成交量，就需要将一个小时内的所有订单记录的成交量加到一起。为了支持这种类型的操作，就得通过 Window 将需要的记录关联到一起进行处理。第三类是对多个流进行操作并转换为单个流。例如，多个流可以通过 Union、Join 或 Connect 等操作合到一起。这些操作合并的逻辑不同，但是它们最终都会产生了一个新的统一的流，从而可以进行一些跨流的操作。最后， DataStream 还支持与合并对称的操作，即把一个流按一定规则拆分为多个流（Split 操作），每个流是之前流的一个子集，这样我们就可以对不同的流作不同的处理。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537308371_60CD8BAC6B1F4A4CAFC6E077E20E337A" alt="图片说明" title="图片标题"><br>图4. 不同类型的 DataStream 子类型。不同的子类型支持不同的操作集合。<br>为了支持这些不同的流操作，Flink 引入了一组不同的流类型，用来表示某些操作的中间流数据集类型。完整的类型转换关系如图4所示。首先，对于一些针对单条记录的操作，如 Map 等，操作的结果仍然是是基本的 DataStream 类型。然后，对于 Split 操作，它会首先产生一个 SplitStream，基于 SplitStream 可以使用 Select 方法来筛选出符合要求的记录并再将得到一个基本的流。</p>
-<p>类似的，对于 Connect 操作，在调用 streamA.connect(streamB)后可以得到一个专门的 ConnectedStream。ConnectedStream 支持的操作与普通的 DataStream 有所区别，由于它代表两个不同的流混合的结果，因此它允许用户对两个流中的记录分别指定不同的处理逻辑，然后它们的处理结果形成一个新的 DataStream 流。由于不同记录的处理是在同一个算子中进行的，因此它们在处理时可以方便的共享一些状态信息。上层的一些 Join 操作，在底层也是需要依赖于 Connect 操作来实现的。</p>
-<p>另外，如前所述，我们可以通过 Window 操作对流可以按时间或者个数进行一些切分，从而将流切分成一个个较小的分组。具体的切分逻辑可以由用户进行选择。当一个分组中所有记录都到达后，用户可以拿到该分组中的所有记录，从而可以进行一些遍历或者累加操作。这样，对每个分组的处理都可以得到一组输出数据，这些输出数据形成了一个新的基本流。</p>
-<p>对于普通的 DataStream，我们必须使用 allWindow 操作，它代表对整个流进行统一的 Window 处理，因此是不能使用多个算子实例进行同时计算的。针对这一问题，就需要我们首先使用 KeyBy 方法对记录按 Key 进行分组，然后才可以并行的对不同 Key 对应的记录进行单独的 Window 操作。KeyBy 操作是我们日常编程中最重要的操作之一，下面我们会更详细的介绍。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538395925_84B3A35C34414BE73CE78565B377C9BE" alt="图片说明" title="图片标题"><br>图5. 基本流上的 Window 操作与 KeyedStream 上的 Window 操对比。KeyedStream 上的 Window 操作使采用多个实例并发处理成为了可能。<br>基本 DataStream 对象上的 allWindow 与 KeyedStream 上的 Window 操作的对比如图5所示。为了能够在多个并发实例上并行的对数据进行处理，我们需要通过 KeyBy 将数据进行分组。KeyBy 和 Window 操作都是对数据进行分组，但是 KeyBy 是在水平分向对流进行切分，而 Window 是在垂直方式对流进行切分。</p>
-<p>使用 KeyBy 进行数据切分之后，后续算子的每一个实例可以只处理特定 Key 集合对应的数据。除了处理本身外，Flink 中允许算子维护一部分状态（State），在KeyedStream 算子的状态也是可以分布式存储的。由于 KeyBy 是一种确定的数据分配方式（下文将介绍其它分配方式），因此即使发生 Failover 作业重启，甚至发生了并发度的改变，Flink 都可以重新分配 Key 分组并保证处理某个 Key 的分组一定包含该 Key 的状态，从而保证一致性。</p>
-<p>最后需要强调的是，KeyBy 操作只有当 Key 的数量超过算子的并发实例数才可以较好的工作。由于同一个 Key 对应的所有数据都会发送到同一个实例上，因此如果Key 的数量比实例数量少时，就会导致部分实例收不到数据，从而导致计算能力不能充分发挥。</p>
-<h1 id="3-其它问题"><a href="#3-其它问题" class="headerlink" title="3. 其它问题"></a>3. 其它问题</h1><p>除 KeyBy 之外，Flink 在算子之前交换数据时还支持其它的物理分组方式。如图 1 所示，Flink DataStream 中物理分组方式包括：</p>
-<p>Global: 上游算子将所有记录发送给下游算子的第一个实例。</p>
-<p>Broadcast: 上游算子将每一条记录发送给下游算子的所有实例。</p>
-<p>Forward：只适用于上游算子实例数与下游算子相同时，每个上游算子实例将记录发送给下游算子对应的实例。</p>
-<p>Shuffle：上游算子对每条记录随机选择一个下游算子进行发送。</p>
-<p>Rebalance：上游算子通过轮询的方式发送数据。</p>
-<p>Rescale：当上游和下游算子的实例数为 n 或 m 时，如果 n &lt; m，则每个上游实例向ceil(m/n)或floor(m/n)个下游实例轮询发送数据；如果 n &gt; m，则 floor(n/m) 或 ceil(n/m) 个上游实例向下游实例轮询发送数据。</p>
-<p>PartitionCustomer：当上述内置分配方式不满足需求时，用户还可以选择自定义分组方式。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538419242_C7E0BBE42E8516B40C29F7E7F9ABDCA5" alt="图片说明" title="图片标题"> </p>
-<p>图6. 除keyBy外其它的物理分组方式<br>除分组方式外，Flink DataStream API 中另一个重要概念就是类型系统。图 7 所示，Flink DataStream 对像都是强类型的，每一个 DataStream 对象都需要指定元素的类型，Flink 自己底层的序列化机制正是依赖于这些信息对序列化等进行优化。具体来说，在 Flink 底层，它是使用 TypeInformation 对象对类型进行描述的，TypeInformation 对象定义了一组类型相关的信息供序列化框架使用。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538432289_8C94F5A6149A0B5B45C667CC818EB879" alt="图片说明" title="图片标题"><br>图7. Flink DataStream API 中的类型系统<br>Flink 内置了一部分常用的基本类型，对于这些类型，Flink 也内置了它们的TypeInformation，用户一般可以直接使用而不需要额外的声明，Flink 自己可以通过类型推断机制识别出相应的类型。但是也会有一些例外的情况，比如，Flink DataStream API 同时支持 Java 和 Scala，Scala API 许多接口是通过隐式的参数来传递类型信息的，所以如果需要通过 Java 调用 Scala 的 API，则需要把这些类型信息通过隐式参数传递过去。另一个例子是 Java 中对泛型存在类型擦除，如果流的类型本身是一个泛型的话，则可能在擦除之后无法推断出类型信息，这时候也需要显式的指定。</p>
-<p>在 Flink 中，一般 Java 接口采用 Tuple 类型来组合多个字段，而 Scala 则更经常使用 Row 类型或 Case Class。相对于 Row，Tuple 类型存在两个问题，一个是字段个数不能超过 25 个，此外，所有字段不允许有 null 值。最后，Flink 也支持用户自定义新的类型和 TypeInformation，并通过 Kryo 来实现序列化，但是这种方式可带来一些迁移等方面的问题，所以尽量不要使用自定义的类型。</p>
-<h1 id="4-示例"><a href="#4-示例" class="headerlink" title="4. 示例"></a>4. 示例</h1><p>然后，我们再看一个更复杂的例子。假设我们有一个数据源，它监控系统中订单的情况，当有新订单时，它使用 Tuple2&lt;String, Integer&gt; 输出订单中商品的类型和交易额。然后，我们希望实时统计每个类别的交易额，以及实时统计全部类别的交易额。</p>
-<p>▼ 示例4. 实时订单统计示例。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class GroupedProcessingTimeWindowSample &#123;</span><br><span class="line">    private static class DataSource extends RichParallelSourceFunction&lt;Tuple2&lt;String, Integer&gt;&gt; &#123;</span><br><span class="line">        private volatile boolean isRunning &#x3D; true;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void run(SourceContext&lt;Tuple2&lt;String, Integer&gt;&gt; ctx) throws Exception &#123;</span><br><span class="line">            Random random &#x3D; new Random();</span><br><span class="line">            while (isRunning) &#123;</span><br><span class="line">                Thread.sleep((getRuntimeContext().getIndexOfThisSubtask() + 1) * 1000 * 5);</span><br><span class="line">                String key &#x3D; &quot;类别&quot; + (char) (&#39;A&#39; + random.nextInt(3));</span><br><span class="line">                int value &#x3D; random.nextInt(10) + 1;</span><br><span class="line"></span><br><span class="line">                System.out.println(String.format(&quot;Emits\t(%s, %d)&quot;, key, value));</span><br><span class="line">                ctx.collect(new Tuple2&lt;&gt;(key, value));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void cancel() &#123;</span><br><span class="line">            isRunning &#x3D; false;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static void main(String[] args) throws Exception &#123;</span><br><span class="line">        StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        env.setParallelism(2);</span><br><span class="line"></span><br><span class="line">        DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; ds &#x3D; env.addSource(new DataSource());</span><br><span class="line">        KeyedStream&lt;Tuple2&lt;String, Integer&gt;, Tuple&gt; keyedStream &#x3D; ds.keyBy(0);</span><br><span class="line"></span><br><span class="line">        keyedStream.sum(1).keyBy(new KeySelector&lt;Tuple2&lt;String, Integer&gt;, Object&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public Object getKey(Tuple2&lt;String, Integer&gt; stringIntegerTuple2) throws Exception &#123;</span><br><span class="line">                return &quot;&quot;;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).fold(new HashMap&lt;String, Integer&gt;(), new FoldFunction&lt;Tuple2&lt;String, Integer&gt;, HashMap&lt;String, Integer&gt;&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public HashMap&lt;String, Integer&gt; fold(HashMap&lt;String, Integer&gt; accumulator, Tuple2&lt;String, Integer&gt; value) throws Exception &#123;</span><br><span class="line">                accumulator.put(value.f0, value.f1);</span><br><span class="line">                return accumulator;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).addSink(new SinkFunction&lt;HashMap&lt;String, Integer&gt;&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public void invoke(HashMap&lt;String, Integer&gt; value, Context context) throws Exception &#123;</span><br><span class="line">                  &#x2F;&#x2F; 每个类型的商品成交量</span><br><span class="line">                  System.out.println(value);</span><br><span class="line">                  &#x2F;&#x2F; 商品成交总量                </span><br><span class="line">                  System.out.println(value.values().stream().mapToInt(v -&gt; v).sum());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line"></span><br><span class="line">        env.execute();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>示例的实现如表4所示。首先，在该实现中，我们首先实现了一个模拟的数据源，它继承自 RichParallelSourceFunction，它是可以有多个实例的 SourceFunction 的接口。它有两个方法需要实现，一个是 Run 方法，Flink 在运行时对 Source 会直接调用该方法，该方法需要不断的输出数据，从而形成初始的流。在 Run 方法的实现中，我们随机的产生商品类别和交易量的记录，然后通过 ctx#collect 方法进行发送。另一个方法是 Cancel 方法，当 Flink 需要 Cancel Source Task 的时候会调用该方法，我们使用一个 Volatile 类型的变量来标记和控制执行的状态。</p>
-<p>然后，我们在 Main 方法中就可以开始图的构建。我们首先创建了一个 StreamExecutioniEnviroment 对象。创建对象调用的 getExecutionEnvironment 方法会自动判断所处的环境，从而创建合适的对象。例如，如果我们在 IDE 中直接右键运行，则会创建 LocalStreamExecutionEnvironment 对象；如果是在一个实际的环境中，则会创建 RemoteStreamExecutionEnvironment 对象。</p>
-<p>基于 Environment 对象，我们首先创建了一个 Source，从而得到初始的&lt;商品类型，成交量&gt;流。然后，为了统计每种类别的成交量，我们使用 KeyBy 按 Tuple 的第 1 个字段（即商品类型）对输入流进行分组，并对每一个 Key 对应的记录的第 2 个字段（即成交量）进行求合。在底层，Sum 算子内部会使用 State 来维护每个Key（即商品类型）对应的成交量之和。当有新记录到达时，Sum 算子内部会更新所维护的成交量之和，并输出一条&lt;商品类型，更新后的成交量&gt;记录。</p>
-<p>如果只统计各个类型的成交量，则程序可以到此为止，我们可以直接在 Sum 后添加一个 Sink 算子对不断更新的各类型成交量进行输出。但是，我们还需要统计所有类型的总成交量。为了做到这一点，我们需要将所有记录输出到同一个计算节点的实例上。我们可以通过 KeyBy 并且对所有记录返回同一个 Key，将所有记录分到同一个组中，从而可以全部发送到同一个实例上。</p>
-<p>然后，我们使用 Fold 方法来在算子中维护每种类型商品的成交量。注意虽然目前 Fold 方法已经被标记为 Deprecated，但是在 DataStream API 中暂时还没有能替代它的其它操作，所以我们仍然使用 Fold 方法。这一方法接收一个初始值，然后当后续流中每条记录到达的时候，算子会调用所传递的 FoldFunction 对初始值进行更新，并发送更新后的值。我们使用一个 HashMap 来对各个类别的当前成交量进行维护，当有一条新的&lt;商品类别，成交量&gt;到达时，我们就更新该 HashMap。这样在 Sink 中，我们收到的是最新的商品类别和成交量的 HashMap，我们可以依赖这个值来输出各个商品的成交量和总的成交量。</p>
-<p>需要指出的是，这个例子主要是用来演示 DataStream API 的用法，实际上还会有更高效的写法，此外，更上层的 Table / SQL 还支持 Retraction 机制，可以更好的处理这种情况。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538470903_1A525E00557FBEAA217657B4AC618FB1" alt="图片说明" title="图片标题"><br>图8. API 原理图<br>最后，我们对 DataStream API 的原理进行简要的介绍。当我们调用 DataStream#map 算法时，Flink 在底层会创建一个 Transformation 对象，这一对象就代表我们计算逻辑图中的节点。它其中就记录了我们传入的 MapFunction，也就是 UDF（User Define Function）。随着我们调用更多的方法，我们创建了更多的 DataStream 对象，每个对象在内部都有一个 Transformation 对象，这些对象根据计算依赖关系组成一个图结构，就是我们的计算图。后续 Flink 将对这个图结构进行进一步的转换，从而最终生成提交作业所需要的 JobGraph。</p>
-<h1 id="5-总结"><a href="#5-总结" class="headerlink" title="5. 总结"></a>5. 总结</h1><p>本文主要介绍了 Flink DataStream API，它是当前 Flink 中比较底层的一套 API。在实际的开发中，基于该 API 需要用户自己处理 State 与 Time 等一些概念，因此需要较大的工作量。后续课程还会介绍更上层的 Table / SQL 层的 API，未来 Table / SQL 可能会成为 Flink 主流的 API，但是对于接口来说，越底层的接口表达能力越强，在一些需要精细操作的情况下，仍然需要依赖于 DataStream API。</p>
-]]></content>
-      <categories>
-        <category>Flink</category>
-      </categories>
-      <tags>
-        <tag>Flink</tag>
-        <tag>转载</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Apache Flink 状态管理与容错机制</title>
     <url>/2020/06/12/Apache-Flink-%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6/</url>
     <content><![CDATA[<h1 id="转载"><a href="#转载" class="headerlink" title="转载"></a>转载</h1><h3 id="作者：孙梦瑶"><a href="#作者：孙梦瑶" class="headerlink" title="作者：孙梦瑶"></a>作者：孙梦瑶</h3><h3 id="整理：韩非"><a href="#整理：韩非" class="headerlink" title="整理：韩非"></a>整理：韩非</h3><h3 id="校对：邱从贤（山智）"><a href="#校对：邱从贤（山智）" class="headerlink" title="校对：邱从贤（山智）"></a>校对：邱从贤（山智）</h3><p><a href="https://ververica.cn/developers/state-management/" target="_blank" rel="noopener">https://ververica.cn/developers/state-management/</a><br>本文主要分享内容如下：</p>
@@ -154,6 +96,106 @@
       </tags>
   </entry>
   <entry>
+    <title>Apache Spark简单构建一个应用程序</title>
+    <url>/2020/06/14/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
+    <content><![CDATA[<h1 id="简单的构建一个Apache-Spark应用程序"><a href="#简单的构建一个Apache-Spark应用程序" class="headerlink" title="简单的构建一个Apache Spark应用程序"></a>简单的构建一个Apache Spark应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Spark 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Spark相关的依赖。<br>pom如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;project xmlns&#x3D;&quot;http:&#x2F;&#x2F;maven.apache.org&#x2F;POM&#x2F;4.0.0&quot; xmlns:xsi&#x3D;&quot;http:&#x2F;&#x2F;www.w3.org&#x2F;2001&#x2F;XMLSchema-instance&quot; xsi:schemaLocation&#x3D;&quot;http:&#x2F;&#x2F;maven.apache.org&#x2F;POM&#x2F;4.0.0 http:&#x2F;&#x2F;maven.apache.org&#x2F;maven-v4_0_0.xsd&quot;&gt;</span><br><span class="line">  &lt;modelVersion&gt;4.0.0&lt;&#x2F;modelVersion&gt;</span><br><span class="line">  &lt;groupId&gt;SparkDemo&lt;&#x2F;groupId&gt;</span><br><span class="line">  &lt;artifactId&gt;SparkDemo&lt;&#x2F;artifactId&gt;</span><br><span class="line">  &lt;version&gt;1.0-SNAPSHOT&lt;&#x2F;version&gt;</span><br><span class="line">  &lt;inceptionYear&gt;2008&lt;&#x2F;inceptionYear&gt;</span><br><span class="line">  &lt;properties&gt;</span><br><span class="line">    &lt;scala.version&gt;2.11.1&lt;&#x2F;scala.version&gt;</span><br><span class="line">  &lt;&#x2F;properties&gt;</span><br><span class="line"></span><br><span class="line">  &lt;repositories&gt;</span><br><span class="line">    &lt;repository&gt;</span><br><span class="line">      &lt;id&gt;scala-tools.org&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;name&gt;Scala-Tools Maven2 Repository&lt;&#x2F;name&gt;</span><br><span class="line">      &lt;url&gt;http:&#x2F;&#x2F;scala-tools.org&#x2F;repo-releases&lt;&#x2F;url&gt;</span><br><span class="line">    &lt;&#x2F;repository&gt;</span><br><span class="line">  &lt;&#x2F;repositories&gt;</span><br><span class="line"></span><br><span class="line">  &lt;pluginRepositories&gt;</span><br><span class="line">    &lt;pluginRepository&gt;</span><br><span class="line">      &lt;id&gt;scala-tools.org&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;name&gt;Scala-Tools Maven2 Repository&lt;&#x2F;name&gt;</span><br><span class="line">      &lt;url&gt;http:&#x2F;&#x2F;scala-tools.org&#x2F;repo-releases&lt;&#x2F;url&gt;</span><br><span class="line">    &lt;&#x2F;pluginRepository&gt;</span><br><span class="line">  &lt;&#x2F;pluginRepositories&gt;</span><br><span class="line"></span><br><span class="line">  &lt;dependencies&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.scala-lang&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;scala-library&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;$&#123;scala.version&#125;&lt;&#x2F;version&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!-- https:&#x2F;&#x2F;mvnrepository.com&#x2F;artifact&#x2F;org.apache.spark&#x2F;spark-core --&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.apache.spark&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;spark-core_2.11&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;2.2.0&lt;&#x2F;version&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;junit&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;junit&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;4.4&lt;&#x2F;version&gt;</span><br><span class="line">      &lt;scope&gt;test&lt;&#x2F;scope&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.specs&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;specs&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;1.2.5&lt;&#x2F;version&gt;</span><br><span class="line">      &lt;scope&gt;test&lt;&#x2F;scope&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line">  &lt;&#x2F;dependencies&gt;</span><br><span class="line"></span><br><span class="line">  &lt;build&gt;</span><br><span class="line">    &lt;sourceDirectory&gt;src&#x2F;main&#x2F;scala&lt;&#x2F;sourceDirectory&gt;</span><br><span class="line">    &lt;testSourceDirectory&gt;src&#x2F;test&#x2F;scala&lt;&#x2F;testSourceDirectory&gt;</span><br><span class="line">    &lt;plugins&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.scala-tools&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-scala-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;executions&gt;</span><br><span class="line">          &lt;execution&gt;</span><br><span class="line">            &lt;goals&gt;</span><br><span class="line">              &lt;goal&gt;compile&lt;&#x2F;goal&gt;</span><br><span class="line">              &lt;goal&gt;testCompile&lt;&#x2F;goal&gt;</span><br><span class="line">            &lt;&#x2F;goals&gt;</span><br><span class="line">          &lt;&#x2F;execution&gt;</span><br><span class="line">        &lt;&#x2F;executions&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;scalaVersion&gt;$&#123;scala.version&#125;&lt;&#x2F;scalaVersion&gt;</span><br><span class="line">          &lt;args&gt;</span><br><span class="line">            &lt;arg&gt;-target:jvm-1.5&lt;&#x2F;arg&gt;</span><br><span class="line">          &lt;&#x2F;args&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.apache.maven.plugins&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-eclipse-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;downloadSources&gt;true&lt;&#x2F;downloadSources&gt;</span><br><span class="line">          &lt;buildcommands&gt;</span><br><span class="line">            &lt;buildcommand&gt;ch.epfl.lamp.sdt.core.scalabuilder&lt;&#x2F;buildcommand&gt;</span><br><span class="line">          &lt;&#x2F;buildcommands&gt;</span><br><span class="line">          &lt;additionalProjectnatures&gt;</span><br><span class="line">            &lt;projectnature&gt;ch.epfl.lamp.sdt.core.scalanature&lt;&#x2F;projectnature&gt;</span><br><span class="line">          &lt;&#x2F;additionalProjectnatures&gt;</span><br><span class="line">          &lt;classpathContainers&gt;</span><br><span class="line">            &lt;classpathContainer&gt;org.eclipse.jdt.launching.JRE_CONTAINER&lt;&#x2F;classpathContainer&gt;</span><br><span class="line">            &lt;classpathContainer&gt;ch.epfl.lamp.sdt.launching.SCALA_CONTAINER&lt;&#x2F;classpathContainer&gt;</span><br><span class="line">          &lt;&#x2F;classpathContainers&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">    &lt;&#x2F;plugins&gt;</span><br><span class="line">  &lt;&#x2F;build&gt;</span><br><span class="line">  &lt;reporting&gt;</span><br><span class="line">    &lt;plugins&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.scala-tools&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-scala-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;scalaVersion&gt;$&#123;scala.version&#125;&lt;&#x2F;scalaVersion&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">    &lt;&#x2F;plugins&gt;</span><br><span class="line">  &lt;&#x2F;reporting&gt;</span><br><span class="line">&lt;&#x2F;project&gt;</span><br></pre></td></tr></table></figure><br>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571913840705_C0C094E4A298BFA098F8123797C7F7CC" alt="图片说明" title="图片标题"><br>编写Spark程序：<br>创建WordCount程序：<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">package SparkDemo</span><br><span class="line"></span><br><span class="line">import org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line">import org.apache.spark.rdd.RDD</span><br><span class="line">&#x2F;**</span><br><span class="line">  * @Author: luomo</span><br><span class="line">  * @CreateTime: 2019&#x2F;10&#x2F;24</span><br><span class="line">  * @Description:WordCount</span><br><span class="line">  *&#x2F;</span><br><span class="line">object WordCount &#123;</span><br><span class="line">  def main(args: Array[String]): Unit &#x3D; &#123;</span><br><span class="line">    &#x2F;&#x2F;配置文件</span><br><span class="line">    val conf &#x3D; new SparkConf().</span><br><span class="line">      setAppName(&quot;wordcount&quot;) &#x2F;&#x2F; 运行时候的作业名称</span><br><span class="line">      .setMaster(&quot;local&quot;)</span><br><span class="line">    &#x2F;&#x2F;上下文 拿着Conf信息创建出来 写spark应用程序的对象  通往集群的入口</span><br><span class="line">    val sc &#x3D; new SparkContext(conf)</span><br><span class="line">    &#x2F;&#x2F;传入文件对象 返回RDD集合</span><br><span class="line">    val input &#x3D; sc.textFile(&quot;E:&#x2F;&#x2F;&#x2F;test.txt&quot;)</span><br><span class="line">    &#x2F;&#x2F;对文件行数据 按照空格切割 返回RDD集合 得到每个单词</span><br><span class="line">    val lines &#x3D; input.flatMap(line &#x3D;&gt; line.split(&quot; &quot;))</span><br><span class="line">    &#x2F;&#x2F;统计单词数量 计数 得到RDD集合 按照相同的Key先分组，之后再对组内的Value进行操作</span><br><span class="line">    val count &#x3D; lines.map(word &#x3D;&gt; (word, 1)).reduceByKey(_ + _)</span><br><span class="line">    &#x2F;&#x2F;将结果遍历打印到控制台</span><br><span class="line">    count.foreach(x &#x3D;&gt;&#123;</span><br><span class="line">      println(x)</span><br><span class="line">    &#125;)</span><br><span class="line">    &#x2F;&#x2F;将结果输出到文件中</span><br><span class="line">    val output &#x3D; count.saveAsTextFile(&quot;E:&#x2F;&#x2F;&#x2F;wordCount&quot;)</span><br><span class="line">    &#x2F;&#x2F;关闭流 在内存中释放这个spark对象</span><br><span class="line">    &#x2F;&#x2F;sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br>运行程序如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571914229568_474EA976C3A9A912CB36A0631F855823" alt="图片说明" title="图片标题"> </p>
+]]></content>
+      <categories>
+        <category>Spark</category>
+      </categories>
+  </entry>
+  <entry>
+    <title>Flume监控之Ganglia</title>
+    <url>/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Ganglia是UC Berkeley发起的一个开源集群监视项目，设计用于测量数以千计的节点。Ganglia的核心包含gmond、gmetad以及一个Web前端。主要是用来监控系统性能，如：cpu 、mem、硬盘利用率， I/O负载、网络流量情况等，通过曲线很容易见到每个节点的工作状态，对合理调整、分配系统资源，提高系统整体性能起到重要作用。今天我们来看看如何用Ganglia来监控我们的flume集群数据。</p>
+<h1 id="Ganglia的安装与部署"><a href="#Ganglia的安装与部署" class="headerlink" title="Ganglia的安装与部署"></a>Ganglia的安装与部署</h1><h2 id="1-安装httpd服务与php"><a href="#1-安装httpd服务与php" class="headerlink" title="1.安装httpd服务与php"></a>1.安装httpd服务与php</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# sudo yum -y install httpd php</span><br></pre></td></tr></table></figure>
+<h2 id="2-安装其他依赖"><a href="#2-安装其他依赖" class="headerlink" title="2.安装其他依赖"></a>2.安装其他依赖</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# sudo yum -y install rrdtool perl-rrdtool rrdtool-devel</span><br><span class="line">[root@bigdata107 flume]# sudo yum -y install apr-devel</span><br></pre></td></tr></table></figure>
+<p>##3.安装ganglia<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# rpm -Uvh http:&#x2F;&#x2F;dl.fedoraproject.org&#x2F;pub&#x2F;epel&#x2F;6&#x2F;x86_64&#x2F;epel-release-6-8.noarch.rpm</span><br><span class="line"></span><br><span class="line">[root@bigdata107 flume]# yum -y install ganglia-gmetad</span><br><span class="line">[root@bigdata107 flume]# yum -y install ganglia-web</span><br><span class="line">[root@bigdata107 flume]# yum install -y ganglia-gmond</span><br></pre></td></tr></table></figure></p>
+<h2 id="4-修改配置文件"><a href="#4-修改配置文件" class="headerlink" title="4.修改配置文件"></a>4.修改配置文件</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;httpd&#x2F;conf.d&#x2F;ganglia.conf</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/1.png" alt="图片说明"> </p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;ganglia&#x2F;gmetad.conf</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/2.png" alt="图片说明"> </p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;ganglia&#x2F;gmond.conf</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/3.png" alt="图片说明"> </p>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/4.png" alt="图片说明"> </p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]#  vim &#x2F;etc&#x2F;selinux&#x2F;config</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/5.png" alt="图片说明"> </p>
+<h2 id="5-selinux本次生效关闭必须重启-如果此时不想重启-可以临时生效"><a href="#5-selinux本次生效关闭必须重启-如果此时不想重启-可以临时生效" class="headerlink" title="5.selinux本次生效关闭必须重启,如果此时不想重启,可以临时生效"></a>5.selinux本次生效关闭必须重启,如果此时不想重启,可以临时生效</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]#  sudo setenforce 0</span><br></pre></td></tr></table></figure>
+<h1 id="启动Ganglia"><a href="#启动Ganglia" class="headerlink" title="启动Ganglia"></a>启动Ganglia</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# service httpd start</span><br><span class="line">正在启动 httpd：</span><br><span class="line">[root@bigdata107 flume]# service gmetad start</span><br><span class="line">Starting GANGLIA gmetad:  [确定]</span><br><span class="line">[root@bigdata107 flume]# service gmond start</span><br><span class="line">Starting GANGLIA gmond:  [确定]</span><br></pre></td></tr></table></figure>
+<h2 id="1-打开web-UI"><a href="#1-打开web-UI" class="headerlink" title="1.打开web UI"></a>1.打开web UI</h2><p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/6.png" alt=" "> </p>
+<h2 id="2-通过Ganglia监控Flume"><a href="#2-通过Ganglia监控Flume" class="headerlink" title="2.通过Ganglia监控Flume"></a>2.通过Ganglia监控Flume</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim flume-env.sh</span><br></pre></td></tr></table></figure>
+<p>添加如下内容：<br>export JAVA_OPTS=&quot;-Dflume.monitoring.type=ganglia -Dflume.monitoring.hosts=192.168.216.107:8649 -Xms100m -Xmx200m&quot;</p>
+<h2 id="3-启动flume任务"><a href="#3-启动flume任务" class="headerlink" title="3.启动flume任务"></a>3.启动flume任务</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# bin&#x2F;flume-ng agent </span><br><span class="line">--conf conf&#x2F; </span><br><span class="line">--name agent1 </span><br><span class="line">--conf-file job&#x2F;flume_telnet_logger.conf </span><br><span class="line">-Dflume.root.logger&#x3D;&#x3D;INFO,console </span><br><span class="line">-Dflume.monitoring.type&#x3D;ganglia </span><br><span class="line">-Dflume.monitoring.hosts&#x3D;192.168.216.107:8649</span><br></pre></td></tr></table></figure>
+<h2 id="4-发送数据查看Ganglia监测图"><a href="#4-发送数据查看Ganglia监测图" class="headerlink" title="4.发送数据查看Ganglia监测图"></a>4.发送数据查看Ganglia监测图</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# telnet bigdata107 44444</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/7.png" alt="图片说明"></p>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/8.png" alt="图片说明"> </p>
+]]></content>
+      <categories>
+        <category>Flume</category>
+      </categories>
+      <tags>
+        <tag>集群监控</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Apache Flink DataStream API 编程</title>
+    <url>/2020/06/12/Apache-Flink-DataStream-API-%E7%BC%96%E7%A8%8B/</url>
+    <content><![CDATA[<p>#转载<br>作者：崔星灿<br>整理：高赟<br><a href="https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/" target="_blank" rel="noopener">https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/</a></p>
+<h1 id="1-流处理基本概念"><a href="#1-流处理基本概念" class="headerlink" title="1. 流处理基本概念"></a>1. 流处理基本概念</h1><p>对于什么是流处理，从不同的角度有不同的定义。其实流处理与批处理这两个概念是对立统一的，它们的关系有点类似于对于 Java 中的 ArrayList 中的元素，是直接看作一个有限数据集并用下标去访问，还是用迭代器去访问。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537175558_C8AF084FBC88BD49BD6B715195F1B6C1" alt="图片说明" title="图片标题"> </p>
+<p>图1. 左图硬币分类器。硬币分类器也可以看作一个流处理系统，用于硬币分类的各部分组件提前串联在一起，硬币不断进入系统，并最终被输出到不同的队列中供后续使用。右图同理。<br>流处理系统本身有很多自己的特点。一般来说，由于需要支持无限数据集的处理，流处理系统一般采用一种数据驱动的处理方式。它会提前设置一些算子，然后等到数据到达后对数据进行处理。为了表达复杂的计算逻辑，包括 Flink 在内的分布式流处理引擎一般采用 DAG 图来表示整个计算逻辑，其中 DAG 图中的每一个点就代表一个基本的逻辑单元，也就是前面说的算子。由于计算逻辑被组织成有向图，数据会按照边的方向，从一些特殊的 Source 节点流入系统，然后通过网络传输、本地传输等不同的数据传输方式在算子之间进行发送和处理，最后会通过另外一些特殊的 Sink 节点将计算结果发送到某个外部系统或数据库中。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537192886_27A88C12397D0EF8F47E865DFEE4A173" alt="图片说明" title="图片标题"> </p>
+<p>图2. 一个 DAG 计算逻辑图与实际的物理时模型。<br>逻辑图中的每个算子在物理图中可能有多个并发。<br>对于实际的分布式流处理引擎，它们的实际运行时物理模型要更复杂一些，这是由于每个算子都可能有多个实例。如图 2 所示，作为 Source 的 A 算子有两个实例，中间算子 C 也有两个实例。在逻辑模型中，A 和 B 是 C 的上游节点，而在对应的物理逻辑中，C 的所有实例和 A、B 的所有实例之间可能都存在数据交换。在物理模型中，我们会根据计算逻辑，采用系统自动优化或人为指定的方式将计算工作分布到不同的实例中。只有当算子实例分布到不同进程上时，才需要通过网络进行数据传输，而同一进程中的多个实例之间的数据传输通常是不需要通过网络的。</p>
+<p>▼示例1. Apache Storm 构造 DAG 计算图。Apache Storm 的接口定义更加“面向操作”，因此更加底层。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">TopologyBuilder builder &#x3D; new TopologyBuilder();</span><br><span class="line"></span><br><span class="line">builder.setSpout(&quot;spout&quot;, new RandomSentenceSpout(), 5);</span><br><span class="line">builder.setBolt(&quot;split&quot;, new SplitSentence(), 8).shuffleGrouping(&quot;spout&quot;);</span><br><span class="line">builder.setBolt(&quot;count&quot;, new WordCount(), 12).fieldsGrouping(&quot;split&quot;, new Fields(&quot;word&quot;));</span><br></pre></td></tr></table></figure>
+<p>▼ 示例2. Apache Flink 构造 DAG 计算图。Apache Flink 的接口定义更加“面向数据”，因此更加高层。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line"></span><br><span class="line">DataStream&lt;String&gt; text &#x3D; env.readTextFile (&quot;input&quot;);</span><br><span class="line">DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; counts &#x3D; text.flatMap(new Tokenizer()).keyBy(0).sum(1);</span><br><span class="line">counts.writeAsText(&quot;output&quot;);</span><br></pre></td></tr></table></figure>
+<p>由于流处理的计算逻辑是通过 DAG 图来表示的，因此它们的大部分 API 都是围绕构建这种计算逻辑图来设计的。例如，对于几年前非常流行的 Apache Storm，它的 Word Count 的示例如表 1 所示。基于 Apache Storm 用户需要在图中添加 Spout 或 Bolt 这种算子，并指定算子之前的连接方式。这样，在完成整个图的构建之后，就可以将图提交到远程或本地集群运行。</p>
+<p>与之对比，Apache Flink 的接口虽然也是在构建计算逻辑图，但是 Flink 的 API 定义更加面向数据本身的处理逻辑，它把数据流抽象成为一个无限集，然后定义了一组集合上的操作，然后在底层自动构建相应的 DAG 图。可以看出，Flink 的 API 要更“上层”一些。许多研究者在进行实验时，可能会更喜欢自由度高的 Storm，因为它更容易保证实现预想的图结构；而在工业界则更喜欢 Flink 这类高级 API，因为它使用更加简单。</p>
+<h1 id="2-Flink-DataStream-API-概览"><a href="#2-Flink-DataStream-API-概览" class="headerlink" title="2. Flink DataStream API 概览"></a>2. Flink DataStream API 概览</h1><p>基于前面对流处理的基本概念，本节将详细介绍 Flink DataStream API 的使用方式。我们首先还是从一个简单的例子开始看起。表3是一个流式 Word Count 的示例，虽然它只有 5 行代码，但是它给出了基于 Flink DataStream API 开发程序的基本结构。</p>
+<p>▼ 示例2. 基于 Flink DataStream API 的 Word Count 示例。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#x2F;&#x2F;1、设置运行环境</span><br><span class="line">StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">&#x2F;&#x2F;2、配置数据源读取数据</span><br><span class="line">DataStream&lt;String&gt; text &#x3D; env.readTextFile (&quot;input&quot;);</span><br><span class="line">&#x2F;&#x2F;3、进行一系列转换</span><br><span class="line">DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; counts &#x3D; text.flatMap(new Tokenizer()).keyBy(0).sum(1);</span><br><span class="line">&#x2F;&#x2F;4、配置数据汇写出数据</span><br><span class="line">counts.writeAsText(&quot;output&quot;);</span><br><span class="line">&#x2F;&#x2F;5、提交执行</span><br><span class="line">env.execute(&quot;Streaming WordCount&quot;);</span><br></pre></td></tr></table></figure>
+<p>为了实现流式 Word Count，我们首先要先获得一个 StreamExecutionEnvironment 对象。它是我们构建图过程中的上下文对象。基于这个对象，我们可以添加一些算子。对于流处理程度，我们一般需要首先创建一个数据源去接入数据。在这个例子中，我们使用了 Environment 对象中内置的读取文件的数据源。这一步之后，我们拿到的是一个 DataStream 对象，它可以看作一个无限的数据集，可以在该集合上进行一序列的操作。例如，在 Word Count 例子中，我们首先将每一条记录（即文件中的一行）分隔为单词，这是通过 FlatMap 操作来实现的。调用 FlatMap 将会在底层的 DAG 图中添加一个 FlatMap 算子。然后，我们得到了一个记录是单词的流。我们将流中的单词进行分组（keyBy），然后累积计算每一个单词的数据（sum(1)）。计算出的单词的数据组成了一个新的流，我们将它写入到输出文件中。</p>
+<p>最后，我们需要调用 env#execute 方法来开始程序的执行。需要强调的是，前面我们调用的所有方法，都不是在实际处理数据，而是在构通表达计算逻辑的 DAG 图。只有当我们将整个图构建完成并显式的调用 Execute 方法后，框架才会把计算图提供到集群中，接入数据并执行实际的逻辑。</p>
+<p>基于流式 Word Count 的例子可以看出，基于 Flink 的 DataStream API 来编写流处理程序一般需要三步：通过 Source 接入数据、进行一系统列的处理以及将数据写出。最后，不要忘记显式调用 Execute 方式，否则前面编写的逻辑并不会真正执行。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537294810_1004D3B6DA52ECDB957ACA30B9C3F264" alt="图片说明" title="图片标题"> </p>
+<p>图3. Flink DataStream 操作概览<br>从上面的例子中还可以看出，Flink DataStream API 的核心，就是代表流数据的 DataStream 对象。整个计算逻辑图的构建就是围绕调用 DataStream 对象上的不同操作产生新的 DataStream 对象展开的。整体来说，DataStream 上的操作可以分为四类。第一类是对于单条记录的操作，比如筛除掉不符合要求的记录（Filter 操作），或者将每条记录都做一个转换（Map 操作）。第二类是对多条记录的操作。比如说统计一个小时内的订单总成交量，就需要将一个小时内的所有订单记录的成交量加到一起。为了支持这种类型的操作，就得通过 Window 将需要的记录关联到一起进行处理。第三类是对多个流进行操作并转换为单个流。例如，多个流可以通过 Union、Join 或 Connect 等操作合到一起。这些操作合并的逻辑不同，但是它们最终都会产生了一个新的统一的流，从而可以进行一些跨流的操作。最后， DataStream 还支持与合并对称的操作，即把一个流按一定规则拆分为多个流（Split 操作），每个流是之前流的一个子集，这样我们就可以对不同的流作不同的处理。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537308371_60CD8BAC6B1F4A4CAFC6E077E20E337A" alt="图片说明" title="图片标题"><br>图4. 不同类型的 DataStream 子类型。不同的子类型支持不同的操作集合。<br>为了支持这些不同的流操作，Flink 引入了一组不同的流类型，用来表示某些操作的中间流数据集类型。完整的类型转换关系如图4所示。首先，对于一些针对单条记录的操作，如 Map 等，操作的结果仍然是是基本的 DataStream 类型。然后，对于 Split 操作，它会首先产生一个 SplitStream，基于 SplitStream 可以使用 Select 方法来筛选出符合要求的记录并再将得到一个基本的流。</p>
+<p>类似的，对于 Connect 操作，在调用 streamA.connect(streamB)后可以得到一个专门的 ConnectedStream。ConnectedStream 支持的操作与普通的 DataStream 有所区别，由于它代表两个不同的流混合的结果，因此它允许用户对两个流中的记录分别指定不同的处理逻辑，然后它们的处理结果形成一个新的 DataStream 流。由于不同记录的处理是在同一个算子中进行的，因此它们在处理时可以方便的共享一些状态信息。上层的一些 Join 操作，在底层也是需要依赖于 Connect 操作来实现的。</p>
+<p>另外，如前所述，我们可以通过 Window 操作对流可以按时间或者个数进行一些切分，从而将流切分成一个个较小的分组。具体的切分逻辑可以由用户进行选择。当一个分组中所有记录都到达后，用户可以拿到该分组中的所有记录，从而可以进行一些遍历或者累加操作。这样，对每个分组的处理都可以得到一组输出数据，这些输出数据形成了一个新的基本流。</p>
+<p>对于普通的 DataStream，我们必须使用 allWindow 操作，它代表对整个流进行统一的 Window 处理，因此是不能使用多个算子实例进行同时计算的。针对这一问题，就需要我们首先使用 KeyBy 方法对记录按 Key 进行分组，然后才可以并行的对不同 Key 对应的记录进行单独的 Window 操作。KeyBy 操作是我们日常编程中最重要的操作之一，下面我们会更详细的介绍。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538395925_84B3A35C34414BE73CE78565B377C9BE" alt="图片说明" title="图片标题"><br>图5. 基本流上的 Window 操作与 KeyedStream 上的 Window 操对比。KeyedStream 上的 Window 操作使采用多个实例并发处理成为了可能。<br>基本 DataStream 对象上的 allWindow 与 KeyedStream 上的 Window 操作的对比如图5所示。为了能够在多个并发实例上并行的对数据进行处理，我们需要通过 KeyBy 将数据进行分组。KeyBy 和 Window 操作都是对数据进行分组，但是 KeyBy 是在水平分向对流进行切分，而 Window 是在垂直方式对流进行切分。</p>
+<p>使用 KeyBy 进行数据切分之后，后续算子的每一个实例可以只处理特定 Key 集合对应的数据。除了处理本身外，Flink 中允许算子维护一部分状态（State），在KeyedStream 算子的状态也是可以分布式存储的。由于 KeyBy 是一种确定的数据分配方式（下文将介绍其它分配方式），因此即使发生 Failover 作业重启，甚至发生了并发度的改变，Flink 都可以重新分配 Key 分组并保证处理某个 Key 的分组一定包含该 Key 的状态，从而保证一致性。</p>
+<p>最后需要强调的是，KeyBy 操作只有当 Key 的数量超过算子的并发实例数才可以较好的工作。由于同一个 Key 对应的所有数据都会发送到同一个实例上，因此如果Key 的数量比实例数量少时，就会导致部分实例收不到数据，从而导致计算能力不能充分发挥。</p>
+<h1 id="3-其它问题"><a href="#3-其它问题" class="headerlink" title="3. 其它问题"></a>3. 其它问题</h1><p>除 KeyBy 之外，Flink 在算子之前交换数据时还支持其它的物理分组方式。如图 1 所示，Flink DataStream 中物理分组方式包括：</p>
+<p>Global: 上游算子将所有记录发送给下游算子的第一个实例。</p>
+<p>Broadcast: 上游算子将每一条记录发送给下游算子的所有实例。</p>
+<p>Forward：只适用于上游算子实例数与下游算子相同时，每个上游算子实例将记录发送给下游算子对应的实例。</p>
+<p>Shuffle：上游算子对每条记录随机选择一个下游算子进行发送。</p>
+<p>Rebalance：上游算子通过轮询的方式发送数据。</p>
+<p>Rescale：当上游和下游算子的实例数为 n 或 m 时，如果 n &lt; m，则每个上游实例向ceil(m/n)或floor(m/n)个下游实例轮询发送数据；如果 n &gt; m，则 floor(n/m) 或 ceil(n/m) 个上游实例向下游实例轮询发送数据。</p>
+<p>PartitionCustomer：当上述内置分配方式不满足需求时，用户还可以选择自定义分组方式。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538419242_C7E0BBE42E8516B40C29F7E7F9ABDCA5" alt="图片说明" title="图片标题"> </p>
+<p>图6. 除keyBy外其它的物理分组方式<br>除分组方式外，Flink DataStream API 中另一个重要概念就是类型系统。图 7 所示，Flink DataStream 对像都是强类型的，每一个 DataStream 对象都需要指定元素的类型，Flink 自己底层的序列化机制正是依赖于这些信息对序列化等进行优化。具体来说，在 Flink 底层，它是使用 TypeInformation 对象对类型进行描述的，TypeInformation 对象定义了一组类型相关的信息供序列化框架使用。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538432289_8C94F5A6149A0B5B45C667CC818EB879" alt="图片说明" title="图片标题"><br>图7. Flink DataStream API 中的类型系统<br>Flink 内置了一部分常用的基本类型，对于这些类型，Flink 也内置了它们的TypeInformation，用户一般可以直接使用而不需要额外的声明，Flink 自己可以通过类型推断机制识别出相应的类型。但是也会有一些例外的情况，比如，Flink DataStream API 同时支持 Java 和 Scala，Scala API 许多接口是通过隐式的参数来传递类型信息的，所以如果需要通过 Java 调用 Scala 的 API，则需要把这些类型信息通过隐式参数传递过去。另一个例子是 Java 中对泛型存在类型擦除，如果流的类型本身是一个泛型的话，则可能在擦除之后无法推断出类型信息，这时候也需要显式的指定。</p>
+<p>在 Flink 中，一般 Java 接口采用 Tuple 类型来组合多个字段，而 Scala 则更经常使用 Row 类型或 Case Class。相对于 Row，Tuple 类型存在两个问题，一个是字段个数不能超过 25 个，此外，所有字段不允许有 null 值。最后，Flink 也支持用户自定义新的类型和 TypeInformation，并通过 Kryo 来实现序列化，但是这种方式可带来一些迁移等方面的问题，所以尽量不要使用自定义的类型。</p>
+<h1 id="4-示例"><a href="#4-示例" class="headerlink" title="4. 示例"></a>4. 示例</h1><p>然后，我们再看一个更复杂的例子。假设我们有一个数据源，它监控系统中订单的情况，当有新订单时，它使用 Tuple2&lt;String, Integer&gt; 输出订单中商品的类型和交易额。然后，我们希望实时统计每个类别的交易额，以及实时统计全部类别的交易额。</p>
+<p>▼ 示例4. 实时订单统计示例。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class GroupedProcessingTimeWindowSample &#123;</span><br><span class="line">    private static class DataSource extends RichParallelSourceFunction&lt;Tuple2&lt;String, Integer&gt;&gt; &#123;</span><br><span class="line">        private volatile boolean isRunning &#x3D; true;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void run(SourceContext&lt;Tuple2&lt;String, Integer&gt;&gt; ctx) throws Exception &#123;</span><br><span class="line">            Random random &#x3D; new Random();</span><br><span class="line">            while (isRunning) &#123;</span><br><span class="line">                Thread.sleep((getRuntimeContext().getIndexOfThisSubtask() + 1) * 1000 * 5);</span><br><span class="line">                String key &#x3D; &quot;类别&quot; + (char) (&#39;A&#39; + random.nextInt(3));</span><br><span class="line">                int value &#x3D; random.nextInt(10) + 1;</span><br><span class="line"></span><br><span class="line">                System.out.println(String.format(&quot;Emits\t(%s, %d)&quot;, key, value));</span><br><span class="line">                ctx.collect(new Tuple2&lt;&gt;(key, value));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void cancel() &#123;</span><br><span class="line">            isRunning &#x3D; false;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static void main(String[] args) throws Exception &#123;</span><br><span class="line">        StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        env.setParallelism(2);</span><br><span class="line"></span><br><span class="line">        DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; ds &#x3D; env.addSource(new DataSource());</span><br><span class="line">        KeyedStream&lt;Tuple2&lt;String, Integer&gt;, Tuple&gt; keyedStream &#x3D; ds.keyBy(0);</span><br><span class="line"></span><br><span class="line">        keyedStream.sum(1).keyBy(new KeySelector&lt;Tuple2&lt;String, Integer&gt;, Object&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public Object getKey(Tuple2&lt;String, Integer&gt; stringIntegerTuple2) throws Exception &#123;</span><br><span class="line">                return &quot;&quot;;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).fold(new HashMap&lt;String, Integer&gt;(), new FoldFunction&lt;Tuple2&lt;String, Integer&gt;, HashMap&lt;String, Integer&gt;&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public HashMap&lt;String, Integer&gt; fold(HashMap&lt;String, Integer&gt; accumulator, Tuple2&lt;String, Integer&gt; value) throws Exception &#123;</span><br><span class="line">                accumulator.put(value.f0, value.f1);</span><br><span class="line">                return accumulator;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).addSink(new SinkFunction&lt;HashMap&lt;String, Integer&gt;&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public void invoke(HashMap&lt;String, Integer&gt; value, Context context) throws Exception &#123;</span><br><span class="line">                  &#x2F;&#x2F; 每个类型的商品成交量</span><br><span class="line">                  System.out.println(value);</span><br><span class="line">                  &#x2F;&#x2F; 商品成交总量                </span><br><span class="line">                  System.out.println(value.values().stream().mapToInt(v -&gt; v).sum());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line"></span><br><span class="line">        env.execute();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>示例的实现如表4所示。首先，在该实现中，我们首先实现了一个模拟的数据源，它继承自 RichParallelSourceFunction，它是可以有多个实例的 SourceFunction 的接口。它有两个方法需要实现，一个是 Run 方法，Flink 在运行时对 Source 会直接调用该方法，该方法需要不断的输出数据，从而形成初始的流。在 Run 方法的实现中，我们随机的产生商品类别和交易量的记录，然后通过 ctx#collect 方法进行发送。另一个方法是 Cancel 方法，当 Flink 需要 Cancel Source Task 的时候会调用该方法，我们使用一个 Volatile 类型的变量来标记和控制执行的状态。</p>
+<p>然后，我们在 Main 方法中就可以开始图的构建。我们首先创建了一个 StreamExecutioniEnviroment 对象。创建对象调用的 getExecutionEnvironment 方法会自动判断所处的环境，从而创建合适的对象。例如，如果我们在 IDE 中直接右键运行，则会创建 LocalStreamExecutionEnvironment 对象；如果是在一个实际的环境中，则会创建 RemoteStreamExecutionEnvironment 对象。</p>
+<p>基于 Environment 对象，我们首先创建了一个 Source，从而得到初始的&lt;商品类型，成交量&gt;流。然后，为了统计每种类别的成交量，我们使用 KeyBy 按 Tuple 的第 1 个字段（即商品类型）对输入流进行分组，并对每一个 Key 对应的记录的第 2 个字段（即成交量）进行求合。在底层，Sum 算子内部会使用 State 来维护每个Key（即商品类型）对应的成交量之和。当有新记录到达时，Sum 算子内部会更新所维护的成交量之和，并输出一条&lt;商品类型，更新后的成交量&gt;记录。</p>
+<p>如果只统计各个类型的成交量，则程序可以到此为止，我们可以直接在 Sum 后添加一个 Sink 算子对不断更新的各类型成交量进行输出。但是，我们还需要统计所有类型的总成交量。为了做到这一点，我们需要将所有记录输出到同一个计算节点的实例上。我们可以通过 KeyBy 并且对所有记录返回同一个 Key，将所有记录分到同一个组中，从而可以全部发送到同一个实例上。</p>
+<p>然后，我们使用 Fold 方法来在算子中维护每种类型商品的成交量。注意虽然目前 Fold 方法已经被标记为 Deprecated，但是在 DataStream API 中暂时还没有能替代它的其它操作，所以我们仍然使用 Fold 方法。这一方法接收一个初始值，然后当后续流中每条记录到达的时候，算子会调用所传递的 FoldFunction 对初始值进行更新，并发送更新后的值。我们使用一个 HashMap 来对各个类别的当前成交量进行维护，当有一条新的&lt;商品类别，成交量&gt;到达时，我们就更新该 HashMap。这样在 Sink 中，我们收到的是最新的商品类别和成交量的 HashMap，我们可以依赖这个值来输出各个商品的成交量和总的成交量。</p>
+<p>需要指出的是，这个例子主要是用来演示 DataStream API 的用法，实际上还会有更高效的写法，此外，更上层的 Table / SQL 还支持 Retraction 机制，可以更好的处理这种情况。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538470903_1A525E00557FBEAA217657B4AC618FB1" alt="图片说明" title="图片标题"><br>图8. API 原理图<br>最后，我们对 DataStream API 的原理进行简要的介绍。当我们调用 DataStream#map 算法时，Flink 在底层会创建一个 Transformation 对象，这一对象就代表我们计算逻辑图中的节点。它其中就记录了我们传入的 MapFunction，也就是 UDF（User Define Function）。随着我们调用更多的方法，我们创建了更多的 DataStream 对象，每个对象在内部都有一个 Transformation 对象，这些对象根据计算依赖关系组成一个图结构，就是我们的计算图。后续 Flink 将对这个图结构进行进一步的转换，从而最终生成提交作业所需要的 JobGraph。</p>
+<h1 id="5-总结"><a href="#5-总结" class="headerlink" title="5. 总结"></a>5. 总结</h1><p>本文主要介绍了 Flink DataStream API，它是当前 Flink 中比较底层的一套 API。在实际的开发中，基于该 API 需要用户自己处理 State 与 Time 等一些概念，因此需要较大的工作量。后续课程还会介绍更上层的 Table / SQL 层的 API，未来 Table / SQL 可能会成为 Flink 主流的 API，但是对于接口来说，越底层的接口表达能力越强，在一些需要精细操作的情况下，仍然需要依赖于 DataStream API。</p>
+]]></content>
+      <categories>
+        <category>Flink</category>
+      </categories>
+      <tags>
+        <tag>Flink</tag>
+        <tag>转载</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Apache Flink概念</title>
     <url>/2020/06/03/Apache-Flink%E6%A6%82%E5%BF%B5/</url>
     <content><![CDATA[<h1 id="转载"><a href="#转载" class="headerlink" title="转载"></a>转载</h1><p>作者：陈守元 &amp; 戴资力<a href="https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/" target="_blank" rel="noopener">https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/</a></p>
@@ -214,106 +256,6 @@
       <tags>
         <tag>Flink</tag>
         <tag>转载</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Apache Spark简单构建一个应用程序</title>
-    <url>/2020/06/14/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
-    <content><![CDATA[<h1 id="简单的构建一个Apache-Spark应用程序"><a href="#简单的构建一个Apache-Spark应用程序" class="headerlink" title="简单的构建一个Apache Spark应用程序"></a>简单的构建一个Apache Spark应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Spark 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Spark相关的依赖。<br>pom如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;project xmlns&#x3D;&quot;http:&#x2F;&#x2F;maven.apache.org&#x2F;POM&#x2F;4.0.0&quot; xmlns:xsi&#x3D;&quot;http:&#x2F;&#x2F;www.w3.org&#x2F;2001&#x2F;XMLSchema-instance&quot; xsi:schemaLocation&#x3D;&quot;http:&#x2F;&#x2F;maven.apache.org&#x2F;POM&#x2F;4.0.0 http:&#x2F;&#x2F;maven.apache.org&#x2F;maven-v4_0_0.xsd&quot;&gt;</span><br><span class="line">  &lt;modelVersion&gt;4.0.0&lt;&#x2F;modelVersion&gt;</span><br><span class="line">  &lt;groupId&gt;SparkDemo&lt;&#x2F;groupId&gt;</span><br><span class="line">  &lt;artifactId&gt;SparkDemo&lt;&#x2F;artifactId&gt;</span><br><span class="line">  &lt;version&gt;1.0-SNAPSHOT&lt;&#x2F;version&gt;</span><br><span class="line">  &lt;inceptionYear&gt;2008&lt;&#x2F;inceptionYear&gt;</span><br><span class="line">  &lt;properties&gt;</span><br><span class="line">    &lt;scala.version&gt;2.11.1&lt;&#x2F;scala.version&gt;</span><br><span class="line">  &lt;&#x2F;properties&gt;</span><br><span class="line"></span><br><span class="line">  &lt;repositories&gt;</span><br><span class="line">    &lt;repository&gt;</span><br><span class="line">      &lt;id&gt;scala-tools.org&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;name&gt;Scala-Tools Maven2 Repository&lt;&#x2F;name&gt;</span><br><span class="line">      &lt;url&gt;http:&#x2F;&#x2F;scala-tools.org&#x2F;repo-releases&lt;&#x2F;url&gt;</span><br><span class="line">    &lt;&#x2F;repository&gt;</span><br><span class="line">  &lt;&#x2F;repositories&gt;</span><br><span class="line"></span><br><span class="line">  &lt;pluginRepositories&gt;</span><br><span class="line">    &lt;pluginRepository&gt;</span><br><span class="line">      &lt;id&gt;scala-tools.org&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;name&gt;Scala-Tools Maven2 Repository&lt;&#x2F;name&gt;</span><br><span class="line">      &lt;url&gt;http:&#x2F;&#x2F;scala-tools.org&#x2F;repo-releases&lt;&#x2F;url&gt;</span><br><span class="line">    &lt;&#x2F;pluginRepository&gt;</span><br><span class="line">  &lt;&#x2F;pluginRepositories&gt;</span><br><span class="line"></span><br><span class="line">  &lt;dependencies&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.scala-lang&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;scala-library&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;$&#123;scala.version&#125;&lt;&#x2F;version&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!-- https:&#x2F;&#x2F;mvnrepository.com&#x2F;artifact&#x2F;org.apache.spark&#x2F;spark-core --&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.apache.spark&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;spark-core_2.11&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;2.2.0&lt;&#x2F;version&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;junit&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;junit&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;4.4&lt;&#x2F;version&gt;</span><br><span class="line">      &lt;scope&gt;test&lt;&#x2F;scope&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.specs&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;specs&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;1.2.5&lt;&#x2F;version&gt;</span><br><span class="line">      &lt;scope&gt;test&lt;&#x2F;scope&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line">  &lt;&#x2F;dependencies&gt;</span><br><span class="line"></span><br><span class="line">  &lt;build&gt;</span><br><span class="line">    &lt;sourceDirectory&gt;src&#x2F;main&#x2F;scala&lt;&#x2F;sourceDirectory&gt;</span><br><span class="line">    &lt;testSourceDirectory&gt;src&#x2F;test&#x2F;scala&lt;&#x2F;testSourceDirectory&gt;</span><br><span class="line">    &lt;plugins&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.scala-tools&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-scala-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;executions&gt;</span><br><span class="line">          &lt;execution&gt;</span><br><span class="line">            &lt;goals&gt;</span><br><span class="line">              &lt;goal&gt;compile&lt;&#x2F;goal&gt;</span><br><span class="line">              &lt;goal&gt;testCompile&lt;&#x2F;goal&gt;</span><br><span class="line">            &lt;&#x2F;goals&gt;</span><br><span class="line">          &lt;&#x2F;execution&gt;</span><br><span class="line">        &lt;&#x2F;executions&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;scalaVersion&gt;$&#123;scala.version&#125;&lt;&#x2F;scalaVersion&gt;</span><br><span class="line">          &lt;args&gt;</span><br><span class="line">            &lt;arg&gt;-target:jvm-1.5&lt;&#x2F;arg&gt;</span><br><span class="line">          &lt;&#x2F;args&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.apache.maven.plugins&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-eclipse-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;downloadSources&gt;true&lt;&#x2F;downloadSources&gt;</span><br><span class="line">          &lt;buildcommands&gt;</span><br><span class="line">            &lt;buildcommand&gt;ch.epfl.lamp.sdt.core.scalabuilder&lt;&#x2F;buildcommand&gt;</span><br><span class="line">          &lt;&#x2F;buildcommands&gt;</span><br><span class="line">          &lt;additionalProjectnatures&gt;</span><br><span class="line">            &lt;projectnature&gt;ch.epfl.lamp.sdt.core.scalanature&lt;&#x2F;projectnature&gt;</span><br><span class="line">          &lt;&#x2F;additionalProjectnatures&gt;</span><br><span class="line">          &lt;classpathContainers&gt;</span><br><span class="line">            &lt;classpathContainer&gt;org.eclipse.jdt.launching.JRE_CONTAINER&lt;&#x2F;classpathContainer&gt;</span><br><span class="line">            &lt;classpathContainer&gt;ch.epfl.lamp.sdt.launching.SCALA_CONTAINER&lt;&#x2F;classpathContainer&gt;</span><br><span class="line">          &lt;&#x2F;classpathContainers&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">    &lt;&#x2F;plugins&gt;</span><br><span class="line">  &lt;&#x2F;build&gt;</span><br><span class="line">  &lt;reporting&gt;</span><br><span class="line">    &lt;plugins&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.scala-tools&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-scala-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;scalaVersion&gt;$&#123;scala.version&#125;&lt;&#x2F;scalaVersion&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">    &lt;&#x2F;plugins&gt;</span><br><span class="line">  &lt;&#x2F;reporting&gt;</span><br><span class="line">&lt;&#x2F;project&gt;</span><br></pre></td></tr></table></figure><br>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571913840705_C0C094E4A298BFA098F8123797C7F7CC" alt="图片说明" title="图片标题"><br>编写Spark程序：<br>创建WordCount程序：<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">package SparkDemo</span><br><span class="line"></span><br><span class="line">import org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line">import org.apache.spark.rdd.RDD</span><br><span class="line">&#x2F;**</span><br><span class="line">  * @Author: luomo</span><br><span class="line">  * @CreateTime: 2019&#x2F;10&#x2F;24</span><br><span class="line">  * @Description:WordCount</span><br><span class="line">  *&#x2F;</span><br><span class="line">object WordCount &#123;</span><br><span class="line">  def main(args: Array[String]): Unit &#x3D; &#123;</span><br><span class="line">    &#x2F;&#x2F;配置文件</span><br><span class="line">    val conf &#x3D; new SparkConf().</span><br><span class="line">      setAppName(&quot;wordcount&quot;) &#x2F;&#x2F; 运行时候的作业名称</span><br><span class="line">      .setMaster(&quot;local&quot;)</span><br><span class="line">    &#x2F;&#x2F;上下文 拿着Conf信息创建出来 写spark应用程序的对象  通往集群的入口</span><br><span class="line">    val sc &#x3D; new SparkContext(conf)</span><br><span class="line">    &#x2F;&#x2F;传入文件对象 返回RDD集合</span><br><span class="line">    val input &#x3D; sc.textFile(&quot;E:&#x2F;&#x2F;&#x2F;test.txt&quot;)</span><br><span class="line">    &#x2F;&#x2F;对文件行数据 按照空格切割 返回RDD集合 得到每个单词</span><br><span class="line">    val lines &#x3D; input.flatMap(line &#x3D;&gt; line.split(&quot; &quot;))</span><br><span class="line">    &#x2F;&#x2F;统计单词数量 计数 得到RDD集合 按照相同的Key先分组，之后再对组内的Value进行操作</span><br><span class="line">    val count &#x3D; lines.map(word &#x3D;&gt; (word, 1)).reduceByKey(_ + _)</span><br><span class="line">    &#x2F;&#x2F;将结果遍历打印到控制台</span><br><span class="line">    count.foreach(x &#x3D;&gt;&#123;</span><br><span class="line">      println(x)</span><br><span class="line">    &#125;)</span><br><span class="line">    &#x2F;&#x2F;将结果输出到文件中</span><br><span class="line">    val output &#x3D; count.saveAsTextFile(&quot;E:&#x2F;&#x2F;&#x2F;wordCount&quot;)</span><br><span class="line">    &#x2F;&#x2F;关闭流 在内存中释放这个spark对象</span><br><span class="line">    &#x2F;&#x2F;sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br>运行程序如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571914229568_474EA976C3A9A912CB36A0631F855823" alt="图片说明" title="图片标题"> </p>
-]]></content>
-      <categories>
-        <category>Spark</category>
-      </categories>
-  </entry>
-  <entry>
-    <title>HDFS(1.0)与(2.0)</title>
-    <url>/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>当数据集超过一个单独的物理计算机的存储能力时，便有必要将它分部到多个独立的计算机。管理跨计算机网络存储的文件系统成为分布式文件系统。因为它们是基于网络的，所有网络编程的复杂性都会随之而来，所以分布式文件系统比普通磁盘文件系统更复杂。使这个文件系统能容忍节点故障而不损失数据就是一个极大的挑战。</p>
-<h2 id="HDFS的设计"><a href="#HDFS的设计" class="headerlink" title="HDFS的设计"></a>HDFS的设计</h2><p>HDFS是为以流式出局访问模式存储超大文件而设计的文件系统，在商用硬件的集群上运行。让我们看看它的优势：<br><strong>超大文件</strong><br>“超大文件”在这里指几百MB，几百GB甚至几百TB大小的文件。目前已经有Hadoop集群存储PB级的数据了。<br><strong>流式数据</strong><br>HDFS建立在这样一个思想上：一次写入、多次读取模式是最高效的。一个数据集通常由数据源生成或复制，接着在此基础上进行各种各样的分析。每个分析至少都会涉及数据集中的大部分数据（甚至全部）。<br><strong>商用硬件</strong><br>Hadoop不需要运行在昂贵并且高可靠的硬件上。它被设计运行在商用硬件（在各种零售店都能买到的普通硬件）的集群上，因此至少对于大的集群来说，节点故障的几率还是较高的。HDFS在面对这种故障时，被设计为能够继续运行而让用户察觉不到明显的中断。</p>
-<h2 id="HDFS-1-0架构："><a href="#HDFS-1-0架构：" class="headerlink" title="HDFS 1.0架构："></a>HDFS 1.0架构：</h2><p> HDFS采用的是Master/Slave架构一个 HDFS 集群包含一个单独的 NameNode 和多个 DataNode 节点。</p>
-<h2 id="HDFS-1-0-的问题"><a href="#HDFS-1-0-的问题" class="headerlink" title="HDFS 1.0 的问题"></a>HDFS 1.0 的问题</h2><p>进入了 PB 级的大数据时代，HDFS 1.0的设计缺陷已经无法满足生产的需求，最致命的问题有以下两点：</p>
-<ul>
-<li>NameNode 的单点问题，如果 NameNode 挂掉了，数据读写都会受到影响，HDFS 整体将变得不可用，这在生产环境中是不可接受的；</li>
-<li>水平扩展问题，随着集群规模的扩大，1.0 时集群规模达到3000时，会导致整个集群管理的文件数目达到上限（因为 NameNode 要管理整个集群 block 元信息、数据目录信息等）。  </li>
-</ul>
-<p>为了解决上面的两个问题，Hadoop2.0 提供一套统一的解决方案：</p>
-<ul>
-<li>HA（High Availability 高可用方案）：这个是为了解决 NameNode 单点问题；</li>
-<li>NameNode Federation：是用来解决 HDFS 集群的线性扩展能力。  </li>
-</ul>
-<h2 id="HDFS-2-0-的-HA-实现"><a href="#HDFS-2-0-的-HA-实现" class="headerlink" title="HDFS 2.0 的 HA 实现"></a>HDFS 2.0 的 HA 实现</h2><p>这里先看下 HDFS 高可用解决方案的架构设计，如下图</p>
-<p><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/1.png" alt="图片说明"> </p>
-<p>这里与前面 1.0 的架构已经有很大变化，简单介绍一下的组件：</p>
-<ol>
-<li>Active NameNode 和 Standby NameNode：两台 NameNode 形成互备，一台处于 Active 状态，为主 NameNode，另外一台处于 Standby 状态，为备 NameNode，只有主 NameNode 才能对外提供读写服务；</li>
-<li>ZKFailoverController（主备切换控制器，FC）：ZKFailoverController 作为独立的进程运行，对 NameNode 的主备切换进行总体控。ZKFailoverController 能及时检测到 NameNode 的健康状况，在主 NameNode 故障时借助 Zookeeper 实现自动的主备选举和切换（当然 NameNode 目前也支持不依赖于Zookeeper 的手动主备切换）；</li>
-<li>Zookeeper 集群：为主备切换控制器提供主备选举支持；</li>
-<li>共享存储系统：共享存储系统是实现 NameNode 的高可用最为关键的部分，共享存储系统保存了 NameNode 在运行过程中所产生的 HDFS 的元数据。主 NameNode 和备NameNode 通过共享存储系统实现元数据同步。在进行主备切换的时候，新的主 NameNode 在确认元数据完全同步之后才能继续对外提供服务。</li>
-<li>DataNode 节点：因为主 NameNode 和备 NameNode 需要共享 HDFS 的数据块和 DataNode 之间的映射关系，为了使故障切换能够快速进行，DataNode 会同时向主 NameNode 和备 NameNode 上报数据块的位置信息。</li>
-</ol>
-<h2 id="HDFS-2-0-Federation-实现"><a href="#HDFS-2-0-Federation-实现" class="headerlink" title="HDFS 2.0 Federation 实现"></a>HDFS 2.0 Federation 实现</h2><p>在 1.0 中，HDFS 的架构设计有以下缺点：</p>
-<p>namespace 扩展性差：在单一的 NN 情况下，因为所有 namespace 数据都需要加载到内存，所以物理机内存的大小限制了整个 HDFS 能够容纳文件的最大个数（namespace 指的是 HDFS 中树形目录和文件结构以及文件对应的 block 信息）；<br>性能可扩展性差：由于所有请求都需要经过 NN，单一 NN 导致所有请求都由一台机器进行处理，很容易达到单台机器的吞吐；<br>隔离性差：多租户的情况下，单一 NN 的架构无法在租户间进行隔离，会造成不可避免的相互影响。<br>而 Federation 的设计就是为了解决这些问题，采用 Federation 的最主要原因是设计实现简单，而且还能解决问题。</p>
-<h2 id="Federation-架构"><a href="#Federation-架构" class="headerlink" title="Federation 架构"></a>Federation 架构</h2><p>Federation 的架构设计如下图所示（图片来自 HDFS Federation）：<br><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/2.png" alt="图片说明"> </p>
-<h3 id="HDFS-Federation-架构实现"><a href="#HDFS-Federation-架构实现" class="headerlink" title="HDFS Federation 架构实现"></a>HDFS Federation 架构实现</h3><p>Federation 的核心设计思想<br>Federation 的核心思想是将一个大的 namespace 划分多个子 namespace，并且每个 namespace 分别由单独的 NameNode 负责，这些 NameNode 之间互相独立，不会影响，不需要做任何协调工作（其实跟拆集群有一些相似），集群的所有 DataNode 会被多个 NameNode 共享。</p>
-<p>其中，每个子 namespace 和 DataNode 之间会由数据块管理层作为中介建立映射关系，数据块管理层由若干数据块池（Pool）构成，每个数据块只会唯一属于某个固定的数据块池，而一个子 namespace 可以对应多个数据块池。每个 DataNode 需要向集群中所有的 NameNode 注册，且周期性地向所有 NameNode 发送心跳和块报告，并执行来自所有 NameNode 的命令。</p>
-<ol>
-<li>一个 block pool 由属于同一个 namespace 的数据块组成，每个 DataNode 可能会存储集群中所有 block pool 的数据块；</li>
-<li>每个 block pool 内部自治，也就是说各自管理各自的 block，不会与其他 block pool 交流，如果一个 NameNode 挂掉了，不会影响其他 NameNode;</li>
-<li>某个 NameNode 上的 namespace 和它对应的 block pool 一起被称为 namespace volume，它是管理的基本单位。当一个 NameNode/namespace 被删除后，其所有 DataNode 上对应的 block pool 也会被删除，当集群升级时，每个 namespace volume 可以作为一个基本单元进行升级。<br>参考链接：<br><a href="https://www.ibm.com/developerworks/cn/opensource/os-cn-hadoop-name-node/" target="_blank" rel="noopener">https://www.ibm.com/developerworks/cn/opensource/os-cn-hadoop-name-node/</a><br><a href="http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/Federation.html" target="_blank" rel="noopener">http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/Federation.html</a></li>
-</ol>
-]]></content>
-      <categories>
-        <category>Hadoop</category>
-      </categories>
-      <tags>
-        <tag>Hadoop</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HDFS NameNode的工作机制</title>
-    <url>/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/</url>
-    <content><![CDATA[<h2 id="NameNode"><a href="#NameNode" class="headerlink" title="NameNode"></a>NameNode</h2><p><img src="/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/1.png" alt=" "> </p>
-<h3 id="1-第一阶段：-namenode-启动"><a href="#1-第一阶段：-namenode-启动" class="headerlink" title="1 第一阶段： namenode 启动"></a>1 第一阶段： namenode 启动</h3><p>1）第一次启动 namenode 格式化后， 创建 fsimage 和 edits 文件。如果不是第一次启动，直接加载编辑日志和镜像文件到内存。<br>2） 客户端对元数据进行增删改的请求。<br>3） namenode 记录操作日志，更新滚动日志。<br>4） namenode 在内存中对数据进行增删改查。</p>
-<h3 id="2-第二阶段：-Secondary-NameNode-工作"><a href="#2-第二阶段：-Secondary-NameNode-工作" class="headerlink" title="2 第二阶段： Secondary NameNode 工作"></a>2 第二阶段： Secondary NameNode 工作</h3><p>1） Secondary NameNode 询问 namenode 是否需要 checkpoint。 直接带回 namenode 是否检查结果。<br>2） Secondary NameNode 请求执行 checkpoint。<br>3） namenode 滚动正在写的 edits 日志。<br>4）将滚动前的编辑日志和镜像文件拷贝到 Secondary NameNode。<br>5） Secondary NameNode 加载编辑日志和镜像文件到内存，并合并。<br>6） 生成新的镜像文件 fsimage.chkpoint。<br>7） 拷贝 fsimage.chkpoint 到 namenode。<br>8） namenode 将 fsimage.chkpoint 重新命名成 fsimage。</p>
-]]></content>
-      <categories>
-        <category>Hadoop</category>
-      </categories>
-      <tags>
-        <tag>Hadoop</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Flume监控之Ganglia</title>
-    <url>/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Ganglia是UC Berkeley发起的一个开源集群监视项目，设计用于测量数以千计的节点。Ganglia的核心包含gmond、gmetad以及一个Web前端。主要是用来监控系统性能，如：cpu 、mem、硬盘利用率， I/O负载、网络流量情况等，通过曲线很容易见到每个节点的工作状态，对合理调整、分配系统资源，提高系统整体性能起到重要作用。今天我们来看看如何用Ganglia来监控我们的flume集群数据。</p>
-<h1 id="Ganglia的安装与部署"><a href="#Ganglia的安装与部署" class="headerlink" title="Ganglia的安装与部署"></a>Ganglia的安装与部署</h1><h2 id="1-安装httpd服务与php"><a href="#1-安装httpd服务与php" class="headerlink" title="1.安装httpd服务与php"></a>1.安装httpd服务与php</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# sudo yum -y install httpd php</span><br></pre></td></tr></table></figure>
-<h2 id="2-安装其他依赖"><a href="#2-安装其他依赖" class="headerlink" title="2.安装其他依赖"></a>2.安装其他依赖</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# sudo yum -y install rrdtool perl-rrdtool rrdtool-devel</span><br><span class="line">[root@bigdata107 flume]# sudo yum -y install apr-devel</span><br></pre></td></tr></table></figure>
-<p>##3.安装ganglia<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# rpm -Uvh http:&#x2F;&#x2F;dl.fedoraproject.org&#x2F;pub&#x2F;epel&#x2F;6&#x2F;x86_64&#x2F;epel-release-6-8.noarch.rpm</span><br><span class="line"></span><br><span class="line">[root@bigdata107 flume]# yum -y install ganglia-gmetad</span><br><span class="line">[root@bigdata107 flume]# yum -y install ganglia-web</span><br><span class="line">[root@bigdata107 flume]# yum install -y ganglia-gmond</span><br></pre></td></tr></table></figure></p>
-<h2 id="4-修改配置文件"><a href="#4-修改配置文件" class="headerlink" title="4.修改配置文件"></a>4.修改配置文件</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;httpd&#x2F;conf.d&#x2F;ganglia.conf</span><br></pre></td></tr></table></figure>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/1.png" alt="图片说明"> </p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;ganglia&#x2F;gmetad.conf</span><br></pre></td></tr></table></figure>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/2.png" alt="图片说明"> </p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;ganglia&#x2F;gmond.conf</span><br></pre></td></tr></table></figure>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/3.png" alt="图片说明"> </p>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/4.png" alt="图片说明"> </p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]#  vim &#x2F;etc&#x2F;selinux&#x2F;config</span><br></pre></td></tr></table></figure>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/5.png" alt="图片说明"> </p>
-<h2 id="5-selinux本次生效关闭必须重启-如果此时不想重启-可以临时生效"><a href="#5-selinux本次生效关闭必须重启-如果此时不想重启-可以临时生效" class="headerlink" title="5.selinux本次生效关闭必须重启,如果此时不想重启,可以临时生效"></a>5.selinux本次生效关闭必须重启,如果此时不想重启,可以临时生效</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]#  sudo setenforce 0</span><br></pre></td></tr></table></figure>
-<h1 id="启动Ganglia"><a href="#启动Ganglia" class="headerlink" title="启动Ganglia"></a>启动Ganglia</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# service httpd start</span><br><span class="line">正在启动 httpd：</span><br><span class="line">[root@bigdata107 flume]# service gmetad start</span><br><span class="line">Starting GANGLIA gmetad:  [确定]</span><br><span class="line">[root@bigdata107 flume]# service gmond start</span><br><span class="line">Starting GANGLIA gmond:  [确定]</span><br></pre></td></tr></table></figure>
-<h2 id="1-打开web-UI"><a href="#1-打开web-UI" class="headerlink" title="1.打开web UI"></a>1.打开web UI</h2><p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/6.png" alt=" "> </p>
-<h2 id="2-通过Ganglia监控Flume"><a href="#2-通过Ganglia监控Flume" class="headerlink" title="2.通过Ganglia监控Flume"></a>2.通过Ganglia监控Flume</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim flume-env.sh</span><br></pre></td></tr></table></figure>
-<p>添加如下内容：<br>export JAVA_OPTS=&quot;-Dflume.monitoring.type=ganglia -Dflume.monitoring.hosts=192.168.216.107:8649 -Xms100m -Xmx200m&quot;</p>
-<h2 id="3-启动flume任务"><a href="#3-启动flume任务" class="headerlink" title="3.启动flume任务"></a>3.启动flume任务</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# bin&#x2F;flume-ng agent </span><br><span class="line">--conf conf&#x2F; </span><br><span class="line">--name agent1 </span><br><span class="line">--conf-file job&#x2F;flume_telnet_logger.conf </span><br><span class="line">-Dflume.root.logger&#x3D;&#x3D;INFO,console </span><br><span class="line">-Dflume.monitoring.type&#x3D;ganglia </span><br><span class="line">-Dflume.monitoring.hosts&#x3D;192.168.216.107:8649</span><br></pre></td></tr></table></figure>
-<h2 id="4-发送数据查看Ganglia监测图"><a href="#4-发送数据查看Ganglia监测图" class="headerlink" title="4.发送数据查看Ganglia监测图"></a>4.发送数据查看Ganglia监测图</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# telnet bigdata107 44444</span><br></pre></td></tr></table></figure>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/7.png" alt="图片说明"></p>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/8.png" alt="图片说明"> </p>
-]]></content>
-      <categories>
-        <category>Flume</category>
-      </categories>
-      <tags>
-        <tag>集群监控</tag>
       </tags>
   </entry>
   <entry>
@@ -388,42 +330,61 @@
       </tags>
   </entry>
   <entry>
-    <title>HotSpot虚拟机对象探秘</title>
-    <url>/2020/06/17/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/</url>
-    <content><![CDATA[<h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>我们以常用的虚拟机HotSpot和常用的内存区域Java堆为例，深入了解HotSpot虚拟机在Java堆中对象分配、布局和访问的全过程。</p>
-<h2 id="对象的创建"><a href="#对象的创建" class="headerlink" title="对象的创建"></a>对象的创建</h2><p>虚拟机遇到一条new指令时，首先将去检查这个指令的参数是否能在常量池中定位到一个类的符号引用，并且检查这个符号引用代表的类是否已被加载、解析和初始化。如果没有先执行相应的类加载过程。<br>    在类加载检查通过后，接下来虚拟机将为新生对象分配内存。对象所需内存的大小在类加载完成后便可完全确定，为对象分配空间的任务等同把一块确定大小的内存从Java堆中划分出来。假设堆中内存是绝对完整的，所有的内存都放在一边，空闲的内存放在另一边，中间放着一个指针作为分界点的指示器，所有用过的内存都放在一边，中间放着一个值指针作为分界点的指示器，这种分配方式成为“指针碰撞”。如图：<br><img src="/2020/06/17/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/1.png" alt="图片说明"> </p>
-<p>如果Java堆中的内存并不是规整的，已使用的内存和空闲的内存相互交错，那就没有办法简单地进行指针碰撞了，虚拟机就必须维护一个实例，并更新列表上的记录，这种分配方式称为“空闲列表”。如图：<br><img src="/2020/06/17/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/2.png" alt="图片说明"> </p>
-<p>选择哪种分配方式是由Java堆是否规整决定，而Java堆是否规整又由所采用的垃圾收集器是否带有压缩功能决定。因此，在使用serial、ParNew等带Compact过程的收集器时，系统采用的分配算法是指针碰撞，而使用CMS这种基于Mark-Sweep算法的收集器时，通常采用空闲列表。</p>
-<h2 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h2><p>在HotSpot虚拟机中，对象在内存中存储的布局可以分为3块区域：对象头（Header）、实例数据（InstanceData）和对齐填充（Padding）。<br>HotSpot虚拟机的对象头包括两部分信息，第一部分用于存储对象自身的运行时数据，如哈希码（HashCode）、GC分代年龄、锁状态标志、线程持有的锁、偏向线程ID、偏向时间戳等，这部分数据的长度在32位和64位的虚拟机（未开启压缩指针）中分别为32bit和64bit，官方称它为“Mark Word”。对象头的另外一部分是类型指针，即对象指向它的类元数据的指针，虚拟机通过这个指针来确定这个对象是哪<br>个类的实例。并不是所有的虚拟机实现都必须在对象数据上保留类型指针，换句话说，查找对象的元数据信息并不<br>一定要经过对象本身<br>第二部分实例数据是对象真正存储的有效信息，也是在程序代码中所定义的各种类型的字段内容。无论是从父类继承下来的，还是在子类中定义的，都需要记录起来。<br>第三部分对齐填充并不是必然存在的，也没有特别的含义，它仅仅起着占位符的作用。由于HotSpot VM的自动内存管理系统要求对象起始地址必须是8字节的整数倍，换句话说，就是对象的大小必须是8字节的整数倍。而对象头部分正好是8字节的倍数（1倍或者2倍），因此，当对象实例数据部分没有对齐时，就需要通过对齐填充来补全。</p>
-<h2 id="对象的访问定位"><a href="#对象的访问定位" class="headerlink" title="对象的访问定位"></a>对象的访问定位</h2><p>建立对象是为了使用对象，我们的Java程序需要通过栈上的reference数据来操作堆上的具体对象。由于reference类型在Java虚拟机规范中只规定了一个指向对象的引用，并没有定义这个引用应该通过何种方式去定位、访问堆中的对象的具***置，所以对象访问方式也是取决于虚拟机实现而定的。目前主流的访问方式有使用句柄和直接指针两种。</p>
-<p>如果使用句柄访问的话，那么Java堆中将会划分出一块内存来作为句柄池，reference中存储的就是对象的句柄地址，而句柄中包含了对象实例数据与类型数据各自的具体地址信息，</p>
-<p>如果使用直接指针访问，那么Java堆对象的布局中就必须考虑如何放置访问类型数据的相关信息，而reference中存储的直接就是对象地址，</p>
+    <title>HDFS(1.0)与(2.0)</title>
+    <url>/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>当数据集超过一个单独的物理计算机的存储能力时，便有必要将它分部到多个独立的计算机。管理跨计算机网络存储的文件系统成为分布式文件系统。因为它们是基于网络的，所有网络编程的复杂性都会随之而来，所以分布式文件系统比普通磁盘文件系统更复杂。使这个文件系统能容忍节点故障而不损失数据就是一个极大的挑战。</p>
+<h2 id="HDFS的设计"><a href="#HDFS的设计" class="headerlink" title="HDFS的设计"></a>HDFS的设计</h2><p>HDFS是为以流式出局访问模式存储超大文件而设计的文件系统，在商用硬件的集群上运行。让我们看看它的优势：<br><strong>超大文件</strong><br>“超大文件”在这里指几百MB，几百GB甚至几百TB大小的文件。目前已经有Hadoop集群存储PB级的数据了。<br><strong>流式数据</strong><br>HDFS建立在这样一个思想上：一次写入、多次读取模式是最高效的。一个数据集通常由数据源生成或复制，接着在此基础上进行各种各样的分析。每个分析至少都会涉及数据集中的大部分数据（甚至全部）。<br><strong>商用硬件</strong><br>Hadoop不需要运行在昂贵并且高可靠的硬件上。它被设计运行在商用硬件（在各种零售店都能买到的普通硬件）的集群上，因此至少对于大的集群来说，节点故障的几率还是较高的。HDFS在面对这种故障时，被设计为能够继续运行而让用户察觉不到明显的中断。</p>
+<h2 id="HDFS-1-0架构："><a href="#HDFS-1-0架构：" class="headerlink" title="HDFS 1.0架构："></a>HDFS 1.0架构：</h2><p> HDFS采用的是Master/Slave架构一个 HDFS 集群包含一个单独的 NameNode 和多个 DataNode 节点。</p>
+<h2 id="HDFS-1-0-的问题"><a href="#HDFS-1-0-的问题" class="headerlink" title="HDFS 1.0 的问题"></a>HDFS 1.0 的问题</h2><p>进入了 PB 级的大数据时代，HDFS 1.0的设计缺陷已经无法满足生产的需求，最致命的问题有以下两点：</p>
+<ul>
+<li>NameNode 的单点问题，如果 NameNode 挂掉了，数据读写都会受到影响，HDFS 整体将变得不可用，这在生产环境中是不可接受的；</li>
+<li>水平扩展问题，随着集群规模的扩大，1.0 时集群规模达到3000时，会导致整个集群管理的文件数目达到上限（因为 NameNode 要管理整个集群 block 元信息、数据目录信息等）。  </li>
+</ul>
+<p>为了解决上面的两个问题，Hadoop2.0 提供一套统一的解决方案：</p>
+<ul>
+<li>HA（High Availability 高可用方案）：这个是为了解决 NameNode 单点问题；</li>
+<li>NameNode Federation：是用来解决 HDFS 集群的线性扩展能力。  </li>
+</ul>
+<h2 id="HDFS-2-0-的-HA-实现"><a href="#HDFS-2-0-的-HA-实现" class="headerlink" title="HDFS 2.0 的 HA 实现"></a>HDFS 2.0 的 HA 实现</h2><p>这里先看下 HDFS 高可用解决方案的架构设计，如下图</p>
+<p><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/1.png" alt="图片说明"> </p>
+<p>这里与前面 1.0 的架构已经有很大变化，简单介绍一下的组件：</p>
+<ol>
+<li>Active NameNode 和 Standby NameNode：两台 NameNode 形成互备，一台处于 Active 状态，为主 NameNode，另外一台处于 Standby 状态，为备 NameNode，只有主 NameNode 才能对外提供读写服务；</li>
+<li>ZKFailoverController（主备切换控制器，FC）：ZKFailoverController 作为独立的进程运行，对 NameNode 的主备切换进行总体控。ZKFailoverController 能及时检测到 NameNode 的健康状况，在主 NameNode 故障时借助 Zookeeper 实现自动的主备选举和切换（当然 NameNode 目前也支持不依赖于Zookeeper 的手动主备切换）；</li>
+<li>Zookeeper 集群：为主备切换控制器提供主备选举支持；</li>
+<li>共享存储系统：共享存储系统是实现 NameNode 的高可用最为关键的部分，共享存储系统保存了 NameNode 在运行过程中所产生的 HDFS 的元数据。主 NameNode 和备NameNode 通过共享存储系统实现元数据同步。在进行主备切换的时候，新的主 NameNode 在确认元数据完全同步之后才能继续对外提供服务。</li>
+<li>DataNode 节点：因为主 NameNode 和备 NameNode 需要共享 HDFS 的数据块和 DataNode 之间的映射关系，为了使故障切换能够快速进行，DataNode 会同时向主 NameNode 和备 NameNode 上报数据块的位置信息。</li>
+</ol>
+<h2 id="HDFS-2-0-Federation-实现"><a href="#HDFS-2-0-Federation-实现" class="headerlink" title="HDFS 2.0 Federation 实现"></a>HDFS 2.0 Federation 实现</h2><p>在 1.0 中，HDFS 的架构设计有以下缺点：</p>
+<p>namespace 扩展性差：在单一的 NN 情况下，因为所有 namespace 数据都需要加载到内存，所以物理机内存的大小限制了整个 HDFS 能够容纳文件的最大个数（namespace 指的是 HDFS 中树形目录和文件结构以及文件对应的 block 信息）；<br>性能可扩展性差：由于所有请求都需要经过 NN，单一 NN 导致所有请求都由一台机器进行处理，很容易达到单台机器的吞吐；<br>隔离性差：多租户的情况下，单一 NN 的架构无法在租户间进行隔离，会造成不可避免的相互影响。<br>而 Federation 的设计就是为了解决这些问题，采用 Federation 的最主要原因是设计实现简单，而且还能解决问题。</p>
+<h2 id="Federation-架构"><a href="#Federation-架构" class="headerlink" title="Federation 架构"></a>Federation 架构</h2><p>Federation 的架构设计如下图所示（图片来自 HDFS Federation）：<br><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/2.png" alt="图片说明"> </p>
+<h3 id="HDFS-Federation-架构实现"><a href="#HDFS-Federation-架构实现" class="headerlink" title="HDFS Federation 架构实现"></a>HDFS Federation 架构实现</h3><p>Federation 的核心设计思想<br>Federation 的核心思想是将一个大的 namespace 划分多个子 namespace，并且每个 namespace 分别由单独的 NameNode 负责，这些 NameNode 之间互相独立，不会影响，不需要做任何协调工作（其实跟拆集群有一些相似），集群的所有 DataNode 会被多个 NameNode 共享。</p>
+<p>其中，每个子 namespace 和 DataNode 之间会由数据块管理层作为中介建立映射关系，数据块管理层由若干数据块池（Pool）构成，每个数据块只会唯一属于某个固定的数据块池，而一个子 namespace 可以对应多个数据块池。每个 DataNode 需要向集群中所有的 NameNode 注册，且周期性地向所有 NameNode 发送心跳和块报告，并执行来自所有 NameNode 的命令。</p>
+<ol>
+<li>一个 block pool 由属于同一个 namespace 的数据块组成，每个 DataNode 可能会存储集群中所有 block pool 的数据块；</li>
+<li>每个 block pool 内部自治，也就是说各自管理各自的 block，不会与其他 block pool 交流，如果一个 NameNode 挂掉了，不会影响其他 NameNode;</li>
+<li>某个 NameNode 上的 namespace 和它对应的 block pool 一起被称为 namespace volume，它是管理的基本单位。当一个 NameNode/namespace 被删除后，其所有 DataNode 上对应的 block pool 也会被删除，当集群升级时，每个 namespace volume 可以作为一个基本单元进行升级。<br>参考链接：<br><a href="https://www.ibm.com/developerworks/cn/opensource/os-cn-hadoop-name-node/" target="_blank" rel="noopener">https://www.ibm.com/developerworks/cn/opensource/os-cn-hadoop-name-node/</a><br><a href="http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/Federation.html" target="_blank" rel="noopener">http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/Federation.html</a></li>
+</ol>
 ]]></content>
+      <categories>
+        <category>Hadoop</category>
+      </categories>
       <tags>
-        <tag>JVM</tag>
+        <tag>Hadoop</tag>
       </tags>
   </entry>
   <entry>
-    <title>JConsole:Java监视与管理控制台</title>
-    <url>/2020/06/17/JConsole-Java%E7%9B%91%E8%A7%86%E4%B8%8E%E7%AE%A1%E7%90%86%E6%8E%A7%E5%88%B6%E5%8F%B0/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>JConsole（Java Monitoring and Management Console）是一种基于JMX的可视化监视、管理工具。<br>1.启动JConsole<br>通过JDK/bin目录下的“jconsole.exe”启动JConsole后，将自动搜索出本机运行的所有虚拟机进程，不需要用户自己再使用jps来查询了，如图双击选择其中一个进程即可开始监控了，也可以使用下面的“远程进程”功能来连接远程服务器，对远程虚拟机进行监控。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573274563736_6654F5DFA4EC7329FE86D88517B8FA93" alt="图片说明" title="图片标题"> </p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573275239073_438AC748ECDB4217D868DFDE95ECFD09" alt=" " title="图片标题"> </p>
-<p>从图中可以看出机器运行了几个本地虚拟机进程，其中OOMTest是我准备的“反面教材”代码双击它进入JConsole主界面，包括“概述”、“内存”、“线程”、“类”、“VM概要”、“MBean”六个页签。如图所示</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573278160273_562106A0F5A1D726229907F196EB6D40" alt="图片说明" title="图片标题"> </p>
-<p>“概述”页签显示的是整个虚拟机主要运行数据的概览，其中包括“堆内存使用情况”、“类”、“CPU使用情况”四种信息的曲线图，这些曲线图是后面“内存”、“线程”、“类”页签的信息汇总。</p>
-<p>2.内存监控<br>“内存”页签相当于可视化的jsat命令，用于监视收集器管理的虚拟机内存（Java堆和永久代）的变化趋势。我们通过运行代码“OOMTest”来体验一下监视功能，运行时设置的虚拟机参数为：-Xms100m -Xmx100m -XX:+UseSerialGC,这段代码的作用是以64KB/50毫秒的速度往Java堆中填充数据，一共填充1000次，使用JConsole的“内存”页签进行监视，观察曲线和柱状图指示图的变化。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">import java.util.ArrayList;</span><br><span class="line">import java.util.List;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * @Author:luomo</span><br><span class="line"> * @CreateTime:2019&#x2F;11&#x2F;9</span><br><span class="line"> * @Description:OOMTest</span><br><span class="line"> *&#x2F;</span><br><span class="line">public class OOMTest &#123;</span><br><span class="line"></span><br><span class="line">    &#x2F;**</span><br><span class="line">     * 内存占位符对象，一个OOMObject大约占64KB</span><br><span class="line">     *&#x2F;</span><br><span class="line">    static class OOMobject&#123;</span><br><span class="line">        public byte[] placeholder&#x3D;new byte[64*1024];</span><br><span class="line">    &#125;</span><br><span class="line">    public static void fillHeap(int num) throws InterruptedException&#123;</span><br><span class="line">        List&lt;OOMobject&gt; list &#x3D;new ArrayList&lt;OOMobject&gt;();</span><br><span class="line">        for(int i&#x3D;0;i&lt;num;i++)</span><br><span class="line">        &#123;</span><br><span class="line">            &#x2F;&#x2F;稍作延时，令监视曲线的变化更加明显</span><br><span class="line">            Thread.sleep(50);</span><br><span class="line">            list.add(new OOMobject());</span><br><span class="line">        &#125;</span><br><span class="line">        System.gc();</span><br><span class="line">    &#125;</span><br><span class="line">    public static void main(String[] args)throws Exception&#123;</span><br><span class="line">        fillHeap(1000);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>程序运行后，在“内存”页签中可以看到内存池Eden区的运行趋势呈现折线状，如图。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573282506435_42550CBEF3FCED46D7B42799FAD4566A" alt="图片说明" title="图片标题"> </p>
-<p>监视范围扩大至整个堆后，会发现曲线是一条向上增长的平滑曲线。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573282418309_B397F1590C7ED6E011AB02405287D0D0" alt="图片说明" title="图片标题"> </p>
-<p>并且从柱状图可以看出，在1000次循环执行结束，运行了System.gc()后，虽然整个新生代Eden和Survivor区都基本被清空了，但是代表老年代的柱状图仍然保持峰值状态，说明被填充进堆中的数据在System.gc（）方法执行之后仍然存活。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573282569188_69314B5631685BFF2D1BB4774E598582" alt="图片说明" title="图片标题"> </p>
-<p>这里有两个小问题供读者思考：<br>1.虚拟机启动参数只限制了Java堆为100MB，没有指定-Xmn参数，能否从监控图中估计出新生代有多大？<br>2.为何执行了System.gc（）之后，图中代表老年代的柱状图仍然显示峰值状态，代码需要如何调整才能让System.gc（）回收掉填充到堆中的对象？<br>问题一：我们可以从图中知道Eden空间大小，因为没有设置-XX：SurvivorRadio参数，所以Eden与Survivor空间比例默认值为8:1，整个新生代空间这样我们可以用Eden空间大小/占新生代空间的比例，得出新生代空间的大小。<br>问题二：执行完System.gc（）之后，空间未能回收是因为List<OOMObject>list对象仍然存活，fillHeap（）方法仍然没有退出，因此list对象在System.gc（）执行时仍然处于作用域之内。如果把System.gc移动到fillHeap()方法外调用就可以回收掉全部内存。 </OOMObject></p>
+    <title>HDFS NameNode的工作机制</title>
+    <url>/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<h2 id="NameNode"><a href="#NameNode" class="headerlink" title="NameNode"></a>NameNode</h2><p><img src="/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/1.png" alt=" "> </p>
+<h3 id="1-第一阶段：-namenode-启动"><a href="#1-第一阶段：-namenode-启动" class="headerlink" title="1 第一阶段： namenode 启动"></a>1 第一阶段： namenode 启动</h3><p>1）第一次启动 namenode 格式化后， 创建 fsimage 和 edits 文件。如果不是第一次启动，直接加载编辑日志和镜像文件到内存。<br>2） 客户端对元数据进行增删改的请求。<br>3） namenode 记录操作日志，更新滚动日志。<br>4） namenode 在内存中对数据进行增删改查。</p>
+<h3 id="2-第二阶段：-Secondary-NameNode-工作"><a href="#2-第二阶段：-Secondary-NameNode-工作" class="headerlink" title="2 第二阶段： Secondary NameNode 工作"></a>2 第二阶段： Secondary NameNode 工作</h3><p>1） Secondary NameNode 询问 namenode 是否需要 checkpoint。 直接带回 namenode 是否检查结果。<br>2） Secondary NameNode 请求执行 checkpoint。<br>3） namenode 滚动正在写的 edits 日志。<br>4）将滚动前的编辑日志和镜像文件拷贝到 Secondary NameNode。<br>5） Secondary NameNode 加载编辑日志和镜像文件到内存，并合并。<br>6） 生成新的镜像文件 fsimage.chkpoint。<br>7） 拷贝 fsimage.chkpoint 到 namenode。<br>8） namenode 将 fsimage.chkpoint 重新命名成 fsimage。</p>
 ]]></content>
+      <categories>
+        <category>Hadoop</category>
+      </categories>
       <tags>
-        <tag>JVM</tag>
+        <tag>Hadoop</tag>
       </tags>
   </entry>
   <entry>
@@ -461,6 +422,45 @@
       </tags>
   </entry>
   <entry>
+    <title>JConsole:Java监视与管理控制台</title>
+    <url>/2020/06/17/JConsole-Java%E7%9B%91%E8%A7%86%E4%B8%8E%E7%AE%A1%E7%90%86%E6%8E%A7%E5%88%B6%E5%8F%B0/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>JConsole（Java Monitoring and Management Console）是一种基于JMX的可视化监视、管理工具。<br>1.启动JConsole<br>通过JDK/bin目录下的“jconsole.exe”启动JConsole后，将自动搜索出本机运行的所有虚拟机进程，不需要用户自己再使用jps来查询了，如图双击选择其中一个进程即可开始监控了，也可以使用下面的“远程进程”功能来连接远程服务器，对远程虚拟机进行监控。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573274563736_6654F5DFA4EC7329FE86D88517B8FA93" alt="图片说明" title="图片标题"> </p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573275239073_438AC748ECDB4217D868DFDE95ECFD09" alt=" " title="图片标题"> </p>
+<p>从图中可以看出机器运行了几个本地虚拟机进程，其中OOMTest是我准备的“反面教材”代码双击它进入JConsole主界面，包括“概述”、“内存”、“线程”、“类”、“VM概要”、“MBean”六个页签。如图所示</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573278160273_562106A0F5A1D726229907F196EB6D40" alt="图片说明" title="图片标题"> </p>
+<p>“概述”页签显示的是整个虚拟机主要运行数据的概览，其中包括“堆内存使用情况”、“类”、“CPU使用情况”四种信息的曲线图，这些曲线图是后面“内存”、“线程”、“类”页签的信息汇总。</p>
+<p>2.内存监控<br>“内存”页签相当于可视化的jsat命令，用于监视收集器管理的虚拟机内存（Java堆和永久代）的变化趋势。我们通过运行代码“OOMTest”来体验一下监视功能，运行时设置的虚拟机参数为：-Xms100m -Xmx100m -XX:+UseSerialGC,这段代码的作用是以64KB/50毫秒的速度往Java堆中填充数据，一共填充1000次，使用JConsole的“内存”页签进行监视，观察曲线和柱状图指示图的变化。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">import java.util.ArrayList;</span><br><span class="line">import java.util.List;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * @Author:luomo</span><br><span class="line"> * @CreateTime:2019&#x2F;11&#x2F;9</span><br><span class="line"> * @Description:OOMTest</span><br><span class="line"> *&#x2F;</span><br><span class="line">public class OOMTest &#123;</span><br><span class="line"></span><br><span class="line">    &#x2F;**</span><br><span class="line">     * 内存占位符对象，一个OOMObject大约占64KB</span><br><span class="line">     *&#x2F;</span><br><span class="line">    static class OOMobject&#123;</span><br><span class="line">        public byte[] placeholder&#x3D;new byte[64*1024];</span><br><span class="line">    &#125;</span><br><span class="line">    public static void fillHeap(int num) throws InterruptedException&#123;</span><br><span class="line">        List&lt;OOMobject&gt; list &#x3D;new ArrayList&lt;OOMobject&gt;();</span><br><span class="line">        for(int i&#x3D;0;i&lt;num;i++)</span><br><span class="line">        &#123;</span><br><span class="line">            &#x2F;&#x2F;稍作延时，令监视曲线的变化更加明显</span><br><span class="line">            Thread.sleep(50);</span><br><span class="line">            list.add(new OOMobject());</span><br><span class="line">        &#125;</span><br><span class="line">        System.gc();</span><br><span class="line">    &#125;</span><br><span class="line">    public static void main(String[] args)throws Exception&#123;</span><br><span class="line">        fillHeap(1000);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>程序运行后，在“内存”页签中可以看到内存池Eden区的运行趋势呈现折线状，如图。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573282506435_42550CBEF3FCED46D7B42799FAD4566A" alt="图片说明" title="图片标题"> </p>
+<p>监视范围扩大至整个堆后，会发现曲线是一条向上增长的平滑曲线。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573282418309_B397F1590C7ED6E011AB02405287D0D0" alt="图片说明" title="图片标题"> </p>
+<p>并且从柱状图可以看出，在1000次循环执行结束，运行了System.gc()后，虽然整个新生代Eden和Survivor区都基本被清空了，但是代表老年代的柱状图仍然保持峰值状态，说明被填充进堆中的数据在System.gc（）方法执行之后仍然存活。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573282569188_69314B5631685BFF2D1BB4774E598582" alt="图片说明" title="图片标题"> </p>
+<p>这里有两个小问题供读者思考：<br>1.虚拟机启动参数只限制了Java堆为100MB，没有指定-Xmn参数，能否从监控图中估计出新生代有多大？<br>2.为何执行了System.gc（）之后，图中代表老年代的柱状图仍然显示峰值状态，代码需要如何调整才能让System.gc（）回收掉填充到堆中的对象？<br>问题一：我们可以从图中知道Eden空间大小，因为没有设置-XX：SurvivorRadio参数，所以Eden与Survivor空间比例默认值为8:1，整个新生代空间这样我们可以用Eden空间大小/占新生代空间的比例，得出新生代空间的大小。<br>问题二：执行完System.gc（）之后，空间未能回收是因为List<OOMObject>list对象仍然存活，fillHeap（）方法仍然没有退出，因此list对象在System.gc（）执行时仍然处于作用域之内。如果把System.gc移动到fillHeap()方法外调用就可以回收掉全部内存。 </OOMObject></p>
+]]></content>
+      <tags>
+        <tag>JVM</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HotSpot虚拟机对象探秘</title>
+    <url>/2020/06/17/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/</url>
+    <content><![CDATA[<h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>我们以常用的虚拟机HotSpot和常用的内存区域Java堆为例，深入了解HotSpot虚拟机在Java堆中对象分配、布局和访问的全过程。</p>
+<h2 id="对象的创建"><a href="#对象的创建" class="headerlink" title="对象的创建"></a>对象的创建</h2><p>虚拟机遇到一条new指令时，首先将去检查这个指令的参数是否能在常量池中定位到一个类的符号引用，并且检查这个符号引用代表的类是否已被加载、解析和初始化。如果没有先执行相应的类加载过程。<br>    在类加载检查通过后，接下来虚拟机将为新生对象分配内存。对象所需内存的大小在类加载完成后便可完全确定，为对象分配空间的任务等同把一块确定大小的内存从Java堆中划分出来。假设堆中内存是绝对完整的，所有的内存都放在一边，空闲的内存放在另一边，中间放着一个指针作为分界点的指示器，所有用过的内存都放在一边，中间放着一个值指针作为分界点的指示器，这种分配方式成为“指针碰撞”。如图：<br><img src="/2020/06/17/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/1.png" alt="图片说明"> </p>
+<p>如果Java堆中的内存并不是规整的，已使用的内存和空闲的内存相互交错，那就没有办法简单地进行指针碰撞了，虚拟机就必须维护一个实例，并更新列表上的记录，这种分配方式称为“空闲列表”。如图：<br><img src="/2020/06/17/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/2.png" alt="图片说明"> </p>
+<p>选择哪种分配方式是由Java堆是否规整决定，而Java堆是否规整又由所采用的垃圾收集器是否带有压缩功能决定。因此，在使用serial、ParNew等带Compact过程的收集器时，系统采用的分配算法是指针碰撞，而使用CMS这种基于Mark-Sweep算法的收集器时，通常采用空闲列表。</p>
+<h2 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h2><p>在HotSpot虚拟机中，对象在内存中存储的布局可以分为3块区域：对象头（Header）、实例数据（InstanceData）和对齐填充（Padding）。<br>HotSpot虚拟机的对象头包括两部分信息，第一部分用于存储对象自身的运行时数据，如哈希码（HashCode）、GC分代年龄、锁状态标志、线程持有的锁、偏向线程ID、偏向时间戳等，这部分数据的长度在32位和64位的虚拟机（未开启压缩指针）中分别为32bit和64bit，官方称它为“Mark Word”。对象头的另外一部分是类型指针，即对象指向它的类元数据的指针，虚拟机通过这个指针来确定这个对象是哪<br>个类的实例。并不是所有的虚拟机实现都必须在对象数据上保留类型指针，换句话说，查找对象的元数据信息并不<br>一定要经过对象本身<br>第二部分实例数据是对象真正存储的有效信息，也是在程序代码中所定义的各种类型的字段内容。无论是从父类继承下来的，还是在子类中定义的，都需要记录起来。<br>第三部分对齐填充并不是必然存在的，也没有特别的含义，它仅仅起着占位符的作用。由于HotSpot VM的自动内存管理系统要求对象起始地址必须是8字节的整数倍，换句话说，就是对象的大小必须是8字节的整数倍。而对象头部分正好是8字节的倍数（1倍或者2倍），因此，当对象实例数据部分没有对齐时，就需要通过对齐填充来补全。</p>
+<h2 id="对象的访问定位"><a href="#对象的访问定位" class="headerlink" title="对象的访问定位"></a>对象的访问定位</h2><p>建立对象是为了使用对象，我们的Java程序需要通过栈上的reference数据来操作堆上的具体对象。由于reference类型在Java虚拟机规范中只规定了一个指向对象的引用，并没有定义这个引用应该通过何种方式去定位、访问堆中的对象的具***置，所以对象访问方式也是取决于虚拟机实现而定的。目前主流的访问方式有使用句柄和直接指针两种。</p>
+<p>如果使用句柄访问的话，那么Java堆中将会划分出一块内存来作为句柄池，reference中存储的就是对象的句柄地址，而句柄中包含了对象实例数据与类型数据各自的具体地址信息，</p>
+<p>如果使用直接指针访问，那么Java堆对象的布局中就必须考虑如何放置访问类型数据的相关信息，而reference中存储的直接就是对象地址，</p>
+]]></content>
+      <tags>
+        <tag>JVM</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Java虚拟机运行时数据区域</title>
     <url>/2020/06/15/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F/</url>
     <content><![CDATA[<p>#概述<br>&emsp;&emsp;对于从事C、C++程序开发人员来说，在内存管理领域，他们既是拥有最高权力的“皇帝”又是从事最基础工作的“劳动人民”-既拥有每一个对象的“所有权”，又担负着每一个对象生命开始到终结的维护责任。<br>对于Java 程序员来说，在虚拟机自动内存管理机制的帮助下，不在需要为每一个new操作去写配对的delete/free代码，不容易出现内存泄漏和内存溢出问题，由虚拟机管理内存这一切看起来都很美好。然而一旦出现内存泄漏和溢出的问题，如果不了解虚拟机是怎样使用内存的，那么排查错误将异常艰难。Java虚拟机在执行Java程序的过程中会把它所管理的内存划分为若干个不同的数据区域。这些区域都有各自的<br>用途，以及创建和销毁的时间，有的区域随着虚拟机进程的启动而存在，有些区域则依赖用户线程的启动和结束而<br>建立和销毁。</p>
@@ -476,37 +476,6 @@
       </categories>
       <tags>
         <tag>运行时数据区域</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Kafka 概述</title>
-    <url>/2020/06/14/Kafka-%E6%A6%82%E8%BF%B0/</url>
-    <content><![CDATA[<h1 id="kafka诞生的背景"><a href="#kafka诞生的背景" class="headerlink" title="kafka诞生的背景"></a>kafka诞生的背景</h1><p>对于一个高效的组织，所有数据需要对该组织的所有服务和系统是可用的，以便挖掘出数据的最大价值。数据采集和数据使用是一个金字塔的结构，底部为以某种统一的方式捕获数据，这些数据需要以统一的方式建模，以方便读取和处理。捕获数据的工作做扎实后，在这个基础上以不同方法处理这些数据就变得得心应手。<br>数据捕获的来源主要有两种：一种是记录正在发生的事件数据。比如Web系统中的用户活动日志（用户的点击选择等）、交警行业中的违章事件等。随着传统行业业务活动的数字化，事件数据正在不断增长，而且这个趋势没有停止。这种类型的事件数据记录了已经发生的事情，往往比传统数据库应用要大好几个数量级。因此对于数据的捕获、数据的处理提出了重大的挑战；另一种是经过二次分析处理之后的数据。对捕获的数据进行二次分析处理后得到的数据也需要记录保存，这里的处理指的是利用批处理、图分析等专有的数据处理系统进行了处理，这些加工后的数据可以作为数据捕获的第二个来源。总之，捕获的数据越来越多，如何将这些巨量的数据以可靠的、完整的数据流方式传递给数据分析处理系统也变得越来越困难。</p>
-<h1 id="Kafka是什么"><a href="#Kafka是什么" class="headerlink" title="Kafka是什么"></a>Kafka是什么</h1><p>在流式计算中，Kafka一般用来缓存数据，Storm通过消费Kafka的数据进行计算。<br>1）Apache Kafka是一个开源消息系统，由Scala写成。是由Apache软件基金会开发的一个开源消息系统项目。<br>2）Kafka最初是由LinkedIn公司开发，并于    2011年初开源。2012年10月从Apache Incubator毕业。该项目的目标是为处理实时数据提供一个统一、高通量、低等待的平台。<br>3）Kafka是一个分布式消息队列。Kafka对消息保存时根据Topic进行归类，发送消息者称为Producer，消息接受者称为Consumer，此外kafka集群有多个kafka实例组成，每个实例(server)成为broker。<br>4）无论是kafka集群，还是producer和consumer都依赖于zookeeper集群保存一些meta信息，来保证系统可用性。</p>
-<h1 id="消息队列内部实现原理"><a href="#消息队列内部实现原理" class="headerlink" title="消息队列内部实现原理"></a>消息队列内部实现原理</h1><p><img src="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975462389_04F96407B00295C6D53D599B4F14DC90" alt="图片说明" title="图片标题"> </p>
-<p>  （1）点对点模式（一对一，消费者主动拉取数据，消息收到后消息清除）<br>点对点模型通常是一个基于拉取或者轮询的消息传送模型，这种模型从队列中请求信息，而不是将消息推送到客户端。这个模型的特点是发送到队列的消息被一个且只有一个接收者接收处理，即使有多个消息监听者也是如此。<br>（2）发布/订阅模式（一对多，数据生产后，推送给所有订阅者）<br>发布订阅模型则是一个基于推送的消息传送模型。发布订阅模型可以有多种不同的订阅者，临时订阅者只在主动监听主题时才接收消息，而持久订阅者则监听主题的所有消息，即使当前订阅者不可用，处于离线状态。</p>
-<h1 id="为什么需要消息队列"><a href="#为什么需要消息队列" class="headerlink" title="为什么需要消息队列"></a>为什么需要消息队列</h1><p>1）解耦：<br>　　允许你独立的扩展或修改两边的处理过程，只要确保它们遵守同样的接口约束。<br>2）冗余：<br>消息队列把数据进行持久化直到它们已经被完全处理，通过这一方式规避了数据丢失风险。许多消息队列所采用的”插入-获取-删除”范式中，在把一个消息从队列中删除之前，需要你的处理系统明确的指出该消息已经被处理完毕，从而确保你的数据被安全的保存直到你使用完毕。<br>3）扩展性：<br>因为消息队列解耦了你的处理过程，所以增大消息入队和处理的频率是很容易的，只要另外增加处理过程即可。<br>4）灵活性 &amp; 峰值处理能力：<br>在访问量剧增的情况下，应用仍然需要继续发挥作用，但是这样的突发流量并不常见。如果为以能处理这类峰值访问为标准来投入资源随时待命无疑是巨大的浪费。使用消息队列能够使关键组件顶住突发的访问压力，而不会因为突发的超负荷的请求而完全崩溃。<br>5）可恢复性：<br>系统的一部分组件失效时，不会影响到整个系统。消息队列降低了进程间的耦合度，所以即使一个处理消息的进程挂掉，加入队列中的消息仍然可以在系统恢复后被处理。<br>6）顺序保证：<br>在大多使用场景下，数据处理的顺序都很重要。大部分消息队列本来就是排序的，并且能保证数据会按照特定的顺序来处理。（Kafka保证一个Partition内的消息的有序性）<br>7）缓冲：<br>有助于控制和优化数据流经过系统的速度，解决生产消息和消费消息的处理速度不一致的情况。<br>8）异步通信：<br>很多时候，用户不想也不需要立即处理消息。消息队列提供了异步处理机制，允许用户把一个消息放入队列，但并不立即处理它。想向队列中放入多少消息就放多少，然后在需要的时候再去处理它们。</p>
-<h1 id="Kafka架构"><a href="#Kafka架构" class="headerlink" title="Kafka架构"></a>Kafka架构</h1><p><img src="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975497955_62B3F472CB3D859915FB4C3B0BBEBAAE" alt="图片说明" title="图片标题"><br>1）Producer ：消息生产者，就是向kafka broker发消息的客户端。<br>2）Consumer ：消息消费者，向kafka broker取消息的客户端<br>3）Topic ：可以理解为一个队列。<br>4） Consumer Group （CG）：这是kafka用来实现一个topic消息的广播（发给所有的consumer）和单播（发给任意一个consumer）的手段。一个topic可以有多个CG。topic的消息会复制-给consumer。如果需要实现广播，只要每个consumer有一个独立的CG就可以了。要实现单播只要所有的consumer在同一个CG。用CG还可以将consumer进行自由的分组而不需要多次发送消息到不同的topic。<br>5）Broker ：一台kafka服务器就是一个broker。一个集群由多个broker组成。一个broker可以容纳多个topic。<br>6）Partition：为了实现扩展性，一个非常大的topic可以分布到多个broker（即服务器）上，一个topic可以分为多个partition，每个partition是一个有序的队列。partition中的每条消息都会被分配一个有序的id（offset）。kafka只保证按一个partition中的顺序将消息发给consumer，不保证一个topic的整体（多个partition间）的顺序。<br>7）Offset：kafka的存储文件都是按照offset.kafka来命名，用offset做名字的好处是方便查找。例如你想找位于2049的位置，只要找到2048.kafka的文件即可。当然the first offset就是00000000000.kafka</p>
-<h1 id="分布式模型"><a href="#分布式模型" class="headerlink" title="分布式模型"></a>分布式模型</h1><p>   Kafka每个主题的多个分区日志分布式地存储在Kafka集群上，同时为了故障容错，每个分区都会以副本的方式复制到多个消息代理节点上。其中一个节点会作为主副本（Leader），其他节点作为备份副本（Follower，也叫作从副本）。主副本会负责所有的客户端读写操作，备份副本仅仅从主副本同步数据。当主副本出现故障时，备份副本中的一个副本会被选择为新的主副本。因为每个分区的副本中只有主副本接受读写，所以每个服务器端都会作为某些分区的主副本，以及另外一些分区的备份副本，这样Kafka集群的所有服务端整体上对客户端是负载均衡的。<br>       Kafka的生产者和消费者相对于服务器端而言都是客户端。<br>Kafka生产者客户端发布消息到服务端的指定主题，会指定消息所属的分区。生产者发布消息时根据消息是否有键，采用不同的分区策略。消息没有键时，通过轮询方式进行客户端负载均衡；消息有键时，根据分区语义（例如hash）确保相同键的消息总是发送到同一分区。<br>       Kafka的消费者通过订阅主题来消费消息，并且每个消费者都会设置一个消费组名称。因为生产者发布到主题的每一条消息都只会发送给消费者组的一个消费者。所以，如果要实现传统消息系统的“队列”模型，可以让每个消费者都拥有相同的消费组名称，这样消息就会负责均衡到所有的消费者；如果要实现“发布-订阅”模型，则每个消费者的消费者组名称都不相同，这样每条消息就会广播给所有的消费者。<br>       分区是消费者现场模型的最小并行单位。如下图（图1）所示，生产者发布消息到一台服务器的3个分区时，只有一个消费者消费所有的3个分区。在下图（图2）中，3个分区分布在3台服务器上，同时有3个消费者分别消费不同的分区。假设每个服务器的吞吐量时300MB，在下图（图1）中分摊到每个分区只有100MB，而在下图（图2）中，集群整体的吞吐量有900MB。可以看到，增加服务器节点会提升集群的性能，增加消费者数量会提升处理性能。<br>       同一个消费组下多个消费者互相协调消费工作，Kafka会将所有的分区平均地分配给所有的消费者实例，这样每个消费者都可以分配到数量均等的分区。Kafka的消费组管理协议会动态地维护消费组的成员列表，当一个新消费者加入消费者组，或者有消费者离开消费组，都会触发再平衡操作。<br><img src="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975534470_558AC9E4B632C16EBB53304E1BB3518A" alt="图片说明" title="图片标题"><br>Kafka的消费者消费消息时，只保证在一个分区内的消息的完全有序性，并不保证同一个主题汇中多个分区的消息顺序。而且，消费者读取一个分区消息的顺序和生产者写入到这个分区的顺序是一致的。比如，生产者写入“hello”和“Kafka”两条消息到分区P1，则消费者读取到的顺序也一定是“hello”和“Kafka”。如果业务上需要保证所有消息完全一致，只能通过设置一个分区完成，但这种做法的缺点是最多只能有一个消费者进行消费。一般来说，只需要保证每个分区的有序性，再对消息假设键来保证相同键的所有消息落入同一分区，就可以满足绝大多数的应用。</p>
-]]></content>
-      <categories>
-        <category>Kafka</category>
-      </categories>
-      <tags>
-        <tag>Kafka</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Scala</title>
-    <url>/2020/06/19/Scala/</url>
-    <content><![CDATA[<p>Scala 是 Scalable Language 的简写，是一门多范式的编程语言<br>联邦理工学院洛桑（EPFL）的Martin Odersky于2001年基于Funnel的工作开始设计Scala。<br>Funnel是把函数式编程思想和Petri网相结合的一种编程语言。<br>Odersky先前的工作是Generic Java和javac（Sun Java编译器）。Java平台的Scala于2003年底/2004年初发布。.NET平台的Scala发布于2004年6月。该语言第二个版本，v2.0，发布于2006年3月。<br>截至2009年9月，最新版本是版本2.7.6 。Scala 2.8预计的特性包括重写的Scala类库（Scala collections library）、方法的命名参数和默认参数、包对象（package object），以及Continuation。<br>2009年4月，Twitter宣布他们已经把大部分后端程序从Ruby迁移到Scala，其余部分也打算要迁移。此外， Wattzon已经公开宣称，其整个平台都已经是基于Scala基础设施编写的。</p>
-<h1 id="Scala特性："><a href="#Scala特性：" class="headerlink" title="Scala特性："></a>Scala特性：</h1><p><strong>面向对象特性：</strong><br>Scala是一种纯面向对象的语言，每个值都是对象。对象的数据类型以及行为由类和特质描述。类抽象机制的扩展有两种途径：一种途径是子类继承，另一种途径是灵活混入机制。这两种途径能避免多重继承的种种问题。<br><strong>函数式编程：</strong><br>Scala也是一种函数式语言，奇函数也能成值来使用。Scala提供了轻量级的语法用以定义匿名函数，支持高级函数，允许嵌套多层函数，并支持柯里化。Scala的case class及内置的模式匹配相当于函数式编程语言中常用的代数类型。<br>更进一步，程序员可以利用Scala的模式匹配，编写类似正则表达式的代码处理XML数据<br>静态类型<br>Scala具备类型系统，通过编译时检查，保证代码的安全性和一致性。<br>类型系统具体支持一下特性：<br>泛型类<br>协变和逆变<br>标注<br>类型参数的上下限约束<br>把类别和抽象类型作为对象成员<br><strong>复合类型</strong><br>引用自己时显示指定类型<br>视图<br>多态方法<br><strong>扩展性：</strong><br>Scala的设计秉承一项事实，即在实践中，某个领域特定的应用程序开发往往需要特定于该领域的语言扩展。Scala提供了许多独特的语言机制，可以以库的形式轻易无缝添加新的语言结构：<br>任何方法可用作前缀或后缀操作符<br>可以根据预期类型自动构造闭包。<br><strong>并发性：</strong><br>Scala使用Actor作为其并发模型，Actor是类似线程的实体，通过邮箱发收消息。Actor可以复用线程，因此可以在程序中可以使用数百万个Actor，而线程只能创建数千个。在2.10之后的版本中，使用AKKa作为其默认Actor实现。</p>
-]]></content>
-      <categories>
-        <category>Scala</category>
-      </categories>
-      <tags>
-        <tag>编程语言</tag>
       </tags>
   </entry>
   <entry>
@@ -571,6 +540,37 @@
       </tags>
   </entry>
   <entry>
+    <title>Kafka 概述</title>
+    <url>/2020/06/14/Kafka-%E6%A6%82%E8%BF%B0/</url>
+    <content><![CDATA[<h1 id="kafka诞生的背景"><a href="#kafka诞生的背景" class="headerlink" title="kafka诞生的背景"></a>kafka诞生的背景</h1><p>对于一个高效的组织，所有数据需要对该组织的所有服务和系统是可用的，以便挖掘出数据的最大价值。数据采集和数据使用是一个金字塔的结构，底部为以某种统一的方式捕获数据，这些数据需要以统一的方式建模，以方便读取和处理。捕获数据的工作做扎实后，在这个基础上以不同方法处理这些数据就变得得心应手。<br>数据捕获的来源主要有两种：一种是记录正在发生的事件数据。比如Web系统中的用户活动日志（用户的点击选择等）、交警行业中的违章事件等。随着传统行业业务活动的数字化，事件数据正在不断增长，而且这个趋势没有停止。这种类型的事件数据记录了已经发生的事情，往往比传统数据库应用要大好几个数量级。因此对于数据的捕获、数据的处理提出了重大的挑战；另一种是经过二次分析处理之后的数据。对捕获的数据进行二次分析处理后得到的数据也需要记录保存，这里的处理指的是利用批处理、图分析等专有的数据处理系统进行了处理，这些加工后的数据可以作为数据捕获的第二个来源。总之，捕获的数据越来越多，如何将这些巨量的数据以可靠的、完整的数据流方式传递给数据分析处理系统也变得越来越困难。</p>
+<h1 id="Kafka是什么"><a href="#Kafka是什么" class="headerlink" title="Kafka是什么"></a>Kafka是什么</h1><p>在流式计算中，Kafka一般用来缓存数据，Storm通过消费Kafka的数据进行计算。<br>1）Apache Kafka是一个开源消息系统，由Scala写成。是由Apache软件基金会开发的一个开源消息系统项目。<br>2）Kafka最初是由LinkedIn公司开发，并于    2011年初开源。2012年10月从Apache Incubator毕业。该项目的目标是为处理实时数据提供一个统一、高通量、低等待的平台。<br>3）Kafka是一个分布式消息队列。Kafka对消息保存时根据Topic进行归类，发送消息者称为Producer，消息接受者称为Consumer，此外kafka集群有多个kafka实例组成，每个实例(server)成为broker。<br>4）无论是kafka集群，还是producer和consumer都依赖于zookeeper集群保存一些meta信息，来保证系统可用性。</p>
+<h1 id="消息队列内部实现原理"><a href="#消息队列内部实现原理" class="headerlink" title="消息队列内部实现原理"></a>消息队列内部实现原理</h1><p><img src="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975462389_04F96407B00295C6D53D599B4F14DC90" alt="图片说明" title="图片标题"> </p>
+<p>  （1）点对点模式（一对一，消费者主动拉取数据，消息收到后消息清除）<br>点对点模型通常是一个基于拉取或者轮询的消息传送模型，这种模型从队列中请求信息，而不是将消息推送到客户端。这个模型的特点是发送到队列的消息被一个且只有一个接收者接收处理，即使有多个消息监听者也是如此。<br>（2）发布/订阅模式（一对多，数据生产后，推送给所有订阅者）<br>发布订阅模型则是一个基于推送的消息传送模型。发布订阅模型可以有多种不同的订阅者，临时订阅者只在主动监听主题时才接收消息，而持久订阅者则监听主题的所有消息，即使当前订阅者不可用，处于离线状态。</p>
+<h1 id="为什么需要消息队列"><a href="#为什么需要消息队列" class="headerlink" title="为什么需要消息队列"></a>为什么需要消息队列</h1><p>1）解耦：<br>　　允许你独立的扩展或修改两边的处理过程，只要确保它们遵守同样的接口约束。<br>2）冗余：<br>消息队列把数据进行持久化直到它们已经被完全处理，通过这一方式规避了数据丢失风险。许多消息队列所采用的”插入-获取-删除”范式中，在把一个消息从队列中删除之前，需要你的处理系统明确的指出该消息已经被处理完毕，从而确保你的数据被安全的保存直到你使用完毕。<br>3）扩展性：<br>因为消息队列解耦了你的处理过程，所以增大消息入队和处理的频率是很容易的，只要另外增加处理过程即可。<br>4）灵活性 &amp; 峰值处理能力：<br>在访问量剧增的情况下，应用仍然需要继续发挥作用，但是这样的突发流量并不常见。如果为以能处理这类峰值访问为标准来投入资源随时待命无疑是巨大的浪费。使用消息队列能够使关键组件顶住突发的访问压力，而不会因为突发的超负荷的请求而完全崩溃。<br>5）可恢复性：<br>系统的一部分组件失效时，不会影响到整个系统。消息队列降低了进程间的耦合度，所以即使一个处理消息的进程挂掉，加入队列中的消息仍然可以在系统恢复后被处理。<br>6）顺序保证：<br>在大多使用场景下，数据处理的顺序都很重要。大部分消息队列本来就是排序的，并且能保证数据会按照特定的顺序来处理。（Kafka保证一个Partition内的消息的有序性）<br>7）缓冲：<br>有助于控制和优化数据流经过系统的速度，解决生产消息和消费消息的处理速度不一致的情况。<br>8）异步通信：<br>很多时候，用户不想也不需要立即处理消息。消息队列提供了异步处理机制，允许用户把一个消息放入队列，但并不立即处理它。想向队列中放入多少消息就放多少，然后在需要的时候再去处理它们。</p>
+<h1 id="Kafka架构"><a href="#Kafka架构" class="headerlink" title="Kafka架构"></a>Kafka架构</h1><p><img src="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975497955_62B3F472CB3D859915FB4C3B0BBEBAAE" alt="图片说明" title="图片标题"><br>1）Producer ：消息生产者，就是向kafka broker发消息的客户端。<br>2）Consumer ：消息消费者，向kafka broker取消息的客户端<br>3）Topic ：可以理解为一个队列。<br>4） Consumer Group （CG）：这是kafka用来实现一个topic消息的广播（发给所有的consumer）和单播（发给任意一个consumer）的手段。一个topic可以有多个CG。topic的消息会复制-给consumer。如果需要实现广播，只要每个consumer有一个独立的CG就可以了。要实现单播只要所有的consumer在同一个CG。用CG还可以将consumer进行自由的分组而不需要多次发送消息到不同的topic。<br>5）Broker ：一台kafka服务器就是一个broker。一个集群由多个broker组成。一个broker可以容纳多个topic。<br>6）Partition：为了实现扩展性，一个非常大的topic可以分布到多个broker（即服务器）上，一个topic可以分为多个partition，每个partition是一个有序的队列。partition中的每条消息都会被分配一个有序的id（offset）。kafka只保证按一个partition中的顺序将消息发给consumer，不保证一个topic的整体（多个partition间）的顺序。<br>7）Offset：kafka的存储文件都是按照offset.kafka来命名，用offset做名字的好处是方便查找。例如你想找位于2049的位置，只要找到2048.kafka的文件即可。当然the first offset就是00000000000.kafka</p>
+<h1 id="分布式模型"><a href="#分布式模型" class="headerlink" title="分布式模型"></a>分布式模型</h1><p>   Kafka每个主题的多个分区日志分布式地存储在Kafka集群上，同时为了故障容错，每个分区都会以副本的方式复制到多个消息代理节点上。其中一个节点会作为主副本（Leader），其他节点作为备份副本（Follower，也叫作从副本）。主副本会负责所有的客户端读写操作，备份副本仅仅从主副本同步数据。当主副本出现故障时，备份副本中的一个副本会被选择为新的主副本。因为每个分区的副本中只有主副本接受读写，所以每个服务器端都会作为某些分区的主副本，以及另外一些分区的备份副本，这样Kafka集群的所有服务端整体上对客户端是负载均衡的。<br>       Kafka的生产者和消费者相对于服务器端而言都是客户端。<br>Kafka生产者客户端发布消息到服务端的指定主题，会指定消息所属的分区。生产者发布消息时根据消息是否有键，采用不同的分区策略。消息没有键时，通过轮询方式进行客户端负载均衡；消息有键时，根据分区语义（例如hash）确保相同键的消息总是发送到同一分区。<br>       Kafka的消费者通过订阅主题来消费消息，并且每个消费者都会设置一个消费组名称。因为生产者发布到主题的每一条消息都只会发送给消费者组的一个消费者。所以，如果要实现传统消息系统的“队列”模型，可以让每个消费者都拥有相同的消费组名称，这样消息就会负责均衡到所有的消费者；如果要实现“发布-订阅”模型，则每个消费者的消费者组名称都不相同，这样每条消息就会广播给所有的消费者。<br>       分区是消费者现场模型的最小并行单位。如下图（图1）所示，生产者发布消息到一台服务器的3个分区时，只有一个消费者消费所有的3个分区。在下图（图2）中，3个分区分布在3台服务器上，同时有3个消费者分别消费不同的分区。假设每个服务器的吞吐量时300MB，在下图（图1）中分摊到每个分区只有100MB，而在下图（图2）中，集群整体的吞吐量有900MB。可以看到，增加服务器节点会提升集群的性能，增加消费者数量会提升处理性能。<br>       同一个消费组下多个消费者互相协调消费工作，Kafka会将所有的分区平均地分配给所有的消费者实例，这样每个消费者都可以分配到数量均等的分区。Kafka的消费组管理协议会动态地维护消费组的成员列表，当一个新消费者加入消费者组，或者有消费者离开消费组，都会触发再平衡操作。<br><img src="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975534470_558AC9E4B632C16EBB53304E1BB3518A" alt="图片说明" title="图片标题"><br>Kafka的消费者消费消息时，只保证在一个分区内的消息的完全有序性，并不保证同一个主题汇中多个分区的消息顺序。而且，消费者读取一个分区消息的顺序和生产者写入到这个分区的顺序是一致的。比如，生产者写入“hello”和“Kafka”两条消息到分区P1，则消费者读取到的顺序也一定是“hello”和“Kafka”。如果业务上需要保证所有消息完全一致，只能通过设置一个分区完成，但这种做法的缺点是最多只能有一个消费者进行消费。一般来说，只需要保证每个分区的有序性，再对消息假设键来保证相同键的所有消息落入同一分区，就可以满足绝大多数的应用。</p>
+]]></content>
+      <categories>
+        <category>Kafka</category>
+      </categories>
+      <tags>
+        <tag>Kafka</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Scala</title>
+    <url>/2020/06/19/Scala/</url>
+    <content><![CDATA[<p>Scala 是 Scalable Language 的简写，是一门多范式的编程语言<br>联邦理工学院洛桑（EPFL）的Martin Odersky于2001年基于Funnel的工作开始设计Scala。<br>Funnel是把函数式编程思想和Petri网相结合的一种编程语言。<br>Odersky先前的工作是Generic Java和javac（Sun Java编译器）。Java平台的Scala于2003年底/2004年初发布。.NET平台的Scala发布于2004年6月。该语言第二个版本，v2.0，发布于2006年3月。<br>截至2009年9月，最新版本是版本2.7.6 。Scala 2.8预计的特性包括重写的Scala类库（Scala collections library）、方法的命名参数和默认参数、包对象（package object），以及Continuation。<br>2009年4月，Twitter宣布他们已经把大部分后端程序从Ruby迁移到Scala，其余部分也打算要迁移。此外， Wattzon已经公开宣称，其整个平台都已经是基于Scala基础设施编写的。</p>
+<h1 id="Scala特性："><a href="#Scala特性：" class="headerlink" title="Scala特性："></a>Scala特性：</h1><p><strong>面向对象特性：</strong><br>Scala是一种纯面向对象的语言，每个值都是对象。对象的数据类型以及行为由类和特质描述。类抽象机制的扩展有两种途径：一种途径是子类继承，另一种途径是灵活混入机制。这两种途径能避免多重继承的种种问题。<br><strong>函数式编程：</strong><br>Scala也是一种函数式语言，奇函数也能成值来使用。Scala提供了轻量级的语法用以定义匿名函数，支持高级函数，允许嵌套多层函数，并支持柯里化。Scala的case class及内置的模式匹配相当于函数式编程语言中常用的代数类型。<br>更进一步，程序员可以利用Scala的模式匹配，编写类似正则表达式的代码处理XML数据<br>静态类型<br>Scala具备类型系统，通过编译时检查，保证代码的安全性和一致性。<br>类型系统具体支持一下特性：<br>泛型类<br>协变和逆变<br>标注<br>类型参数的上下限约束<br>把类别和抽象类型作为对象成员<br><strong>复合类型</strong><br>引用自己时显示指定类型<br>视图<br>多态方法<br><strong>扩展性：</strong><br>Scala的设计秉承一项事实，即在实践中，某个领域特定的应用程序开发往往需要特定于该领域的语言扩展。Scala提供了许多独特的语言机制，可以以库的形式轻易无缝添加新的语言结构：<br>任何方法可用作前缀或后缀操作符<br>可以根据预期类型自动构造闭包。<br><strong>并发性：</strong><br>Scala使用Actor作为其并发模型，Actor是类似线程的实体，通过邮箱发收消息。Actor可以复用线程，因此可以在程序中可以使用数百万个Actor，而线程只能创建数千个。在2.10之后的版本中，使用AKKa作为其默认Actor实现。</p>
+]]></content>
+      <categories>
+        <category>Scala</category>
+      </categories>
+      <tags>
+        <tag>编程语言</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Spark Demo(Serializable)</title>
     <url>/2020/06/14/Spark-Demo-Serializable/</url>
     <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在本文中将介绍spark中Task执行序列化的开发问题</p>
@@ -588,66 +588,6 @@
       </categories>
       <tags>
         <tag>Serializable</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spark Error</title>
-    <url>/2020/06/14/Spark-Error/</url>
-    <content><![CDATA[<h1 id="配置historyserver时："><a href="#配置historyserver时：" class="headerlink" title="配置historyserver时："></a>配置historyserver时：</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227263283_97221A1B1C45BED99055FB1996A900CE" alt="图片说明" title="图片标题"> </p>
-<p>因为端口被占用了</p>
-<h1 id="SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错"><a href="#SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错" class="headerlink" title="SparkStreaming updateStateByKeyde 使用时 –checkpoint报错"></a>SparkStreaming updateStateByKeyde 使用时 –checkpoint报错</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227382925_460CCA764930F915D29C8DC785013F26" alt="图片说明" title="图片标题"> </p>
-<p>原因在使用的时候，并没有设置checkPoint 检测点<br>检测点的目的就是为了保存上一次的结果数据。如果没有检测点的话，那么将无法保存上一次结果<br>如果要保证中间数据不丢失的话，可以借助其它的工具，如hdfs<br>ssc.checkpoint(“hdfs://kd0301:9000/spark_checkpoint/”)</p>
-]]></content>
-      <categories>
-        <category>Spark</category>
-      </categories>
-      <tags>
-        <tag>Error</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spark压缩文件性能分析</title>
-    <url>/2020/06/14/Spark%E5%8E%8B%E7%BC%A9%E6%96%87%E4%BB%B6%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/</url>
-    <content><![CDATA[<h1 id="Spark压缩文件性能分析"><a href="#Spark压缩文件性能分析" class="headerlink" title="Spark压缩文件性能分析"></a>Spark压缩文件性能分析</h1><p>HDFS上分布式文件存储，成为大数据平台首选存储平台。而Spark往往以HDFS文件为输入，为保持兼容性，Spark支持多种格式文件读取，大数据场景下，性能瓶颈往往是IO，而不是CPU算力，所以对文件的压缩处理成为了很必要的手段。Spark为提供兼容性，同时支持多种压缩包直接读取，方便于用户使用，不用提前对压缩格式处理，但各种压缩格式各有优缺点，若不注意将导致Spark的能力无法发挥出来。故对Spark计算压缩文件做一个分析。</p>
-<h1 id="支持的压缩格式"><a href="#支持的压缩格式" class="headerlink" title="支持的压缩格式"></a>支持的压缩格式</h1><p>首先来看一下Spark读取HDFS文件常用的压缩格式：<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106237246_09ACB263F52577BA2C36F0D60E304A75" alt="图片说明" title="图片标题"></p>
-<h1 id="执行对比分析"><a href="#执行对比分析" class="headerlink" title="执行对比分析"></a>执行对比分析</h1><p>实验数据：同一个文件包，json格式文件数据<br>处理逻辑：增加列，然后发送到kafka中。<br>DAG逻辑划分：两个job（read动作一个job，foreach动作一个job），每个job下面各一个stage，每个stage下面task若干<br>程序执行参数：–master yarn –deploy-mode client –executor-cores 4 –executor-memory 4G –num-executors 4</p>
-<h2 id="非压缩文件"><a href="#非压缩文件" class="headerlink" title="非压缩文件"></a>非压缩文件</h2><p>文件大小：33.7GB<br>运行时间：9min</p>
-<h3 id="read阶段："><a href="#read阶段：" class="headerlink" title="read阶段："></a>read阶段：</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106293920_47AEB6D162BF532944DBDAB53E3D2EAB" alt="图片说明" title="图片标题"><br>可以看到所有节点都在读取，分布式读取，速度很快。<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106336406_317ADCB2DB2F35A583847F38535B7718" alt="图片说明" title="图片标题"></p>
-<p>Stage里面共计分成了252个task，每个读取128MB数据。</p>
-<h3 id="foreach阶段"><a href="#foreach阶段" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106365520_C40B30CD2EE17428DAC6E44372D32E64" alt="图片说明" title="图片标题"><br>依然并行全力计算<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106387308_25162C0F4A622B24CE97415EFFDE198A" alt="图片说明" title="图片标题"><br>每个执行节点上4个core都在并发运行。</p>
-<h2 id="GZIP"><a href="#GZIP" class="headerlink" title="GZIP"></a>GZIP</h2><p>文件大小：10.6GB<br>运行时间：2.2h</p>
-<p>###read阶段<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106404340_1FCD14A02942D89F2391B8A13BF3F1BF" alt="图片说明" title="图片标题"><br>只有单节点读取</p>
-<p>同时该节点上也只有一个核心在运行<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106440480_1A2BEF1D5E0E50929495F9B550115FBA" alt="图片说明" title="图片标题"><br>foreach阶段</p>
-<p>也是只有单节点、单core运行</p>
-<h2 id="BZIP2"><a href="#BZIP2" class="headerlink" title="BZIP2"></a>BZIP2</h2><p>文件大小：7.7GB<br>运行时间：12min</p>
-<h3 id="read阶段"><a href="#read阶段" class="headerlink" title="read阶段"></a>read阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106466729_53072EE252372595149335F751CD1394" alt="图片说明" title="图片标题"><br>与非压缩一致，并行进行</p>
-<h3 id="foreach阶段-1"><a href="#foreach阶段-1" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106481625_67EEB8DB9FD25C46B3486090E777B5D7" alt="图片说明" title="图片标题"><br>同样并发执行</p>
-<h2 id="SNAPPY"><a href="#SNAPPY" class="headerlink" title="SNAPPY"></a>SNAPPY</h2><p>文件大小：16.5GB<br>运行时间：2.1h<br>这里直接采用的整文件压缩，所以文件不可分割。</p>
-<h3 id="read阶段-1"><a href="#read阶段-1" class="headerlink" title="read阶段"></a>read阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106498372_E01A7A3A8C35CDBBFDFD4A58BA865021" alt="图片说明" title="图片标题"></p>
-<p>单节点单核心读取，非并行。</p>
-<h3 id="foreach阶段-2"><a href="#foreach阶段-2" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p>同上类似，单节点单核心运行<br>结果<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106539620_64157194D9DFAFAA77BE73D5A02CE37B" alt="图片说明" title="图片标题"><br>gzip和snappy无法采用并行计算，也就是说在spark平台上，这两种格式只能采用串行单进程执行，于本文开头表格对应，无法分割（splittable）的压缩格式只能顺序一个进程读取，而读取后多文件又在一个executor上，其他executor无文件导致无法并行的foreach。<br>bz2和非压缩格式支持分割，也就是说可以并行读取以及计算。<br>不可分割的压缩格式文件不可并行读取，完全无法发挥spark的并行计算优势，并且若压缩包过大，对单节点的物理性能要求较高。<br>建议<br>snappy采用分块压缩方式使其可以并行读取计算。<br>gzip格式最好提前进行分割成小文件或者换格式，因多个文件可以并行读取。另一个办法是read文件后调用repartition操作强制将读取多数据重新均匀分配到不同的executor上，但这个操作会导致大量单节点性能占用，因此该格式建议不在spark上使用。<br>bz2表现相同于非压缩，但解压操作需要耗费时间。<br><strong>非压缩性能表现最佳，但会占用过大HDFS存储。</strong><br>spark输出压缩文件<br>实际生产环境需要spark输出文件到HDFS，并且为了节省空间会使用压缩格式，以下介绍几种常用的压缩格式<br>文本文件压缩</p>
-<h2 id="bzip2"><a href="#bzip2" class="headerlink" title="bzip2"></a>bzip2</h2><p>压缩率最高，压缩解压速度较慢，支持split。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">import org.apache.hadoop.io.compress.BZip2Codec</span><br><span class="line">&#x2F;&#x2F;</span><br><span class="line">rdd.saveAsTextFile(&quot;codec&#x2F;bzip2&quot;,classOf[BZip2Codec])</span><br></pre></td></tr></table></figure>
-<h2 id="snappy"><a href="#snappy" class="headerlink" title="snappy"></a>snappy</h2><p>json文本压缩率 38.2%，压缩和解压缩时间短。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">import org.apache.hadoop.io.compress.SnappyCodec</span><br><span class="line">&#x2F;&#x2F;</span><br><span class="line">rdd.saveAsTextFile(&quot;codec&#x2F;snappy&quot;,classOf[SnappyCodec])</span><br></pre></td></tr></table></figure>
-<h2 id="gzip"><a href="#gzip" class="headerlink" title="gzip"></a>gzip</h2><p>压缩率高，压缩和解压速度较快，不支持split，如果不对文件大小进行控制，下次分析可能可能会造成效率低下的问题。<br>json文本压缩率23.5%，适合使用率低，长期存储的文件。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">import org.apache.hadoop.io.compress.GzipCodec</span><br><span class="line">&#x2F;&#x2F;</span><br><span class="line">rdd.saveAsTextFile(&quot;codec&#x2F;gzip&quot;,classOf[GzipCodec])</span><br></pre></td></tr></table></figure>
-<h2 id="parquet文件压缩"><a href="#parquet文件压缩" class="headerlink" title="parquet文件压缩"></a>parquet文件压缩</h2><p>列式存储布局（比如 Parquet）可以加速查询，因为它只检查所有需要的列并对它们的值执行计算，因此只读取一个数据文件或表的小部分数据。Parquet 还支持灵活的压缩选项，因此可以显著减少磁盘上的存储。<br>如果您在 HDFS 上拥有基于文本的数据文件或表，而且正在使用 Spark SQL 对它们执行查询，那么强烈推荐将文本数据文件转换为 Parquet 数据文件，以实现性能和存储收益。当然，转换需要时间，但查询性能的提升在某些情况下可能达到 30 倍或更高，存储的节省可高达 75%！<br>转换 1 TB 数据将花费多长时间？<br>50 分钟，在一个 6 数据节点的 Spark v1.5.1 集群上可达到约 20 GB/分的吞吐量。使用的总内存约为 500GB。HDFS 上最终的 Parquet 文件的格式为：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">...</span><br><span class="line">&#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet&#x2F;catalog_page&#x2F;part-r-00000-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet</span><br><span class="line">&#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet&#x2F;catalog_page&#x2F;part-r-00001-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-<h3 id="存储节省"><a href="#存储节省" class="headerlink" title="存储节省"></a>存储节省</h3><p>以下 Linux 输出显示了 TEXT 和 PARQUET 在 HDFS 上的大小比较：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">% hadoop fs -du -h -s &#x2F;user&#x2F;spark&#x2F;hadoopds1000g</span><br><span class="line">897.9 G &#x2F;user&#x2F;spark&#x2F;hadoopds1000g</span><br><span class="line">% hadoop fs -du -h -s &#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet</span><br><span class="line">231.4 G &#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet</span><br></pre></td></tr></table></figure>
-<p>1 TB 数据的存储节省了将近 75%！<br>parquet为文件提供了列式存储，查询时只会取出需要的字段和分区，对IO性能的提升非常大，同时占用空间较小，即使是parquet的uncompressed存储方式也比普通的文本要小的多。<br>spark中通过对parquet文件进行存储，spark2.0后默认使用snappy压缩，1.6.3及以前版本默认使用的gzip压缩方式。</p>
-<p>dataset.write().parquet(“path”);</p>
-<p>可以通过<br>spark.sql.parquet.compression.codec</p>
-<p>参数或是在代码中进行修改配置压缩方式。<br>sparkConf.set(“spark.sql.parquet.compression.codec”,”gzip”)</p>
-<p>parquet存储提供了<br>lzo gzip snappy uncompressed</p>
-<p>参考文章<br><a href="https://zturn.cc/?p=24" target="_blank" rel="noopener">https://zturn.cc/?p=24</a><br><a href="https://blog.csdn.net/bajinsheng/article/details/100031359" target="_blank" rel="noopener">https://blog.csdn.net/bajinsheng/article/details/100031359</a><br><a href="https://www.ibm.com/developerworks/cn/analytics/blog/ba-parquet-for-spark-sql/index.html" target="_blank" rel="noopener">https://www.ibm.com/developerworks/cn/analytics/blog/ba-parquet-for-spark-sql/index.html</a></p>
-]]></content>
-      <categories>
-        <category>Spark</category>
-      </categories>
-      <tags>
-        <tag>性能调优</tag>
       </tags>
   </entry>
   <entry>
@@ -714,6 +654,66 @@
       </tags>
   </entry>
   <entry>
+    <title>Spark Error</title>
+    <url>/2020/06/14/Spark-Error/</url>
+    <content><![CDATA[<h1 id="配置historyserver时："><a href="#配置historyserver时：" class="headerlink" title="配置historyserver时："></a>配置historyserver时：</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227263283_97221A1B1C45BED99055FB1996A900CE" alt="图片说明" title="图片标题"> </p>
+<p>因为端口被占用了</p>
+<h1 id="SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错"><a href="#SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错" class="headerlink" title="SparkStreaming updateStateByKeyde 使用时 –checkpoint报错"></a>SparkStreaming updateStateByKeyde 使用时 –checkpoint报错</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227382925_460CCA764930F915D29C8DC785013F26" alt="图片说明" title="图片标题"> </p>
+<p>原因在使用的时候，并没有设置checkPoint 检测点<br>检测点的目的就是为了保存上一次的结果数据。如果没有检测点的话，那么将无法保存上一次结果<br>如果要保证中间数据不丢失的话，可以借助其它的工具，如hdfs<br>ssc.checkpoint(“hdfs://kd0301:9000/spark_checkpoint/”)</p>
+]]></content>
+      <categories>
+        <category>Spark</category>
+      </categories>
+      <tags>
+        <tag>Error</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spark压缩文件性能分析</title>
+    <url>/2020/06/14/Spark%E5%8E%8B%E7%BC%A9%E6%96%87%E4%BB%B6%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/</url>
+    <content><![CDATA[<h1 id="Spark压缩文件性能分析"><a href="#Spark压缩文件性能分析" class="headerlink" title="Spark压缩文件性能分析"></a>Spark压缩文件性能分析</h1><p>HDFS上分布式文件存储，成为大数据平台首选存储平台。而Spark往往以HDFS文件为输入，为保持兼容性，Spark支持多种格式文件读取，大数据场景下，性能瓶颈往往是IO，而不是CPU算力，所以对文件的压缩处理成为了很必要的手段。Spark为提供兼容性，同时支持多种压缩包直接读取，方便于用户使用，不用提前对压缩格式处理，但各种压缩格式各有优缺点，若不注意将导致Spark的能力无法发挥出来。故对Spark计算压缩文件做一个分析。</p>
+<h1 id="支持的压缩格式"><a href="#支持的压缩格式" class="headerlink" title="支持的压缩格式"></a>支持的压缩格式</h1><p>首先来看一下Spark读取HDFS文件常用的压缩格式：<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106237246_09ACB263F52577BA2C36F0D60E304A75" alt="图片说明" title="图片标题"></p>
+<h1 id="执行对比分析"><a href="#执行对比分析" class="headerlink" title="执行对比分析"></a>执行对比分析</h1><p>实验数据：同一个文件包，json格式文件数据<br>处理逻辑：增加列，然后发送到kafka中。<br>DAG逻辑划分：两个job（read动作一个job，foreach动作一个job），每个job下面各一个stage，每个stage下面task若干<br>程序执行参数：–master yarn –deploy-mode client –executor-cores 4 –executor-memory 4G –num-executors 4</p>
+<h2 id="非压缩文件"><a href="#非压缩文件" class="headerlink" title="非压缩文件"></a>非压缩文件</h2><p>文件大小：33.7GB<br>运行时间：9min</p>
+<h3 id="read阶段："><a href="#read阶段：" class="headerlink" title="read阶段："></a>read阶段：</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106293920_47AEB6D162BF532944DBDAB53E3D2EAB" alt="图片说明" title="图片标题"><br>可以看到所有节点都在读取，分布式读取，速度很快。<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106336406_317ADCB2DB2F35A583847F38535B7718" alt="图片说明" title="图片标题"></p>
+<p>Stage里面共计分成了252个task，每个读取128MB数据。</p>
+<h3 id="foreach阶段"><a href="#foreach阶段" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106365520_C40B30CD2EE17428DAC6E44372D32E64" alt="图片说明" title="图片标题"><br>依然并行全力计算<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106387308_25162C0F4A622B24CE97415EFFDE198A" alt="图片说明" title="图片标题"><br>每个执行节点上4个core都在并发运行。</p>
+<h2 id="GZIP"><a href="#GZIP" class="headerlink" title="GZIP"></a>GZIP</h2><p>文件大小：10.6GB<br>运行时间：2.2h</p>
+<p>###read阶段<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106404340_1FCD14A02942D89F2391B8A13BF3F1BF" alt="图片说明" title="图片标题"><br>只有单节点读取</p>
+<p>同时该节点上也只有一个核心在运行<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106440480_1A2BEF1D5E0E50929495F9B550115FBA" alt="图片说明" title="图片标题"><br>foreach阶段</p>
+<p>也是只有单节点、单core运行</p>
+<h2 id="BZIP2"><a href="#BZIP2" class="headerlink" title="BZIP2"></a>BZIP2</h2><p>文件大小：7.7GB<br>运行时间：12min</p>
+<h3 id="read阶段"><a href="#read阶段" class="headerlink" title="read阶段"></a>read阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106466729_53072EE252372595149335F751CD1394" alt="图片说明" title="图片标题"><br>与非压缩一致，并行进行</p>
+<h3 id="foreach阶段-1"><a href="#foreach阶段-1" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106481625_67EEB8DB9FD25C46B3486090E777B5D7" alt="图片说明" title="图片标题"><br>同样并发执行</p>
+<h2 id="SNAPPY"><a href="#SNAPPY" class="headerlink" title="SNAPPY"></a>SNAPPY</h2><p>文件大小：16.5GB<br>运行时间：2.1h<br>这里直接采用的整文件压缩，所以文件不可分割。</p>
+<h3 id="read阶段-1"><a href="#read阶段-1" class="headerlink" title="read阶段"></a>read阶段</h3><p><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106498372_E01A7A3A8C35CDBBFDFD4A58BA865021" alt="图片说明" title="图片标题"></p>
+<p>单节点单核心读取，非并行。</p>
+<h3 id="foreach阶段-2"><a href="#foreach阶段-2" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p>同上类似，单节点单核心运行<br>结果<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106539620_64157194D9DFAFAA77BE73D5A02CE37B" alt="图片说明" title="图片标题"><br>gzip和snappy无法采用并行计算，也就是说在spark平台上，这两种格式只能采用串行单进程执行，于本文开头表格对应，无法分割（splittable）的压缩格式只能顺序一个进程读取，而读取后多文件又在一个executor上，其他executor无文件导致无法并行的foreach。<br>bz2和非压缩格式支持分割，也就是说可以并行读取以及计算。<br>不可分割的压缩格式文件不可并行读取，完全无法发挥spark的并行计算优势，并且若压缩包过大，对单节点的物理性能要求较高。<br>建议<br>snappy采用分块压缩方式使其可以并行读取计算。<br>gzip格式最好提前进行分割成小文件或者换格式，因多个文件可以并行读取。另一个办法是read文件后调用repartition操作强制将读取多数据重新均匀分配到不同的executor上，但这个操作会导致大量单节点性能占用，因此该格式建议不在spark上使用。<br>bz2表现相同于非压缩，但解压操作需要耗费时间。<br><strong>非压缩性能表现最佳，但会占用过大HDFS存储。</strong><br>spark输出压缩文件<br>实际生产环境需要spark输出文件到HDFS，并且为了节省空间会使用压缩格式，以下介绍几种常用的压缩格式<br>文本文件压缩</p>
+<h2 id="bzip2"><a href="#bzip2" class="headerlink" title="bzip2"></a>bzip2</h2><p>压缩率最高，压缩解压速度较慢，支持split。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">import org.apache.hadoop.io.compress.BZip2Codec</span><br><span class="line">&#x2F;&#x2F;</span><br><span class="line">rdd.saveAsTextFile(&quot;codec&#x2F;bzip2&quot;,classOf[BZip2Codec])</span><br></pre></td></tr></table></figure>
+<h2 id="snappy"><a href="#snappy" class="headerlink" title="snappy"></a>snappy</h2><p>json文本压缩率 38.2%，压缩和解压缩时间短。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">import org.apache.hadoop.io.compress.SnappyCodec</span><br><span class="line">&#x2F;&#x2F;</span><br><span class="line">rdd.saveAsTextFile(&quot;codec&#x2F;snappy&quot;,classOf[SnappyCodec])</span><br></pre></td></tr></table></figure>
+<h2 id="gzip"><a href="#gzip" class="headerlink" title="gzip"></a>gzip</h2><p>压缩率高，压缩和解压速度较快，不支持split，如果不对文件大小进行控制，下次分析可能可能会造成效率低下的问题。<br>json文本压缩率23.5%，适合使用率低，长期存储的文件。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">import org.apache.hadoop.io.compress.GzipCodec</span><br><span class="line">&#x2F;&#x2F;</span><br><span class="line">rdd.saveAsTextFile(&quot;codec&#x2F;gzip&quot;,classOf[GzipCodec])</span><br></pre></td></tr></table></figure>
+<h2 id="parquet文件压缩"><a href="#parquet文件压缩" class="headerlink" title="parquet文件压缩"></a>parquet文件压缩</h2><p>列式存储布局（比如 Parquet）可以加速查询，因为它只检查所有需要的列并对它们的值执行计算，因此只读取一个数据文件或表的小部分数据。Parquet 还支持灵活的压缩选项，因此可以显著减少磁盘上的存储。<br>如果您在 HDFS 上拥有基于文本的数据文件或表，而且正在使用 Spark SQL 对它们执行查询，那么强烈推荐将文本数据文件转换为 Parquet 数据文件，以实现性能和存储收益。当然，转换需要时间，但查询性能的提升在某些情况下可能达到 30 倍或更高，存储的节省可高达 75%！<br>转换 1 TB 数据将花费多长时间？<br>50 分钟，在一个 6 数据节点的 Spark v1.5.1 集群上可达到约 20 GB/分的吞吐量。使用的总内存约为 500GB。HDFS 上最终的 Parquet 文件的格式为：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">...</span><br><span class="line">&#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet&#x2F;catalog_page&#x2F;part-r-00000-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet</span><br><span class="line">&#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet&#x2F;catalog_page&#x2F;part-r-00001-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h3 id="存储节省"><a href="#存储节省" class="headerlink" title="存储节省"></a>存储节省</h3><p>以下 Linux 输出显示了 TEXT 和 PARQUET 在 HDFS 上的大小比较：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">% hadoop fs -du -h -s &#x2F;user&#x2F;spark&#x2F;hadoopds1000g</span><br><span class="line">897.9 G &#x2F;user&#x2F;spark&#x2F;hadoopds1000g</span><br><span class="line">% hadoop fs -du -h -s &#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet</span><br><span class="line">231.4 G &#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet</span><br></pre></td></tr></table></figure>
+<p>1 TB 数据的存储节省了将近 75%！<br>parquet为文件提供了列式存储，查询时只会取出需要的字段和分区，对IO性能的提升非常大，同时占用空间较小，即使是parquet的uncompressed存储方式也比普通的文本要小的多。<br>spark中通过对parquet文件进行存储，spark2.0后默认使用snappy压缩，1.6.3及以前版本默认使用的gzip压缩方式。</p>
+<p>dataset.write().parquet(“path”);</p>
+<p>可以通过<br>spark.sql.parquet.compression.codec</p>
+<p>参数或是在代码中进行修改配置压缩方式。<br>sparkConf.set(“spark.sql.parquet.compression.codec”,”gzip”)</p>
+<p>parquet存储提供了<br>lzo gzip snappy uncompressed</p>
+<p>参考文章<br><a href="https://zturn.cc/?p=24" target="_blank" rel="noopener">https://zturn.cc/?p=24</a><br><a href="https://blog.csdn.net/bajinsheng/article/details/100031359" target="_blank" rel="noopener">https://blog.csdn.net/bajinsheng/article/details/100031359</a><br><a href="https://www.ibm.com/developerworks/cn/analytics/blog/ba-parquet-for-spark-sql/index.html" target="_blank" rel="noopener">https://www.ibm.com/developerworks/cn/analytics/blog/ba-parquet-for-spark-sql/index.html</a></p>
+]]></content>
+      <categories>
+        <category>Spark</category>
+      </categories>
+      <tags>
+        <tag>性能调优</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>VisualVM:多合一故障处理工具</title>
     <url>/2020/06/17/VisualVM-%E5%A4%9A%E5%90%88%E4%B8%80%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7/</url>
     <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>VisualVM (All-in-One Java Troubleshooting Tool)是到目前为止随JDK发布的功能最强大的运行监视和故障处理程序，并且可以预见在未来一段时间内都是官方助力发展的虚拟机故障处理工具。官方在VisualVM的软件说明中写上了“All in One”的描述字样，预示着它除了运行监视，故障处理 外，还提供了很多其他方面的功能。如性能分析，VisualVM的性能分析功能甚至比起JProfiler、YourKit等专业收费的Profiling工具都不会逊色多少，而且VisualVM的还有一个很大的优点：不需要被监视的程序基于特殊Agent运行，因此它对应用程序的实际性能的影响很小，使用它可以直接应用在生产环境中。这个是JProfiler、YourKit等工具无法与之媲美的。</p>
@@ -750,6 +750,43 @@
 <p><img src="https://uploadfiles.nowcoder.com/images/20191111/9094293_1573477699767_FA5FB94755C7F76228C24ADC9E5CF1A9" alt="图片说明" title="图片标题"> </p>
 <p>BTrace的用法还有许多，打印调用堆栈、参数、返回值只是最基本的应用，在他的网站上有使用BTrace进行性能监视、定位连接泄漏和内存泄漏、解决多线程竞争问题等例子。</p>
 ]]></content>
+  </entry>
+  <entry>
+    <title>Zeppelin 安装</title>
+    <url>/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Apache Zeppelin 是一个可以进行大数据可视化分析的交互式开发系统，可以承担数据接入、数据发现、数据分析、数据可视化、数据协作等任务，其前端提供丰富的可视化图形库，不限于SparkSQL，后端支持HBase、Flink 等大数据系统以插件扩展的方式，并支持Spark、Python、JDBC、Markdown、Shell 等各种常用Interpreter，这使得开发者可以方便地使用SQL 在 Zeppelin 中做数据开发。</p>
+<h3 id="安装环境："><a href="#安装环境：" class="headerlink" title="安装环境："></a>安装环境：</h3><p>Centos6.8、jdk1.8、zeppelin-0.8.1-bin-all</p>
+<h3 id="安装步骤"><a href="#安装步骤" class="headerlink" title="安装步骤"></a>安装步骤</h3><p>打开下面链接进行下载:<br><a href="http://zeppelin.apache.org/download.html" target="_blank" rel="noopener">http://zeppelin.apache.org/download.html</a></p>
+<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/1.png" alt="图片说明"> </p>
+<p>选择zeppelin-0.8.2-bin-all下载并将其解压缩到您选择的目录中，即可开始使用。</p>
+<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/2.png" alt="图片说明"> </p>
+<p>执行 bin/zeppelin-daemon.sh start<br>Zeppelin成功启动后，使用Web浏览器转到http：// localhost：8080。如图：</p>
+<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/3.png" alt="图片说明"> </p>
+<p>安装成功。</p>
+<h3 id="如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决："><a href="#如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决：" class="headerlink" title="如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决："></a>如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决：</h3><p>1.防火墙是否关闭<br>使用以下命令永久关闭防火墙<br>chkconfig iptables off<br>2.查看是否是端口被占用<br>lsof -i:端口号 //查看是否被占用<br>如果被占用可以尝试修改默认端口 zeppelin-site.xml.template</p>
+<p>vi zeppelin-site.xml.template</p>
+<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/4.png" alt="图片说明"> </p>
+<h2 id="这里展示一下Zeppelin连接数据库的一个demo"><a href="#这里展示一下Zeppelin连接数据库的一个demo" class="headerlink" title="这里展示一下Zeppelin连接数据库的一个demo"></a>这里展示一下Zeppelin连接数据库的一个demo</h2><p>1.首先进入Zeppelin的首页</p>
+<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/5.png" alt="图片说明"> </p>
+<p>2.点击 anonymous -&gt; Interpreter 输入jdbc回车</p>
+<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/6.png" alt="图片说明"> </p>
+<p>3.点击 edit 编辑红框选中选项</p>
+<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/7.png" alt="图片说明"> </p>
+<p>然后添加你的mysql驱动位置</p>
+<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/8.png" alt="图片说明"> </p>
+<p>4.创建一个新的node，点击 create new note：输入NoteName和Default Interpreter</p>
+<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/9.png" alt="图片说明"> </p>
+<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/10.png" alt="图片说明"> </p>
+<p>5.在框中输入SQL语句，点击执行</p>
+<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/11.png" alt="图片说明"> </p>
+<p>我们还可以根据自己的需要进行选择图表的展示方式。</p>
+]]></content>
+      <categories>
+        <category>Zeppelin</category>
+      </categories>
+      <tags>
+        <tag>Zeppelin 安装</tag>
+      </tags>
   </entry>
   <entry>
     <title>Zeppelin</title>
@@ -797,50 +834,13 @@
       </tags>
   </entry>
   <entry>
-    <title>Zeppelin 安装</title>
-    <url>/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Apache Zeppelin 是一个可以进行大数据可视化分析的交互式开发系统，可以承担数据接入、数据发现、数据分析、数据可视化、数据协作等任务，其前端提供丰富的可视化图形库，不限于SparkSQL，后端支持HBase、Flink 等大数据系统以插件扩展的方式，并支持Spark、Python、JDBC、Markdown、Shell 等各种常用Interpreter，这使得开发者可以方便地使用SQL 在 Zeppelin 中做数据开发。</p>
-<h3 id="安装环境："><a href="#安装环境：" class="headerlink" title="安装环境："></a>安装环境：</h3><p>Centos6.8、jdk1.8、zeppelin-0.8.1-bin-all</p>
-<h3 id="安装步骤"><a href="#安装步骤" class="headerlink" title="安装步骤"></a>安装步骤</h3><p>打开下面链接进行下载:<br><a href="http://zeppelin.apache.org/download.html" target="_blank" rel="noopener">http://zeppelin.apache.org/download.html</a></p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/1.png" alt="图片说明"> </p>
-<p>选择zeppelin-0.8.2-bin-all下载并将其解压缩到您选择的目录中，即可开始使用。</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/2.png" alt="图片说明"> </p>
-<p>执行 bin/zeppelin-daemon.sh start<br>Zeppelin成功启动后，使用Web浏览器转到http：// localhost：8080。如图：</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/3.png" alt="图片说明"> </p>
-<p>安装成功。</p>
-<h3 id="如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决："><a href="#如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决：" class="headerlink" title="如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决："></a>如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决：</h3><p>1.防火墙是否关闭<br>使用以下命令永久关闭防火墙<br>chkconfig iptables off<br>2.查看是否是端口被占用<br>lsof -i:端口号 //查看是否被占用<br>如果被占用可以尝试修改默认端口 zeppelin-site.xml.template</p>
-<p>vi zeppelin-site.xml.template</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/4.png" alt="图片说明"> </p>
-<h2 id="这里展示一下Zeppelin连接数据库的一个demo"><a href="#这里展示一下Zeppelin连接数据库的一个demo" class="headerlink" title="这里展示一下Zeppelin连接数据库的一个demo"></a>这里展示一下Zeppelin连接数据库的一个demo</h2><p>1.首先进入Zeppelin的首页</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/5.png" alt="图片说明"> </p>
-<p>2.点击 anonymous -&gt; Interpreter 输入jdbc回车</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/6.png" alt="图片说明"> </p>
-<p>3.点击 edit 编辑红框选中选项</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/7.png" alt="图片说明"> </p>
-<p>然后添加你的mysql驱动位置</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/8.png" alt="图片说明"> </p>
-<p>4.创建一个新的node，点击 create new note：输入NoteName和Default Interpreter</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/9.png" alt="图片说明"> </p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/10.png" alt="图片说明"> </p>
-<p>5.在框中输入SQL语句，点击执行</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/11.png" alt="图片说明"> </p>
-<p>我们还可以根据自己的需要进行选择图表的展示方式。</p>
-]]></content>
-      <categories>
-        <category>Zeppelin</category>
-      </categories>
-      <tags>
-        <tag>Zeppelin 安装</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>代码测试</title>
     <url>/2020/06/20/%E4%BB%A3%E7%A0%81%E6%B5%8B%E8%AF%95/</url>
     <content><![CDATA[<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> main&#123;</span><br><span class="line">   <span class="keyword">int</span> a = <span class="number">10</span></span><br><span class="line">       </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="keyword">this</span> is cpp code</span><br></pre></td></tr></table></figure>
 <figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">this</span> is cpp code</span><br></pre></td></tr></table></figure>
 <p><code>fsaf</code></p>
-<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line">public <span class="keyword">static</span> <span class="keyword">void</span> main&#123;</span><br><span class="line">    int a = <span class="number">10</span></span><br><span class="line">    double b = <span class="number">100</span></span><br><span class="line">    float f = <span class="number">1000</span></span><br><span class="line">    这是JavaScript</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <figure class="highlight java"><figcaption><span>[] [title] [url] [link text]</span></figcaption><table><tr><td class="code"><pre><span class="line">code snippet</span><br></pre></td></tr></table></figure>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#123;% codeblock [title] [lang:language] [url] [link text] [additional options] %&#125;</span><br><span class="line">code snippet</span><br><span class="line">&#123;% endcodeblock %&#125;</span><br></pre></td></tr></table></figure>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#123;% codeblock %&#125;</span><br><span class="line">alert(&#39;Hello World!&#39;);</span><br><span class="line">&#123;% endcodeblock %&#125;</span><br></pre></td></tr></table></figure>
@@ -852,31 +852,6 @@
       </categories>
       <tags>
         <tag>test</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>垃圾收集算法</title>
-    <url>/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/</url>
-    <content><![CDATA[<h1 id="标记清除算法"><a href="#标记清除算法" class="headerlink" title="标记清除算法"></a>标记清除算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/1.png" alt="图片说明"><br>最基础的收集算法是“标记清除”算法，如同它的名字一样，算法分为“标记”和“清除”两个阶段：首先标记出所有需要回收的对象，在标记完成后统一回收所有被标记的对象，它的标记过程其实在前一节讲述对象标记判定时已经介绍过了。之所以说他是最基础的收集算法，是因为后续的收集算法都是基于这种思路并对其不足进行改进而得到的。<br>主要不足：</p>
-<ul>
-<li>效率问题，标记和清除两个过程的效率都不高；</li>
-<li>空间问题，标记清除之后会产生大量不连续的内存碎片，空间碎片太多可能导致以后再程序过程中需要分配较大的对象时，无法找到连续内存而不得不提前触发另一次垃圾收集动作</li>
-</ul>
-<h1 id="复制算法"><a href="#复制算法" class="headerlink" title="复制算法"></a>复制算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/2.png" alt="图片说明"><br>为了解决效率问题，一种称为复制的收集算法出现了，他将可用内存按容量划分为大小相等的两块，每次只使用其中的一块。当这一块内存用完了，就将还存活着的对象复制到另一块上面，然后再把已经使用过的内存空间一次清理掉。这样使得每次都是对整个半区进行内存回收，内存分配时也就不用考虑内存碎片等复杂的情况，只要移动堆顶指针，按顺序分配内存即可，实现简单，运行高效。<br>主要不足：</p>
-<ul>
-<li>将内存缩小为了原来的一半，在对象存活率较高时就要进行较多的复制操作，效率将会变低。</li>
-</ul>
-<h1 id="标记-整理算法"><a href="#标记-整理算法" class="headerlink" title="标记-整理算法"></a>标记-整理算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/3.png" alt="图片说明"><br>根据老年代的特点，有人提出了另外一种“标记-整理”算法，标记过程仍然与“标记-清除”算法一样，但后续步骤不是直接对可回收对象进行清理，而是让所有存活的对象都向一端移动，然后直接清理掉端边界以外的内存。<br>主要不足：</p>
-<ul>
-<li>它对内存变动更频繁，需要整理所有存活对象的引用地址，在效率上比复制算法要差很多。</li>
-</ul>
-<h1 id="分代收集算法"><a href="#分代收集算法" class="headerlink" title="分代收集算法"></a>分代收集算法</h1><p>当前商业虚拟机的垃圾收集器都采用“分代收集”算法，这种算法并没有什么新的思想，知识根据对象存活周期的不同将内存划分为几块。分代收集算法分代收集算法（Generational Collection）严格来说并不是一种思想或理论，而是融合上述3种基础的算法思想，而产生的针对不同情况所采用不同算法的一套组合拳。一般是把Java堆分为新生代和老年代，这样就可以根据各个年代的特点采用最适当的收集算法。在新生代中，每次垃圾收集时都发现有大批对象死去，只有少量存活，那就选用复制算法，没有额外空间对它进行分配担保，就必须使用“标记-清理”或者“标记-整理”算法来进行回收。</p>
-]]></content>
-      <categories>
-        <category>JVM</category>
-      </categories>
-      <tags>
-        <tag>垃圾收集算法</tag>
       </tags>
   </entry>
   <entry>
@@ -936,6 +911,31 @@
       </categories>
       <tags>
         <tag>JVM</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>垃圾收集算法</title>
+    <url>/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/</url>
+    <content><![CDATA[<h1 id="标记清除算法"><a href="#标记清除算法" class="headerlink" title="标记清除算法"></a>标记清除算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/1.png" alt="图片说明"><br>最基础的收集算法是“标记清除”算法，如同它的名字一样，算法分为“标记”和“清除”两个阶段：首先标记出所有需要回收的对象，在标记完成后统一回收所有被标记的对象，它的标记过程其实在前一节讲述对象标记判定时已经介绍过了。之所以说他是最基础的收集算法，是因为后续的收集算法都是基于这种思路并对其不足进行改进而得到的。<br>主要不足：</p>
+<ul>
+<li>效率问题，标记和清除两个过程的效率都不高；</li>
+<li>空间问题，标记清除之后会产生大量不连续的内存碎片，空间碎片太多可能导致以后再程序过程中需要分配较大的对象时，无法找到连续内存而不得不提前触发另一次垃圾收集动作</li>
+</ul>
+<h1 id="复制算法"><a href="#复制算法" class="headerlink" title="复制算法"></a>复制算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/2.png" alt="图片说明"><br>为了解决效率问题，一种称为复制的收集算法出现了，他将可用内存按容量划分为大小相等的两块，每次只使用其中的一块。当这一块内存用完了，就将还存活着的对象复制到另一块上面，然后再把已经使用过的内存空间一次清理掉。这样使得每次都是对整个半区进行内存回收，内存分配时也就不用考虑内存碎片等复杂的情况，只要移动堆顶指针，按顺序分配内存即可，实现简单，运行高效。<br>主要不足：</p>
+<ul>
+<li>将内存缩小为了原来的一半，在对象存活率较高时就要进行较多的复制操作，效率将会变低。</li>
+</ul>
+<h1 id="标记-整理算法"><a href="#标记-整理算法" class="headerlink" title="标记-整理算法"></a>标记-整理算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/3.png" alt="图片说明"><br>根据老年代的特点，有人提出了另外一种“标记-整理”算法，标记过程仍然与“标记-清除”算法一样，但后续步骤不是直接对可回收对象进行清理，而是让所有存活的对象都向一端移动，然后直接清理掉端边界以外的内存。<br>主要不足：</p>
+<ul>
+<li>它对内存变动更频繁，需要整理所有存活对象的引用地址，在效率上比复制算法要差很多。</li>
+</ul>
+<h1 id="分代收集算法"><a href="#分代收集算法" class="headerlink" title="分代收集算法"></a>分代收集算法</h1><p>当前商业虚拟机的垃圾收集器都采用“分代收集”算法，这种算法并没有什么新的思想，知识根据对象存活周期的不同将内存划分为几块。分代收集算法分代收集算法（Generational Collection）严格来说并不是一种思想或理论，而是融合上述3种基础的算法思想，而产生的针对不同情况所采用不同算法的一套组合拳。一般是把Java堆分为新生代和老年代，这样就可以根据各个年代的特点采用最适当的收集算法。在新生代中，每次垃圾收集时都发现有大批对象死去，只有少量存活，那就选用复制算法，没有额外空间对它进行分配担保，就必须使用“标记-清理”或者“标记-整理”算法来进行回收。</p>
+]]></content>
+      <categories>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>垃圾收集算法</tag>
       </tags>
   </entry>
 </search>
