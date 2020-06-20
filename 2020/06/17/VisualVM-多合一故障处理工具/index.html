@@ -323,57 +323,10 @@
 <h2 id="4-BTrace动态日志跟踪"><a href="#4-BTrace动态日志跟踪" class="headerlink" title="4.BTrace动态日志跟踪"></a>4.BTrace动态日志跟踪</h2><p>BTrace是一个很“有趣”的VisualVM插件，本身也是可以独立运行的程序，它的作用是在不停止目标程序运行的前提下，通过HotSpot虚拟机的HotSwap技术动态缴入原本并不存在的调试代码。这项功能对实际生产中的程序很有意义：经常遇到程序出现问题，但排查错误的一些必要信息，譬如方法参数、返回值等，在开发时并没有打印到日止之中，以至于不得不停掉服务，通过调试增量来加入日志代码以解决问题。当遇到生产环境服务无法随便停止是，缺一两句日志导致排错进行不下去是一件非常郁闷的事情。<br>在VisualVM中安装了BTrace插件后，在应用程序面板中右键点击要调试的程序，会出现“Trace Application。。。”菜单，点击将进入BTrace面板。这个面板里面看起来就像一个简单的Java程序开发环境，里面还有一段Java代码。如图：</p>
 <p><img src="https://uploadfiles.nowcoder.com/images/20191111/9094293_1573475795296_506A122025C95B87465048F8325621A5" alt="图片说明" title="图片标题"> </p>
 <p>这里准备了一个Demo来演示BTrace的功能：产生 两个1000以内的随机整数，输出两个数字相加的结果代码如下：</p>
-<pre><code>import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-
-/**
- * @Author: luomo
- * @CreateTime: 2019/11/11
- * @Description: 对BTrace插件简单的使用
- */
-public class BTraceTest {
-    public int add(int a,int b){
-        return a+b;
-    }
-    public static void main(String[] args)throws IOException {
-        BTraceTest test=new BTraceTest();
-        BufferedReader reader=new BufferedReader(new InputStreamReader(System.in));
-        for(int i=0;i&lt;10;i++)
-        {
-            reader.readLine();
-            int a=(int) Math.round(Math.random()*1000);
-            int b=(int) Math.round(Math.random()*1000);
-            System.out.println(test.add(a,b));
-        }
-
-
-    }
-}
-
-</code></pre><p>程序运行后，在VisualVM中打开该程序的监视，在BTrace页签填充TracingScript内容，输入的调试代码如下：</p>
-<pre><code>/* BTrace Script Template */
-import com.sun.btrace.annotations.*;
-import static com.sun.btrace.BTraceUtils.*;
-
-@BTrace
-public class TracingScript {
-    /* put your code here */
-    @OnMethod(
-        clazz=&quot;BTraceTest&quot;,
-        method=&quot;add&quot;,
-        location=@Location(Kind.RETURN)
-)
-public static void func(@Self BTraceTest instance,int a,int b,@Return int result){
-println(&quot;调用堆栈：&quot;);
-jstack();
-println(strcat(&quot;方法参数A：&quot;,str(a)));
-println(strcat(&quot;方法参数B:&quot;,str(b)));
-println(strcat(&quot;方法结果：&quot;,str(result)));
-
-}
-}
-</code></pre><p>点击“Start”按钮后稍等片刻，编译完成后，可见Output面板上出现“BTrace code sucessfuly deployed”的字样。程序运行的时候在Output面板将会输出如图的调试信息。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">import java.io.BufferedReader;</span><br><span class="line">import java.io.IOException;</span><br><span class="line">import java.io.InputStreamReader;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * @Author: luomo</span><br><span class="line"> * @CreateTime: 2019&#x2F;11&#x2F;11</span><br><span class="line"> * @Description: 对BTrace插件简单的使用</span><br><span class="line"> *&#x2F;</span><br><span class="line">public class BTraceTest &#123;</span><br><span class="line">    public int add(int a,int b)&#123;</span><br><span class="line">        return a+b;</span><br><span class="line">    &#125;</span><br><span class="line">    public static void main(String[] args)throws IOException &#123;</span><br><span class="line">        BTraceTest test&#x3D;new BTraceTest();</span><br><span class="line">        BufferedReader reader&#x3D;new BufferedReader(new InputStreamReader(System.in));</span><br><span class="line">        for(int i&#x3D;0;i&lt;10;i++)</span><br><span class="line">        &#123;</span><br><span class="line">            reader.readLine();</span><br><span class="line">            int a&#x3D;(int) Math.round(Math.random()*1000);</span><br><span class="line">            int b&#x3D;(int) Math.round(Math.random()*1000);</span><br><span class="line">            System.out.println(test.add(a,b));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>程序运行后，在VisualVM中打开该程序的监视，在BTrace页签填充TracingScript内容，输入的调试代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;* BTrace Script Template *&#x2F;</span><br><span class="line">import com.sun.btrace.annotations.*;</span><br><span class="line">import static com.sun.btrace.BTraceUtils.*;</span><br><span class="line"></span><br><span class="line">@BTrace</span><br><span class="line">public class TracingScript &#123;</span><br><span class="line">	&#x2F;* put your code here *&#x2F;</span><br><span class="line">    @OnMethod(</span><br><span class="line">        clazz&#x3D;&quot;BTraceTest&quot;,</span><br><span class="line">        method&#x3D;&quot;add&quot;,</span><br><span class="line">        location&#x3D;@Location(Kind.RETURN)</span><br><span class="line">)</span><br><span class="line">public static void func(@Self BTraceTest instance,int a,int b,@Return int result)&#123;</span><br><span class="line">println(&quot;调用堆栈：&quot;);</span><br><span class="line">jstack();</span><br><span class="line">println(strcat(&quot;方法参数A：&quot;,str(a)));</span><br><span class="line">println(strcat(&quot;方法参数B:&quot;,str(b)));</span><br><span class="line">println(strcat(&quot;方法结果：&quot;,str(result)));</span><br><span class="line">    </span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>点击“Start”按钮后稍等片刻，编译完成后，可见Output面板上出现“BTrace code sucessfuly deployed”的字样。程序运行的时候在Output面板将会输出如图的调试信息。</p>
 <p><img src="https://uploadfiles.nowcoder.com/images/20191111/9094293_1573477699767_FA5FB94755C7F76228C24ADC9E5CF1A9" alt="图片说明" title="图片标题"> </p>
 <p>BTrace的用法还有许多，打印调用堆栈、参数、返回值只是最基本的应用，在他的网站上有使用BTrace进行性能监视、定位连接泄漏和内存泄漏、解决多线程竞争问题等例子。</p>
 

@@ -306,98 +306,11 @@
 <h1 id="开发环境准备"><a href="#开发环境准备" class="headerlink" title="开发环境准备"></a>开发环境准备</h1><p>本实验Spark运行在Windows上，为了开发Spark应用程序，在本地机器上需要有Jdk1.8和Maven环境。<br>确保我们的环境配置正常，我们可以使用快捷键 Win+R 输入cmd：<br>环境如下：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341256892_8D8973B8667179A2319B041328F690BD" alt="图片说明" title="图片标题"><br>程序开发工具我们使用IDEA，创建maven项目，添加pom依赖</p>
 <h1 id="编写Spark程序"><a href="#编写Spark程序" class="headerlink" title="编写Spark程序"></a>编写Spark程序</h1><h2 id="目录结构如下"><a href="#目录结构如下" class="headerlink" title="目录结构如下:"></a>目录结构如下:</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341490332_07386CADB58D4E8A80763A83F9F6B34D" alt="图片说明" title="图片标题"> </p>
 <h2 id="创建Serializable-scala"><a href="#创建Serializable-scala" class="headerlink" title="创建Serializable.scala:"></a>创建Serializable.scala:</h2><p>首先我们需要了解RDD中的函数传递：<br>在实际开发中我们往往需要自己定义一些对于RDD的操作，那么此时需要主要的是，初始化工作是在Driver端进行的，而实际运行程序是在Executor端进行的，这就涉及到了跨进程通信，是需要序列化的。<br>如果我们对我们自定义的类不进行序列化：</p>
-<pre><code>package SparkDemo
-
-import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
-
-/**
-  * @Author: luomo
-  * @CreateTime: 2019/10/29
-  * @Description: Serializable from Driver to Executor
-  */
-object Serializable {
-
-  def main(args: Array[String]): Unit = {
-
-    //创建Spark上下文对象
-    val config:SparkConf =new SparkConf().setMaster(&quot;local[*]&quot;).setAppName(&quot;Serializable&quot;)
-
-    //创建Spark上下文对象
-    val sc = new SparkContext(config)
-
-    val rdd:RDD[String] = sc.parallelize(Array(&quot;hadoop&quot;,&quot;spark&quot;,&quot;hive&quot;,&quot;Flink&quot;))
-
-    val search = new Search(&quot;h&quot;)
-
-    val match1:RDD[String] =search.getMatch1(rdd)
-    match1.collect().foreach(println)
-    sc.stop()
-  }
-  class Search(query:String){
-    //过滤出包含字符串的数据
-    def  isMatch(s:String):Boolean ={
-      s.contains(query)
-    }
-    //过滤出包含字符串的RDD
-    def getMatch1(rdd:RDD[String]) :RDD[String] = {
-      rdd.filter(isMatch)
-    }
-    //过滤出包含字符串的RDD
-    def getMatche2(rdd: RDD[String]): RDD[String] ={
-      rdd.filter(x=&gt; x.contains(query))
-    }
-  }
-}
-
-</code></pre><p>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572346997711_619AA778B91D5D25CAB063D1C7D53FFE" alt="图片说明" title="图片标题"> </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">package SparkDemo</span><br><span class="line"></span><br><span class="line">import org.apache.spark.rdd.RDD</span><br><span class="line">import org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line">  * @Author: luomo</span><br><span class="line">  * @CreateTime: 2019&#x2F;10&#x2F;29</span><br><span class="line">  * @Description: Serializable from Driver to Executor</span><br><span class="line">  *&#x2F;</span><br><span class="line">object Serializable &#123;</span><br><span class="line"></span><br><span class="line">  def main(args: Array[String]): Unit &#x3D; &#123;</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;创建Spark上下文对象</span><br><span class="line">    val config:SparkConf &#x3D;new SparkConf().setMaster(&quot;local[*]&quot;).setAppName(&quot;Serializable&quot;)</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;创建Spark上下文对象</span><br><span class="line">    val sc &#x3D; new SparkContext(config)</span><br><span class="line"></span><br><span class="line">    val rdd:RDD[String] &#x3D; sc.parallelize(Array(&quot;hadoop&quot;,&quot;spark&quot;,&quot;hive&quot;,&quot;Flink&quot;))</span><br><span class="line"></span><br><span class="line">    val search &#x3D; new Search(&quot;h&quot;)</span><br><span class="line"></span><br><span class="line">    val match1:RDD[String] &#x3D;search.getMatch1(rdd)</span><br><span class="line">    match1.collect().foreach(println)</span><br><span class="line">    sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">  class Search(query:String)&#123;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的数据</span><br><span class="line">    def  isMatch(s:String):Boolean &#x3D;&#123;</span><br><span class="line">      s.contains(query)</span><br><span class="line">    &#125;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的RDD</span><br><span class="line">    def getMatch1(rdd:RDD[String]) :RDD[String] &#x3D; &#123;</span><br><span class="line">      rdd.filter(isMatch)</span><br><span class="line">    &#125;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的RDD</span><br><span class="line">    def getMatche2(rdd: RDD[String]): RDD[String] &#x3D;&#123;</span><br><span class="line">      rdd.filter(x&#x3D;&gt; x.contains(query))</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572346997711_619AA778B91D5D25CAB063D1C7D53FFE" alt="图片说明" title="图片标题"> </p>
 <p>可见，对于自己定义的普通类，Spark是无法直接将其序列化的。<br>需要我们自定义的类继承java.io.Serializable</p>
-<pre><code>package SparkDemo
-
-import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
-
-/**
-  * @Author: luomo
-  * @CreateTime: 2019/10/29
-  * @Description: Serializable from Driver to Executor
-  */
-object Serializable {
-
-  def main(args: Array[String]): Unit = {
-
-    //创建Spark上下文对象
-    val config:SparkConf =new SparkConf().setMaster(&quot;local[*]&quot;).setAppName(&quot;Serializable&quot;)
-
-    //创建Spark上下文对象
-    val sc = new SparkContext(config)
-
-    val rdd:RDD[String] = sc.parallelize(Array(&quot;hadoop&quot;,&quot;spark&quot;,&quot;hive&quot;,&quot;Flink&quot;))
-
-    val search = new Search(&quot;h&quot;)
-
-    val match1:RDD[String] =search.getMatch1(rdd)
-    match1.collect().foreach(println)
-    sc.stop()
-  }
-  //自定义类
-  class Search(query:String) extends  java.io.Serializable {
-    //过滤出包含字符串的数据
-    def  isMatch(s:String):Boolean ={
-      s.contains(query)
-    }
-    //过滤出包含字符串的RDD
-    def getMatch1(rdd:RDD[String]) :RDD[String] = {
-      rdd.filter(isMatch)
-    }
-    //过滤出包含字符串的RDD
-    def getMatche2(rdd: RDD[String]): RDD[String] ={
-      rdd.filter(x=&gt; x.contains(query))
-    }
-  }
-}
-
-</code></pre><h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>如图我们过滤出包含字符h的字符串：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572351464995_DFD27DCB713FEB02D8628E6C67FD4273" alt="图片说明" title="图片标题"> </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">package SparkDemo</span><br><span class="line"></span><br><span class="line">import org.apache.spark.rdd.RDD</span><br><span class="line">import org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line">  * @Author: luomo</span><br><span class="line">  * @CreateTime: 2019&#x2F;10&#x2F;29</span><br><span class="line">  * @Description: Serializable from Driver to Executor</span><br><span class="line">  *&#x2F;</span><br><span class="line">object Serializable &#123;</span><br><span class="line"></span><br><span class="line">  def main(args: Array[String]): Unit &#x3D; &#123;</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;创建Spark上下文对象</span><br><span class="line">    val config:SparkConf &#x3D;new SparkConf().setMaster(&quot;local[*]&quot;).setAppName(&quot;Serializable&quot;)</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;创建Spark上下文对象</span><br><span class="line">    val sc &#x3D; new SparkContext(config)</span><br><span class="line"></span><br><span class="line">    val rdd:RDD[String] &#x3D; sc.parallelize(Array(&quot;hadoop&quot;,&quot;spark&quot;,&quot;hive&quot;,&quot;Flink&quot;))</span><br><span class="line"></span><br><span class="line">    val search &#x3D; new Search(&quot;h&quot;)</span><br><span class="line"></span><br><span class="line">    val match1:RDD[String] &#x3D;search.getMatch1(rdd)</span><br><span class="line">    match1.collect().foreach(println)</span><br><span class="line">    sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">  &#x2F;&#x2F;自定义类</span><br><span class="line">  class Search(query:String) extends  java.io.Serializable &#123;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的数据</span><br><span class="line">    def  isMatch(s:String):Boolean &#x3D;&#123;</span><br><span class="line">      s.contains(query)</span><br><span class="line">    &#125;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的RDD</span><br><span class="line">    def getMatch1(rdd:RDD[String]) :RDD[String] &#x3D; &#123;</span><br><span class="line">      rdd.filter(isMatch)</span><br><span class="line">    &#125;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的RDD</span><br><span class="line">    def getMatche2(rdd: RDD[String]): RDD[String] &#x3D;&#123;</span><br><span class="line">      rdd.filter(x&#x3D;&gt; x.contains(query))</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>如图我们过滤出包含字符h的字符串：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572351464995_DFD27DCB713FEB02D8628E6C67FD4273" alt="图片说明" title="图片标题"> </p>
 
       
     </div>

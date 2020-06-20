@@ -302,36 +302,8 @@
           
         <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在堆里面存放着Java世界中几乎所有的对象实例，垃圾收集器在对堆进行回收前，第一件事情就是要确定这些对象之中哪些还“存活”着，哪些已经“死去”，判断对象的生死存活都有那些算法？</p>
 <h2 id="引用计数算法"><a href="#引用计数算法" class="headerlink" title="引用计数算法"></a>引用计数算法</h2><p>实现原理：给对象中添加一个引用计数器，每当一个地方引用它是，计数器值就加1；任何时刻计数器为0的对象就是不可能再被使用的。<br>但是主流的Java虚拟机里面没有选用引用计数算法来管理内存，其中主要的原因是它很难解决对象之间相互引用的问题。<br>如下一个简单的例子：请看测试代码：对象objA和objB都有字段instance，赋值令 objA.instance=objB及objB.instance=objA，实际上这两个对象已经不可能再被访问了，但是他们因为互相引用这对方，导致引用计数都不为0，于是引用计数算法无法通过GC收集器回收他们。</p>
-<pre><code>
-public class ReferenceCountingGC {
-    /**
-     * @Author: luomo
-     * @CreateTime: 2019/11/4
-     * @Description: 引用计数算法
-     */
-    public Object instance = null;
-    private  static final int _1MB=1024*1024;
-    /**
-     *  这个成员属性的唯一意义就是占点内存，以便能在GC日志中看清楚是否被回收
-     */
-    private  byte[] bigSize =new byte[2 * _1MB];
-    public static void testGC(){
-        ReferenceCountingGC objA =new  ReferenceCountingGC();
-        ReferenceCountingGC objB =new ReferenceCountingGC();
-        objA.instance=objB;
-        objB.instance=objA;
-        objA =null;
-        objB =null;
-        System.gc();
-
-
-    }
-    public  static void main(String[] args){
-        testGC();
-    }
-}
-
-</code></pre><p>程序运行结果如下：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/1.png" alt=" "><br>从运行结果中可以清楚看出虚拟机并没有因为互相引用就不回收他们，这也从侧面说明虚拟机并不是通过引用计数算法来判断对象是否存活的。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">public class ReferenceCountingGC &#123;</span><br><span class="line">    &#x2F;**</span><br><span class="line">     * @Author: luomo</span><br><span class="line">     * @CreateTime: 2019&#x2F;11&#x2F;4</span><br><span class="line">     * @Description: 引用计数算法</span><br><span class="line">     *&#x2F;</span><br><span class="line">    public Object instance &#x3D; null;</span><br><span class="line">    private  static final int _1MB&#x3D;1024*1024;</span><br><span class="line">    &#x2F;**</span><br><span class="line">     *  这个成员属性的唯一意义就是占点内存，以便能在GC日志中看清楚是否被回收</span><br><span class="line">     *&#x2F;</span><br><span class="line">    private  byte[] bigSize &#x3D;new byte[2 * _1MB];</span><br><span class="line">    public static void testGC()&#123;</span><br><span class="line">        ReferenceCountingGC objA &#x3D;new  ReferenceCountingGC();</span><br><span class="line">        ReferenceCountingGC objB &#x3D;new ReferenceCountingGC();</span><br><span class="line">        objA.instance&#x3D;objB;</span><br><span class="line">        objB.instance&#x3D;objA;</span><br><span class="line">        objA &#x3D;null;</span><br><span class="line">        objB &#x3D;null;</span><br><span class="line">        System.gc();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">    public  static void main(String[] args)&#123;</span><br><span class="line">        testGC();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>程序运行结果如下：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/1.png" alt=" "><br>从运行结果中可以清楚看出虚拟机并没有因为互相引用就不回收他们，这也从侧面说明虚拟机并不是通过引用计数算法来判断对象是否存活的。</p>
 <h2 id="可达性分析算法"><a href="#可达性分析算法" class="headerlink" title="可达性分析算法"></a>可达性分析算法</h2><p>实现原理：在主流的语言的主流实现中，比如Java、C#、甚至是古老的Lisp都是使用的可达性分析算法来判断对象是否存活的。</p>
 <p>这个算法的核心思路就是通过一些列的“GC Roots”对象作为起始点，从这些对象开始往下搜索，搜索所经过的路径称之为“引用链”。</p>
 <p>当一个对象到GC Roots没有任何引用链相连的时候，证明此对象是可以被回收的。如下图所示：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/2.png" alt="图片说明"><br>在Java中，可作为GC Roots对象的列表：</p>

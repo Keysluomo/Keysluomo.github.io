@@ -307,45 +307,26 @@
       
           
         <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Ganglia是UC Berkeley发起的一个开源集群监视项目，设计用于测量数以千计的节点。Ganglia的核心包含gmond、gmetad以及一个Web前端。主要是用来监控系统性能，如：cpu 、mem、硬盘利用率， I/O负载、网络流量情况等，通过曲线很容易见到每个节点的工作状态，对合理调整、分配系统资源，提高系统整体性能起到重要作用。今天我们来看看如何用Ganglia来监控我们的flume集群数据。</p>
-<h1 id="Ganglia的安装与部署"><a href="#Ganglia的安装与部署" class="headerlink" title="Ganglia的安装与部署"></a>Ganglia的安装与部署</h1><h2 id="1-安装httpd服务与php"><a href="#1-安装httpd服务与php" class="headerlink" title="1.安装httpd服务与php"></a>1.安装httpd服务与php</h2><pre><code>[root@bigdata107 flume]# sudo yum -y install httpd php
-
-</code></pre><h2 id="2-安装其他依赖"><a href="#2-安装其他依赖" class="headerlink" title="2.安装其他依赖"></a>2.安装其他依赖</h2><pre><code>[root@bigdata107 flume]# sudo yum -y install rrdtool perl-rrdtool rrdtool-devel
-[root@bigdata107 flume]# sudo yum -y install apr-devel 
-
-</code></pre><p>##3.安装ganglia</p>
-<pre><code>[root@bigdata107 flume]# rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
-
-[root@bigdata107 flume]# yum -y install ganglia-gmetad
-[root@bigdata107 flume]# yum -y install ganglia-web
-[root@bigdata107 flume]# yum install -y ganglia-gmond
-</code></pre><h2 id="4-修改配置文件"><a href="#4-修改配置文件" class="headerlink" title="4.修改配置文件"></a>4.修改配置文件</h2><pre><code>[root@bigdata107 flume]# vim /etc/httpd/conf.d/ganglia.conf
-</code></pre><p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/1.png" alt="图片说明"> </p>
-<pre><code>[root@bigdata107 flume]# vim /etc/ganglia/gmetad.conf
-</code></pre><p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/2.png" alt="图片说明"> </p>
-<pre><code>[root@bigdata107 flume]# vim /etc/ganglia/gmond.conf
-</code></pre><p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/3.png" alt="图片说明"> </p>
+<h1 id="Ganglia的安装与部署"><a href="#Ganglia的安装与部署" class="headerlink" title="Ganglia的安装与部署"></a>Ganglia的安装与部署</h1><h2 id="1-安装httpd服务与php"><a href="#1-安装httpd服务与php" class="headerlink" title="1.安装httpd服务与php"></a>1.安装httpd服务与php</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]# sudo yum -y install httpd php</span><br></pre></td></tr></table></figure>
+<h2 id="2-安装其他依赖"><a href="#2-安装其他依赖" class="headerlink" title="2.安装其他依赖"></a>2.安装其他依赖</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]# sudo yum -y install rrdtool perl-rrdtool rrdtool-devel</span><br><span class="line">[root@bigdata107 flume]# sudo yum -y install apr-devel</span><br></pre></td></tr></table></figure>
+<p>##3.安装ganglia<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]# rpm -Uvh http:&#x2F;&#x2F;dl.fedoraproject.org&#x2F;pub&#x2F;epel&#x2F;6&#x2F;x86_64&#x2F;epel-release-6-8.noarch.rpm</span><br><span class="line"></span><br><span class="line">[root@bigdata107 flume]# yum -y install ganglia-gmetad</span><br><span class="line">[root@bigdata107 flume]# yum -y install ganglia-web</span><br><span class="line">[root@bigdata107 flume]# yum install -y ganglia-gmond</span><br></pre></td></tr></table></figure></p>
+<h2 id="4-修改配置文件"><a href="#4-修改配置文件" class="headerlink" title="4.修改配置文件"></a>4.修改配置文件</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;httpd&#x2F;conf.d&#x2F;ganglia.conf</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/1.png" alt="图片说明"> </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;ganglia&#x2F;gmetad.conf</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/2.png" alt="图片说明"> </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;ganglia&#x2F;gmond.conf</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/3.png" alt="图片说明"> </p>
 <p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/4.png" alt="图片说明"> </p>
-<pre><code>[root@bigdata107 flume]#  vim /etc/selinux/config
-</code></pre><p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/5.png" alt="图片说明"> </p>
-<h2 id="5-selinux本次生效关闭必须重启-如果此时不想重启-可以临时生效"><a href="#5-selinux本次生效关闭必须重启-如果此时不想重启-可以临时生效" class="headerlink" title="5.selinux本次生效关闭必须重启,如果此时不想重启,可以临时生效"></a>5.selinux本次生效关闭必须重启,如果此时不想重启,可以临时生效</h2><pre><code>[root@bigdata107 flume]#  sudo setenforce 0
-</code></pre><h1 id="启动Ganglia"><a href="#启动Ganglia" class="headerlink" title="启动Ganglia"></a>启动Ganglia</h1><pre><code>[root@bigdata107 flume]# service httpd start
-正在启动 httpd：
-[root@bigdata107 flume]# service gmetad start
-Starting GANGLIA gmetad:  [确定]
-[root@bigdata107 flume]# service gmond start
-Starting GANGLIA gmond:  [确定]
-</code></pre><h2 id="1-打开web-UI"><a href="#1-打开web-UI" class="headerlink" title="1.打开web UI"></a>1.打开web UI</h2><p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/6.png" alt=" "> </p>
-<h2 id="2-通过Ganglia监控Flume"><a href="#2-通过Ganglia监控Flume" class="headerlink" title="2.通过Ganglia监控Flume"></a>2.通过Ganglia监控Flume</h2><pre><code>[root@bigdata107 flume]# vim flume-env.sh
-</code></pre><p>添加如下内容：<br>export JAVA_OPTS=&quot;-Dflume.monitoring.type=ganglia -Dflume.monitoring.hosts=192.168.216.107:8649 -Xms100m -Xmx200m&quot;</p>
-<h2 id="3-启动flume任务"><a href="#3-启动flume任务" class="headerlink" title="3.启动flume任务"></a>3.启动flume任务</h2><pre><code>[root@bigdata107 flume]# bin/flume-ng agent 
---conf conf/ 
---name agent1 
---conf-file job/flume_telnet_logger.conf 
--Dflume.root.logger==INFO,console 
--Dflume.monitoring.type=ganglia 
--Dflume.monitoring.hosts=192.168.216.107:8649
-</code></pre><h2 id="4-发送数据查看Ganglia监测图"><a href="#4-发送数据查看Ganglia监测图" class="headerlink" title="4.发送数据查看Ganglia监测图"></a>4.发送数据查看Ganglia监测图</h2><pre><code>[root@bigdata107 flume]# telnet bigdata107 44444
-</code></pre><p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/7.png" alt="图片说明"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]#  vim &#x2F;etc&#x2F;selinux&#x2F;config</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/5.png" alt="图片说明"> </p>
+<h2 id="5-selinux本次生效关闭必须重启-如果此时不想重启-可以临时生效"><a href="#5-selinux本次生效关闭必须重启-如果此时不想重启-可以临时生效" class="headerlink" title="5.selinux本次生效关闭必须重启,如果此时不想重启,可以临时生效"></a>5.selinux本次生效关闭必须重启,如果此时不想重启,可以临时生效</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]#  sudo setenforce 0</span><br></pre></td></tr></table></figure>
+<h1 id="启动Ganglia"><a href="#启动Ganglia" class="headerlink" title="启动Ganglia"></a>启动Ganglia</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]# service httpd start</span><br><span class="line">正在启动 httpd：</span><br><span class="line">[root@bigdata107 flume]# service gmetad start</span><br><span class="line">Starting GANGLIA gmetad:  [确定]</span><br><span class="line">[root@bigdata107 flume]# service gmond start</span><br><span class="line">Starting GANGLIA gmond:  [确定]</span><br></pre></td></tr></table></figure>
+<h2 id="1-打开web-UI"><a href="#1-打开web-UI" class="headerlink" title="1.打开web UI"></a>1.打开web UI</h2><p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/6.png" alt=" "> </p>
+<h2 id="2-通过Ganglia监控Flume"><a href="#2-通过Ganglia监控Flume" class="headerlink" title="2.通过Ganglia监控Flume"></a>2.通过Ganglia监控Flume</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim flume-env.sh</span><br></pre></td></tr></table></figure>
+<p>添加如下内容：<br>export JAVA_OPTS=&quot;-Dflume.monitoring.type=ganglia -Dflume.monitoring.hosts=192.168.216.107:8649 -Xms100m -Xmx200m&quot;</p>
+<h2 id="3-启动flume任务"><a href="#3-启动flume任务" class="headerlink" title="3.启动flume任务"></a>3.启动flume任务</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]# bin&#x2F;flume-ng agent </span><br><span class="line">--conf conf&#x2F; </span><br><span class="line">--name agent1 </span><br><span class="line">--conf-file job&#x2F;flume_telnet_logger.conf </span><br><span class="line">-Dflume.root.logger&#x3D;&#x3D;INFO,console </span><br><span class="line">-Dflume.monitoring.type&#x3D;ganglia </span><br><span class="line">-Dflume.monitoring.hosts&#x3D;192.168.216.107:8649</span><br></pre></td></tr></table></figure>
+<h2 id="4-发送数据查看Ganglia监测图"><a href="#4-发送数据查看Ganglia监测图" class="headerlink" title="4.发送数据查看Ganglia监测图"></a>4.发送数据查看Ganglia监测图</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@bigdata107 flume]# telnet bigdata107 44444</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/7.png" alt="图片说明"></p>
 <p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/8.png" alt="图片说明"> </p>
 
       

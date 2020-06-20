@@ -328,31 +328,16 @@
 <p>单节点单核心读取，非并行。</p>
 <h3 id="foreach阶段-2"><a href="#foreach阶段-2" class="headerlink" title="foreach阶段"></a>foreach阶段</h3><p>同上类似，单节点单核心运行<br>结果<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106539620_64157194D9DFAFAA77BE73D5A02CE37B" alt="图片说明" title="图片标题"><br>gzip和snappy无法采用并行计算，也就是说在spark平台上，这两种格式只能采用串行单进程执行，于本文开头表格对应，无法分割（splittable）的压缩格式只能顺序一个进程读取，而读取后多文件又在一个executor上，其他executor无文件导致无法并行的foreach。<br>bz2和非压缩格式支持分割，也就是说可以并行读取以及计算。<br>不可分割的压缩格式文件不可并行读取，完全无法发挥spark的并行计算优势，并且若压缩包过大，对单节点的物理性能要求较高。<br>建议<br>snappy采用分块压缩方式使其可以并行读取计算。<br>gzip格式最好提前进行分割成小文件或者换格式，因多个文件可以并行读取。另一个办法是read文件后调用repartition操作强制将读取多数据重新均匀分配到不同的executor上，但这个操作会导致大量单节点性能占用，因此该格式建议不在spark上使用。<br>bz2表现相同于非压缩，但解压操作需要耗费时间。<br><strong>非压缩性能表现最佳，但会占用过大HDFS存储。</strong><br>spark输出压缩文件<br>实际生产环境需要spark输出文件到HDFS，并且为了节省空间会使用压缩格式，以下介绍几种常用的压缩格式<br>文本文件压缩</p>
 <h2 id="bzip2"><a href="#bzip2" class="headerlink" title="bzip2"></a>bzip2</h2><p>压缩率最高，压缩解压速度较慢，支持split。</p>
-<pre><code>import org.apache.hadoop.io.compress.BZip2Codec
-//
-rdd.saveAsTextFile(&quot;codec/bzip2&quot;,classOf[BZip2Codec])
-</code></pre><h2 id="snappy"><a href="#snappy" class="headerlink" title="snappy"></a>snappy</h2><p>json文本压缩率 38.2%，压缩和解压缩时间短。</p>
-<pre><code>
-import org.apache.hadoop.io.compress.SnappyCodec
-//
-rdd.saveAsTextFile(&quot;codec/snappy&quot;,classOf[SnappyCodec])
-
-</code></pre><h2 id="gzip"><a href="#gzip" class="headerlink" title="gzip"></a>gzip</h2><p>压缩率高，压缩和解压速度较快，不支持split，如果不对文件大小进行控制，下次分析可能可能会造成效率低下的问题。<br>json文本压缩率23.5%，适合使用率低，长期存储的文件。</p>
-<pre><code>
-import org.apache.hadoop.io.compress.GzipCodec
-//
-rdd.saveAsTextFile(&quot;codec/gzip&quot;,classOf[GzipCodec])
-</code></pre><h2 id="parquet文件压缩"><a href="#parquet文件压缩" class="headerlink" title="parquet文件压缩"></a>parquet文件压缩</h2><p>列式存储布局（比如 Parquet）可以加速查询，因为它只检查所有需要的列并对它们的值执行计算，因此只读取一个数据文件或表的小部分数据。Parquet 还支持灵活的压缩选项，因此可以显著减少磁盘上的存储。<br>如果您在 HDFS 上拥有基于文本的数据文件或表，而且正在使用 Spark SQL 对它们执行查询，那么强烈推荐将文本数据文件转换为 Parquet 数据文件，以实现性能和存储收益。当然，转换需要时间，但查询性能的提升在某些情况下可能达到 30 倍或更高，存储的节省可高达 75%！<br>转换 1 TB 数据将花费多长时间？<br>50 分钟，在一个 6 数据节点的 Spark v1.5.1 集群上可达到约 20 GB/分的吞吐量。使用的总内存约为 500GB。HDFS 上最终的 Parquet 文件的格式为：</p>
-<pre><code>...
-/user/spark/data/parquet/catalog_page/part-r-00000-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet
-/user/spark/data/parquet/catalog_page/part-r-00001-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet
-...
-</code></pre><h3 id="存储节省"><a href="#存储节省" class="headerlink" title="存储节省"></a>存储节省</h3><p>以下 Linux 输出显示了 TEXT 和 PARQUET 在 HDFS 上的大小比较：</p>
-<pre><code>% hadoop fs -du -h -s /user/spark/hadoopds1000g
-897.9 G /user/spark/hadoopds1000g
-% hadoop fs -du -h -s /user/spark/data/parquet
-231.4 G /user/spark/data/parquet
-</code></pre><p>1 TB 数据的存储节省了将近 75%！<br>parquet为文件提供了列式存储，查询时只会取出需要的字段和分区，对IO性能的提升非常大，同时占用空间较小，即使是parquet的uncompressed存储方式也比普通的文本要小的多。<br>spark中通过对parquet文件进行存储，spark2.0后默认使用snappy压缩，1.6.3及以前版本默认使用的gzip压缩方式。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">import org.apache.hadoop.io.compress.BZip2Codec</span><br><span class="line">&#x2F;&#x2F;</span><br><span class="line">rdd.saveAsTextFile(&quot;codec&#x2F;bzip2&quot;,classOf[BZip2Codec])</span><br></pre></td></tr></table></figure>
+<h2 id="snappy"><a href="#snappy" class="headerlink" title="snappy"></a>snappy</h2><p>json文本压缩率 38.2%，压缩和解压缩时间短。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">import org.apache.hadoop.io.compress.SnappyCodec</span><br><span class="line">&#x2F;&#x2F;</span><br><span class="line">rdd.saveAsTextFile(&quot;codec&#x2F;snappy&quot;,classOf[SnappyCodec])</span><br></pre></td></tr></table></figure>
+<h2 id="gzip"><a href="#gzip" class="headerlink" title="gzip"></a>gzip</h2><p>压缩率高，压缩和解压速度较快，不支持split，如果不对文件大小进行控制，下次分析可能可能会造成效率低下的问题。<br>json文本压缩率23.5%，适合使用率低，长期存储的文件。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">import org.apache.hadoop.io.compress.GzipCodec</span><br><span class="line">&#x2F;&#x2F;</span><br><span class="line">rdd.saveAsTextFile(&quot;codec&#x2F;gzip&quot;,classOf[GzipCodec])</span><br></pre></td></tr></table></figure>
+<h2 id="parquet文件压缩"><a href="#parquet文件压缩" class="headerlink" title="parquet文件压缩"></a>parquet文件压缩</h2><p>列式存储布局（比如 Parquet）可以加速查询，因为它只检查所有需要的列并对它们的值执行计算，因此只读取一个数据文件或表的小部分数据。Parquet 还支持灵活的压缩选项，因此可以显著减少磁盘上的存储。<br>如果您在 HDFS 上拥有基于文本的数据文件或表，而且正在使用 Spark SQL 对它们执行查询，那么强烈推荐将文本数据文件转换为 Parquet 数据文件，以实现性能和存储收益。当然，转换需要时间，但查询性能的提升在某些情况下可能达到 30 倍或更高，存储的节省可高达 75%！<br>转换 1 TB 数据将花费多长时间？<br>50 分钟，在一个 6 数据节点的 Spark v1.5.1 集群上可达到约 20 GB/分的吞吐量。使用的总内存约为 500GB。HDFS 上最终的 Parquet 文件的格式为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line">&#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet&#x2F;catalog_page&#x2F;part-r-00000-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet</span><br><span class="line">&#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet&#x2F;catalog_page&#x2F;part-r-00001-9ff58e65-0674-440a-883d-256370f33c66.gz.parquet</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h3 id="存储节省"><a href="#存储节省" class="headerlink" title="存储节省"></a>存储节省</h3><p>以下 Linux 输出显示了 TEXT 和 PARQUET 在 HDFS 上的大小比较：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">% hadoop fs -du -h -s &#x2F;user&#x2F;spark&#x2F;hadoopds1000g</span><br><span class="line">897.9 G &#x2F;user&#x2F;spark&#x2F;hadoopds1000g</span><br><span class="line">% hadoop fs -du -h -s &#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet</span><br><span class="line">231.4 G &#x2F;user&#x2F;spark&#x2F;data&#x2F;parquet</span><br></pre></td></tr></table></figure>
+<p>1 TB 数据的存储节省了将近 75%！<br>parquet为文件提供了列式存储，查询时只会取出需要的字段和分区，对IO性能的提升非常大，同时占用空间较小，即使是parquet的uncompressed存储方式也比普通的文本要小的多。<br>spark中通过对parquet文件进行存储，spark2.0后默认使用snappy压缩，1.6.3及以前版本默认使用的gzip压缩方式。</p>
 <p>dataset.write().parquet(“path”);</p>
 <p>可以通过<br>spark.sql.parquet.compression.codec</p>
 <p>参数或是在代码中进行修改配置压缩方式。<br>sparkConf.set(“spark.sql.parquet.compression.codec”,”gzip”)</p>

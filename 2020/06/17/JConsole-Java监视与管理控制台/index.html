@@ -307,38 +307,8 @@
 <p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573278160273_562106A0F5A1D726229907F196EB6D40" alt="图片说明" title="图片标题"> </p>
 <p>“概述”页签显示的是整个虚拟机主要运行数据的概览，其中包括“堆内存使用情况”、“类”、“CPU使用情况”四种信息的曲线图，这些曲线图是后面“内存”、“线程”、“类”页签的信息汇总。</p>
 <p>2.内存监控<br>“内存”页签相当于可视化的jsat命令，用于监视收集器管理的虚拟机内存（Java堆和永久代）的变化趋势。我们通过运行代码“OOMTest”来体验一下监视功能，运行时设置的虚拟机参数为：-Xms100m -Xmx100m -XX:+UseSerialGC,这段代码的作用是以64KB/50毫秒的速度往Java堆中填充数据，一共填充1000次，使用JConsole的“内存”页签进行监视，观察曲线和柱状图指示图的变化。</p>
-<pre><code>import java.util.ArrayList;
-import java.util.List;
-
-/**
- * @Author:luomo
- * @CreateTime:2019/11/9
- * @Description:OOMTest
- */
-public class OOMTest {
-
-    /**
-     * 内存占位符对象，一个OOMObject大约占64KB
-     */
-    static class OOMobject{
-        public byte[] placeholder=new byte[64*1024];
-    }
-    public static void fillHeap(int num) throws InterruptedException{
-        List&lt;OOMobject&gt; list =new ArrayList&lt;OOMobject&gt;();
-        for(int i=0;i&lt;num;i++)
-        {
-            //稍作延时，令监视曲线的变化更加明显
-            Thread.sleep(50);
-            list.add(new OOMobject());
-        }
-        System.gc();
-    }
-    public static void main(String[] args)throws Exception{
-        fillHeap(1000);
-    }
-}
-
-</code></pre><p>程序运行后，在“内存”页签中可以看到内存池Eden区的运行趋势呈现折线状，如图。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">import java.util.ArrayList;</span><br><span class="line">import java.util.List;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * @Author:luomo</span><br><span class="line"> * @CreateTime:2019&#x2F;11&#x2F;9</span><br><span class="line"> * @Description:OOMTest</span><br><span class="line"> *&#x2F;</span><br><span class="line">public class OOMTest &#123;</span><br><span class="line"></span><br><span class="line">    &#x2F;**</span><br><span class="line">     * 内存占位符对象，一个OOMObject大约占64KB</span><br><span class="line">     *&#x2F;</span><br><span class="line">    static class OOMobject&#123;</span><br><span class="line">        public byte[] placeholder&#x3D;new byte[64*1024];</span><br><span class="line">    &#125;</span><br><span class="line">    public static void fillHeap(int num) throws InterruptedException&#123;</span><br><span class="line">        List&lt;OOMobject&gt; list &#x3D;new ArrayList&lt;OOMobject&gt;();</span><br><span class="line">        for(int i&#x3D;0;i&lt;num;i++)</span><br><span class="line">        &#123;</span><br><span class="line">            &#x2F;&#x2F;稍作延时，令监视曲线的变化更加明显</span><br><span class="line">            Thread.sleep(50);</span><br><span class="line">            list.add(new OOMobject());</span><br><span class="line">        &#125;</span><br><span class="line">        System.gc();</span><br><span class="line">    &#125;</span><br><span class="line">    public static void main(String[] args)throws Exception&#123;</span><br><span class="line">        fillHeap(1000);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>程序运行后，在“内存”页签中可以看到内存池Eden区的运行趋势呈现折线状，如图。</p>
 <p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573282506435_42550CBEF3FCED46D7B42799FAD4566A" alt="图片说明" title="图片标题"> </p>
 <p>监视范围扩大至整个堆后，会发现曲线是一条向上增长的平滑曲线。</p>
 <p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573282418309_B397F1590C7ED6E011AB02405287D0D0" alt="图片说明" title="图片标题"> </p>
