@@ -79,64 +79,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Apache Flink DataStream API 编程</title>
-    <url>/2020/06/12/Apache-Flink-DataStream-API-%E7%BC%96%E7%A8%8B/</url>
-    <content><![CDATA[<p>#转载<br>作者：崔星灿<br>整理：高赟<br><a href="https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/" target="_blank" rel="noopener">https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/</a></p>
-<h1 id="1-流处理基本概念"><a href="#1-流处理基本概念" class="headerlink" title="1. 流处理基本概念"></a>1. 流处理基本概念</h1><p>对于什么是流处理，从不同的角度有不同的定义。其实流处理与批处理这两个概念是对立统一的，它们的关系有点类似于对于 Java 中的 ArrayList 中的元素，是直接看作一个有限数据集并用下标去访问，还是用迭代器去访问。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537175558_C8AF084FBC88BD49BD6B715195F1B6C1" alt="图片说明" title="图片标题"> </p>
-<p>图1. 左图硬币分类器。硬币分类器也可以看作一个流处理系统，用于硬币分类的各部分组件提前串联在一起，硬币不断进入系统，并最终被输出到不同的队列中供后续使用。右图同理。<br>流处理系统本身有很多自己的特点。一般来说，由于需要支持无限数据集的处理，流处理系统一般采用一种数据驱动的处理方式。它会提前设置一些算子，然后等到数据到达后对数据进行处理。为了表达复杂的计算逻辑，包括 Flink 在内的分布式流处理引擎一般采用 DAG 图来表示整个计算逻辑，其中 DAG 图中的每一个点就代表一个基本的逻辑单元，也就是前面说的算子。由于计算逻辑被组织成有向图，数据会按照边的方向，从一些特殊的 Source 节点流入系统，然后通过网络传输、本地传输等不同的数据传输方式在算子之间进行发送和处理，最后会通过另外一些特殊的 Sink 节点将计算结果发送到某个外部系统或数据库中。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537192886_27A88C12397D0EF8F47E865DFEE4A173" alt="图片说明" title="图片标题"> </p>
-<p>图2. 一个 DAG 计算逻辑图与实际的物理时模型。<br>逻辑图中的每个算子在物理图中可能有多个并发。<br>对于实际的分布式流处理引擎，它们的实际运行时物理模型要更复杂一些，这是由于每个算子都可能有多个实例。如图 2 所示，作为 Source 的 A 算子有两个实例，中间算子 C 也有两个实例。在逻辑模型中，A 和 B 是 C 的上游节点，而在对应的物理逻辑中，C 的所有实例和 A、B 的所有实例之间可能都存在数据交换。在物理模型中，我们会根据计算逻辑，采用系统自动优化或人为指定的方式将计算工作分布到不同的实例中。只有当算子实例分布到不同进程上时，才需要通过网络进行数据传输，而同一进程中的多个实例之间的数据传输通常是不需要通过网络的。</p>
-<p>▼示例1. Apache Storm 构造 DAG 计算图。Apache Storm 的接口定义更加“面向操作”，因此更加底层。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">TopologyBuilder builder &#x3D; new TopologyBuilder();</span><br><span class="line"></span><br><span class="line">builder.setSpout(&quot;spout&quot;, new RandomSentenceSpout(), 5);</span><br><span class="line">builder.setBolt(&quot;split&quot;, new SplitSentence(), 8).shuffleGrouping(&quot;spout&quot;);</span><br><span class="line">builder.setBolt(&quot;count&quot;, new WordCount(), 12).fieldsGrouping(&quot;split&quot;, new Fields(&quot;word&quot;));</span><br></pre></td></tr></table></figure>
-<p>▼ 示例2. Apache Flink 构造 DAG 计算图。Apache Flink 的接口定义更加“面向数据”，因此更加高层。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line"></span><br><span class="line">DataStream&lt;String&gt; text &#x3D; env.readTextFile (&quot;input&quot;);</span><br><span class="line">DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; counts &#x3D; text.flatMap(new Tokenizer()).keyBy(0).sum(1);</span><br><span class="line">counts.writeAsText(&quot;output&quot;);</span><br></pre></td></tr></table></figure>
-<p>由于流处理的计算逻辑是通过 DAG 图来表示的，因此它们的大部分 API 都是围绕构建这种计算逻辑图来设计的。例如，对于几年前非常流行的 Apache Storm，它的 Word Count 的示例如表 1 所示。基于 Apache Storm 用户需要在图中添加 Spout 或 Bolt 这种算子，并指定算子之前的连接方式。这样，在完成整个图的构建之后，就可以将图提交到远程或本地集群运行。</p>
-<p>与之对比，Apache Flink 的接口虽然也是在构建计算逻辑图，但是 Flink 的 API 定义更加面向数据本身的处理逻辑，它把数据流抽象成为一个无限集，然后定义了一组集合上的操作，然后在底层自动构建相应的 DAG 图。可以看出，Flink 的 API 要更“上层”一些。许多研究者在进行实验时，可能会更喜欢自由度高的 Storm，因为它更容易保证实现预想的图结构；而在工业界则更喜欢 Flink 这类高级 API，因为它使用更加简单。</p>
-<h1 id="2-Flink-DataStream-API-概览"><a href="#2-Flink-DataStream-API-概览" class="headerlink" title="2. Flink DataStream API 概览"></a>2. Flink DataStream API 概览</h1><p>基于前面对流处理的基本概念，本节将详细介绍 Flink DataStream API 的使用方式。我们首先还是从一个简单的例子开始看起。表3是一个流式 Word Count 的示例，虽然它只有 5 行代码，但是它给出了基于 Flink DataStream API 开发程序的基本结构。</p>
-<p>▼ 示例2. 基于 Flink DataStream API 的 Word Count 示例。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#x2F;&#x2F;1、设置运行环境</span><br><span class="line">StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">&#x2F;&#x2F;2、配置数据源读取数据</span><br><span class="line">DataStream&lt;String&gt; text &#x3D; env.readTextFile (&quot;input&quot;);</span><br><span class="line">&#x2F;&#x2F;3、进行一系列转换</span><br><span class="line">DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; counts &#x3D; text.flatMap(new Tokenizer()).keyBy(0).sum(1);</span><br><span class="line">&#x2F;&#x2F;4、配置数据汇写出数据</span><br><span class="line">counts.writeAsText(&quot;output&quot;);</span><br><span class="line">&#x2F;&#x2F;5、提交执行</span><br><span class="line">env.execute(&quot;Streaming WordCount&quot;);</span><br></pre></td></tr></table></figure>
-<p>为了实现流式 Word Count，我们首先要先获得一个 StreamExecutionEnvironment 对象。它是我们构建图过程中的上下文对象。基于这个对象，我们可以添加一些算子。对于流处理程度，我们一般需要首先创建一个数据源去接入数据。在这个例子中，我们使用了 Environment 对象中内置的读取文件的数据源。这一步之后，我们拿到的是一个 DataStream 对象，它可以看作一个无限的数据集，可以在该集合上进行一序列的操作。例如，在 Word Count 例子中，我们首先将每一条记录（即文件中的一行）分隔为单词，这是通过 FlatMap 操作来实现的。调用 FlatMap 将会在底层的 DAG 图中添加一个 FlatMap 算子。然后，我们得到了一个记录是单词的流。我们将流中的单词进行分组（keyBy），然后累积计算每一个单词的数据（sum(1)）。计算出的单词的数据组成了一个新的流，我们将它写入到输出文件中。</p>
-<p>最后，我们需要调用 env#execute 方法来开始程序的执行。需要强调的是，前面我们调用的所有方法，都不是在实际处理数据，而是在构通表达计算逻辑的 DAG 图。只有当我们将整个图构建完成并显式的调用 Execute 方法后，框架才会把计算图提供到集群中，接入数据并执行实际的逻辑。</p>
-<p>基于流式 Word Count 的例子可以看出，基于 Flink 的 DataStream API 来编写流处理程序一般需要三步：通过 Source 接入数据、进行一系统列的处理以及将数据写出。最后，不要忘记显式调用 Execute 方式，否则前面编写的逻辑并不会真正执行。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537294810_1004D3B6DA52ECDB957ACA30B9C3F264" alt="图片说明" title="图片标题"> </p>
-<p>图3. Flink DataStream 操作概览<br>从上面的例子中还可以看出，Flink DataStream API 的核心，就是代表流数据的 DataStream 对象。整个计算逻辑图的构建就是围绕调用 DataStream 对象上的不同操作产生新的 DataStream 对象展开的。整体来说，DataStream 上的操作可以分为四类。第一类是对于单条记录的操作，比如筛除掉不符合要求的记录（Filter 操作），或者将每条记录都做一个转换（Map 操作）。第二类是对多条记录的操作。比如说统计一个小时内的订单总成交量，就需要将一个小时内的所有订单记录的成交量加到一起。为了支持这种类型的操作，就得通过 Window 将需要的记录关联到一起进行处理。第三类是对多个流进行操作并转换为单个流。例如，多个流可以通过 Union、Join 或 Connect 等操作合到一起。这些操作合并的逻辑不同，但是它们最终都会产生了一个新的统一的流，从而可以进行一些跨流的操作。最后， DataStream 还支持与合并对称的操作，即把一个流按一定规则拆分为多个流（Split 操作），每个流是之前流的一个子集，这样我们就可以对不同的流作不同的处理。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537308371_60CD8BAC6B1F4A4CAFC6E077E20E337A" alt="图片说明" title="图片标题"><br>图4. 不同类型的 DataStream 子类型。不同的子类型支持不同的操作集合。<br>为了支持这些不同的流操作，Flink 引入了一组不同的流类型，用来表示某些操作的中间流数据集类型。完整的类型转换关系如图4所示。首先，对于一些针对单条记录的操作，如 Map 等，操作的结果仍然是是基本的 DataStream 类型。然后，对于 Split 操作，它会首先产生一个 SplitStream，基于 SplitStream 可以使用 Select 方法来筛选出符合要求的记录并再将得到一个基本的流。</p>
-<p>类似的，对于 Connect 操作，在调用 streamA.connect(streamB)后可以得到一个专门的 ConnectedStream。ConnectedStream 支持的操作与普通的 DataStream 有所区别，由于它代表两个不同的流混合的结果，因此它允许用户对两个流中的记录分别指定不同的处理逻辑，然后它们的处理结果形成一个新的 DataStream 流。由于不同记录的处理是在同一个算子中进行的，因此它们在处理时可以方便的共享一些状态信息。上层的一些 Join 操作，在底层也是需要依赖于 Connect 操作来实现的。</p>
-<p>另外，如前所述，我们可以通过 Window 操作对流可以按时间或者个数进行一些切分，从而将流切分成一个个较小的分组。具体的切分逻辑可以由用户进行选择。当一个分组中所有记录都到达后，用户可以拿到该分组中的所有记录，从而可以进行一些遍历或者累加操作。这样，对每个分组的处理都可以得到一组输出数据，这些输出数据形成了一个新的基本流。</p>
-<p>对于普通的 DataStream，我们必须使用 allWindow 操作，它代表对整个流进行统一的 Window 处理，因此是不能使用多个算子实例进行同时计算的。针对这一问题，就需要我们首先使用 KeyBy 方法对记录按 Key 进行分组，然后才可以并行的对不同 Key 对应的记录进行单独的 Window 操作。KeyBy 操作是我们日常编程中最重要的操作之一，下面我们会更详细的介绍。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538395925_84B3A35C34414BE73CE78565B377C9BE" alt="图片说明" title="图片标题"><br>图5. 基本流上的 Window 操作与 KeyedStream 上的 Window 操对比。KeyedStream 上的 Window 操作使采用多个实例并发处理成为了可能。<br>基本 DataStream 对象上的 allWindow 与 KeyedStream 上的 Window 操作的对比如图5所示。为了能够在多个并发实例上并行的对数据进行处理，我们需要通过 KeyBy 将数据进行分组。KeyBy 和 Window 操作都是对数据进行分组，但是 KeyBy 是在水平分向对流进行切分，而 Window 是在垂直方式对流进行切分。</p>
-<p>使用 KeyBy 进行数据切分之后，后续算子的每一个实例可以只处理特定 Key 集合对应的数据。除了处理本身外，Flink 中允许算子维护一部分状态（State），在KeyedStream 算子的状态也是可以分布式存储的。由于 KeyBy 是一种确定的数据分配方式（下文将介绍其它分配方式），因此即使发生 Failover 作业重启，甚至发生了并发度的改变，Flink 都可以重新分配 Key 分组并保证处理某个 Key 的分组一定包含该 Key 的状态，从而保证一致性。</p>
-<p>最后需要强调的是，KeyBy 操作只有当 Key 的数量超过算子的并发实例数才可以较好的工作。由于同一个 Key 对应的所有数据都会发送到同一个实例上，因此如果Key 的数量比实例数量少时，就会导致部分实例收不到数据，从而导致计算能力不能充分发挥。</p>
-<h1 id="3-其它问题"><a href="#3-其它问题" class="headerlink" title="3. 其它问题"></a>3. 其它问题</h1><p>除 KeyBy 之外，Flink 在算子之前交换数据时还支持其它的物理分组方式。如图 1 所示，Flink DataStream 中物理分组方式包括：</p>
-<p>Global: 上游算子将所有记录发送给下游算子的第一个实例。</p>
-<p>Broadcast: 上游算子将每一条记录发送给下游算子的所有实例。</p>
-<p>Forward：只适用于上游算子实例数与下游算子相同时，每个上游算子实例将记录发送给下游算子对应的实例。</p>
-<p>Shuffle：上游算子对每条记录随机选择一个下游算子进行发送。</p>
-<p>Rebalance：上游算子通过轮询的方式发送数据。</p>
-<p>Rescale：当上游和下游算子的实例数为 n 或 m 时，如果 n &lt; m，则每个上游实例向ceil(m/n)或floor(m/n)个下游实例轮询发送数据；如果 n &gt; m，则 floor(n/m) 或 ceil(n/m) 个上游实例向下游实例轮询发送数据。</p>
-<p>PartitionCustomer：当上述内置分配方式不满足需求时，用户还可以选择自定义分组方式。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538419242_C7E0BBE42E8516B40C29F7E7F9ABDCA5" alt="图片说明" title="图片标题"> </p>
-<p>图6. 除keyBy外其它的物理分组方式<br>除分组方式外，Flink DataStream API 中另一个重要概念就是类型系统。图 7 所示，Flink DataStream 对像都是强类型的，每一个 DataStream 对象都需要指定元素的类型，Flink 自己底层的序列化机制正是依赖于这些信息对序列化等进行优化。具体来说，在 Flink 底层，它是使用 TypeInformation 对象对类型进行描述的，TypeInformation 对象定义了一组类型相关的信息供序列化框架使用。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538432289_8C94F5A6149A0B5B45C667CC818EB879" alt="图片说明" title="图片标题"><br>图7. Flink DataStream API 中的类型系统<br>Flink 内置了一部分常用的基本类型，对于这些类型，Flink 也内置了它们的TypeInformation，用户一般可以直接使用而不需要额外的声明，Flink 自己可以通过类型推断机制识别出相应的类型。但是也会有一些例外的情况，比如，Flink DataStream API 同时支持 Java 和 Scala，Scala API 许多接口是通过隐式的参数来传递类型信息的，所以如果需要通过 Java 调用 Scala 的 API，则需要把这些类型信息通过隐式参数传递过去。另一个例子是 Java 中对泛型存在类型擦除，如果流的类型本身是一个泛型的话，则可能在擦除之后无法推断出类型信息，这时候也需要显式的指定。</p>
-<p>在 Flink 中，一般 Java 接口采用 Tuple 类型来组合多个字段，而 Scala 则更经常使用 Row 类型或 Case Class。相对于 Row，Tuple 类型存在两个问题，一个是字段个数不能超过 25 个，此外，所有字段不允许有 null 值。最后，Flink 也支持用户自定义新的类型和 TypeInformation，并通过 Kryo 来实现序列化，但是这种方式可带来一些迁移等方面的问题，所以尽量不要使用自定义的类型。</p>
-<h1 id="4-示例"><a href="#4-示例" class="headerlink" title="4. 示例"></a>4. 示例</h1><p>然后，我们再看一个更复杂的例子。假设我们有一个数据源，它监控系统中订单的情况，当有新订单时，它使用 Tuple2&lt;String, Integer&gt; 输出订单中商品的类型和交易额。然后，我们希望实时统计每个类别的交易额，以及实时统计全部类别的交易额。</p>
-<p>▼ 示例4. 实时订单统计示例。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class GroupedProcessingTimeWindowSample &#123;</span><br><span class="line">    private static class DataSource extends RichParallelSourceFunction&lt;Tuple2&lt;String, Integer&gt;&gt; &#123;</span><br><span class="line">        private volatile boolean isRunning &#x3D; true;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void run(SourceContext&lt;Tuple2&lt;String, Integer&gt;&gt; ctx) throws Exception &#123;</span><br><span class="line">            Random random &#x3D; new Random();</span><br><span class="line">            while (isRunning) &#123;</span><br><span class="line">                Thread.sleep((getRuntimeContext().getIndexOfThisSubtask() + 1) * 1000 * 5);</span><br><span class="line">                String key &#x3D; &quot;类别&quot; + (char) (&#39;A&#39; + random.nextInt(3));</span><br><span class="line">                int value &#x3D; random.nextInt(10) + 1;</span><br><span class="line"></span><br><span class="line">                System.out.println(String.format(&quot;Emits\t(%s, %d)&quot;, key, value));</span><br><span class="line">                ctx.collect(new Tuple2&lt;&gt;(key, value));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void cancel() &#123;</span><br><span class="line">            isRunning &#x3D; false;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static void main(String[] args) throws Exception &#123;</span><br><span class="line">        StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        env.setParallelism(2);</span><br><span class="line"></span><br><span class="line">        DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; ds &#x3D; env.addSource(new DataSource());</span><br><span class="line">        KeyedStream&lt;Tuple2&lt;String, Integer&gt;, Tuple&gt; keyedStream &#x3D; ds.keyBy(0);</span><br><span class="line"></span><br><span class="line">        keyedStream.sum(1).keyBy(new KeySelector&lt;Tuple2&lt;String, Integer&gt;, Object&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public Object getKey(Tuple2&lt;String, Integer&gt; stringIntegerTuple2) throws Exception &#123;</span><br><span class="line">                return &quot;&quot;;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).fold(new HashMap&lt;String, Integer&gt;(), new FoldFunction&lt;Tuple2&lt;String, Integer&gt;, HashMap&lt;String, Integer&gt;&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public HashMap&lt;String, Integer&gt; fold(HashMap&lt;String, Integer&gt; accumulator, Tuple2&lt;String, Integer&gt; value) throws Exception &#123;</span><br><span class="line">                accumulator.put(value.f0, value.f1);</span><br><span class="line">                return accumulator;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).addSink(new SinkFunction&lt;HashMap&lt;String, Integer&gt;&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public void invoke(HashMap&lt;String, Integer&gt; value, Context context) throws Exception &#123;</span><br><span class="line">                  &#x2F;&#x2F; 每个类型的商品成交量</span><br><span class="line">                  System.out.println(value);</span><br><span class="line">                  &#x2F;&#x2F; 商品成交总量                </span><br><span class="line">                  System.out.println(value.values().stream().mapToInt(v -&gt; v).sum());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line"></span><br><span class="line">        env.execute();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>示例的实现如表4所示。首先，在该实现中，我们首先实现了一个模拟的数据源，它继承自 RichParallelSourceFunction，它是可以有多个实例的 SourceFunction 的接口。它有两个方法需要实现，一个是 Run 方法，Flink 在运行时对 Source 会直接调用该方法，该方法需要不断的输出数据，从而形成初始的流。在 Run 方法的实现中，我们随机的产生商品类别和交易量的记录，然后通过 ctx#collect 方法进行发送。另一个方法是 Cancel 方法，当 Flink 需要 Cancel Source Task 的时候会调用该方法，我们使用一个 Volatile 类型的变量来标记和控制执行的状态。</p>
-<p>然后，我们在 Main 方法中就可以开始图的构建。我们首先创建了一个 StreamExecutioniEnviroment 对象。创建对象调用的 getExecutionEnvironment 方法会自动判断所处的环境，从而创建合适的对象。例如，如果我们在 IDE 中直接右键运行，则会创建 LocalStreamExecutionEnvironment 对象；如果是在一个实际的环境中，则会创建 RemoteStreamExecutionEnvironment 对象。</p>
-<p>基于 Environment 对象，我们首先创建了一个 Source，从而得到初始的&lt;商品类型，成交量&gt;流。然后，为了统计每种类别的成交量，我们使用 KeyBy 按 Tuple 的第 1 个字段（即商品类型）对输入流进行分组，并对每一个 Key 对应的记录的第 2 个字段（即成交量）进行求合。在底层，Sum 算子内部会使用 State 来维护每个Key（即商品类型）对应的成交量之和。当有新记录到达时，Sum 算子内部会更新所维护的成交量之和，并输出一条&lt;商品类型，更新后的成交量&gt;记录。</p>
-<p>如果只统计各个类型的成交量，则程序可以到此为止，我们可以直接在 Sum 后添加一个 Sink 算子对不断更新的各类型成交量进行输出。但是，我们还需要统计所有类型的总成交量。为了做到这一点，我们需要将所有记录输出到同一个计算节点的实例上。我们可以通过 KeyBy 并且对所有记录返回同一个 Key，将所有记录分到同一个组中，从而可以全部发送到同一个实例上。</p>
-<p>然后，我们使用 Fold 方法来在算子中维护每种类型商品的成交量。注意虽然目前 Fold 方法已经被标记为 Deprecated，但是在 DataStream API 中暂时还没有能替代它的其它操作，所以我们仍然使用 Fold 方法。这一方法接收一个初始值，然后当后续流中每条记录到达的时候，算子会调用所传递的 FoldFunction 对初始值进行更新，并发送更新后的值。我们使用一个 HashMap 来对各个类别的当前成交量进行维护，当有一条新的&lt;商品类别，成交量&gt;到达时，我们就更新该 HashMap。这样在 Sink 中，我们收到的是最新的商品类别和成交量的 HashMap，我们可以依赖这个值来输出各个商品的成交量和总的成交量。</p>
-<p>需要指出的是，这个例子主要是用来演示 DataStream API 的用法，实际上还会有更高效的写法，此外，更上层的 Table / SQL 还支持 Retraction 机制，可以更好的处理这种情况。</p>
-<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538470903_1A525E00557FBEAA217657B4AC618FB1" alt="图片说明" title="图片标题"><br>图8. API 原理图<br>最后，我们对 DataStream API 的原理进行简要的介绍。当我们调用 DataStream#map 算法时，Flink 在底层会创建一个 Transformation 对象，这一对象就代表我们计算逻辑图中的节点。它其中就记录了我们传入的 MapFunction，也就是 UDF（User Define Function）。随着我们调用更多的方法，我们创建了更多的 DataStream 对象，每个对象在内部都有一个 Transformation 对象，这些对象根据计算依赖关系组成一个图结构，就是我们的计算图。后续 Flink 将对这个图结构进行进一步的转换，从而最终生成提交作业所需要的 JobGraph。</p>
-<h1 id="5-总结"><a href="#5-总结" class="headerlink" title="5. 总结"></a>5. 总结</h1><p>本文主要介绍了 Flink DataStream API，它是当前 Flink 中比较底层的一套 API。在实际的开发中，基于该 API 需要用户自己处理 State 与 Time 等一些概念，因此需要较大的工作量。后续课程还会介绍更上层的 Table / SQL 层的 API，未来 Table / SQL 可能会成为 Flink 主流的 API，但是对于接口来说，越底层的接口表达能力越强，在一些需要精细操作的情况下，仍然需要依赖于 DataStream API。</p>
-]]></content>
-      <categories>
-        <category>Flink</category>
-      </categories>
-      <tags>
-        <tag>Flink</tag>
-        <tag>转载</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Apache Flink概念</title>
     <url>/2020/06/03/Apache-Flink%E6%A6%82%E5%BF%B5/</url>
     <content><![CDATA[<h1 id="转载"><a href="#转载" class="headerlink" title="转载"></a>转载</h1><p>作者：陈守元 &amp; 戴资力<a href="https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/" target="_blank" rel="noopener">https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/</a></p>
@@ -200,6 +142,73 @@
       </tags>
   </entry>
   <entry>
+    <title>Apache Flink DataStream API 编程</title>
+    <url>/2020/06/12/Apache-Flink-DataStream-API-%E7%BC%96%E7%A8%8B/</url>
+    <content><![CDATA[<p>#转载<br>作者：崔星灿<br>整理：高赟<br><a href="https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/" target="_blank" rel="noopener">https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/</a></p>
+<h1 id="1-流处理基本概念"><a href="#1-流处理基本概念" class="headerlink" title="1. 流处理基本概念"></a>1. 流处理基本概念</h1><p>对于什么是流处理，从不同的角度有不同的定义。其实流处理与批处理这两个概念是对立统一的，它们的关系有点类似于对于 Java 中的 ArrayList 中的元素，是直接看作一个有限数据集并用下标去访问，还是用迭代器去访问。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537175558_C8AF084FBC88BD49BD6B715195F1B6C1" alt="图片说明" title="图片标题"> </p>
+<p>图1. 左图硬币分类器。硬币分类器也可以看作一个流处理系统，用于硬币分类的各部分组件提前串联在一起，硬币不断进入系统，并最终被输出到不同的队列中供后续使用。右图同理。<br>流处理系统本身有很多自己的特点。一般来说，由于需要支持无限数据集的处理，流处理系统一般采用一种数据驱动的处理方式。它会提前设置一些算子，然后等到数据到达后对数据进行处理。为了表达复杂的计算逻辑，包括 Flink 在内的分布式流处理引擎一般采用 DAG 图来表示整个计算逻辑，其中 DAG 图中的每一个点就代表一个基本的逻辑单元，也就是前面说的算子。由于计算逻辑被组织成有向图，数据会按照边的方向，从一些特殊的 Source 节点流入系统，然后通过网络传输、本地传输等不同的数据传输方式在算子之间进行发送和处理，最后会通过另外一些特殊的 Sink 节点将计算结果发送到某个外部系统或数据库中。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537192886_27A88C12397D0EF8F47E865DFEE4A173" alt="图片说明" title="图片标题"> </p>
+<p>图2. 一个 DAG 计算逻辑图与实际的物理时模型。<br>逻辑图中的每个算子在物理图中可能有多个并发。<br>对于实际的分布式流处理引擎，它们的实际运行时物理模型要更复杂一些，这是由于每个算子都可能有多个实例。如图 2 所示，作为 Source 的 A 算子有两个实例，中间算子 C 也有两个实例。在逻辑模型中，A 和 B 是 C 的上游节点，而在对应的物理逻辑中，C 的所有实例和 A、B 的所有实例之间可能都存在数据交换。在物理模型中，我们会根据计算逻辑，采用系统自动优化或人为指定的方式将计算工作分布到不同的实例中。只有当算子实例分布到不同进程上时，才需要通过网络进行数据传输，而同一进程中的多个实例之间的数据传输通常是不需要通过网络的。</p>
+<p>▼示例1. Apache Storm 构造 DAG 计算图。Apache Storm 的接口定义更加“面向操作”，因此更加底层。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">TopologyBuilder builder &#x3D; new TopologyBuilder();</span><br><span class="line"></span><br><span class="line">builder.setSpout(&quot;spout&quot;, new RandomSentenceSpout(), 5);</span><br><span class="line">builder.setBolt(&quot;split&quot;, new SplitSentence(), 8).shuffleGrouping(&quot;spout&quot;);</span><br><span class="line">builder.setBolt(&quot;count&quot;, new WordCount(), 12).fieldsGrouping(&quot;split&quot;, new Fields(&quot;word&quot;));</span><br></pre></td></tr></table></figure>
+<p>▼ 示例2. Apache Flink 构造 DAG 计算图。Apache Flink 的接口定义更加“面向数据”，因此更加高层。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line"></span><br><span class="line">DataStream&lt;String&gt; text &#x3D; env.readTextFile (&quot;input&quot;);</span><br><span class="line">DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; counts &#x3D; text.flatMap(new Tokenizer()).keyBy(0).sum(1);</span><br><span class="line">counts.writeAsText(&quot;output&quot;);</span><br></pre></td></tr></table></figure>
+<p>由于流处理的计算逻辑是通过 DAG 图来表示的，因此它们的大部分 API 都是围绕构建这种计算逻辑图来设计的。例如，对于几年前非常流行的 Apache Storm，它的 Word Count 的示例如表 1 所示。基于 Apache Storm 用户需要在图中添加 Spout 或 Bolt 这种算子，并指定算子之前的连接方式。这样，在完成整个图的构建之后，就可以将图提交到远程或本地集群运行。</p>
+<p>与之对比，Apache Flink 的接口虽然也是在构建计算逻辑图，但是 Flink 的 API 定义更加面向数据本身的处理逻辑，它把数据流抽象成为一个无限集，然后定义了一组集合上的操作，然后在底层自动构建相应的 DAG 图。可以看出，Flink 的 API 要更“上层”一些。许多研究者在进行实验时，可能会更喜欢自由度高的 Storm，因为它更容易保证实现预想的图结构；而在工业界则更喜欢 Flink 这类高级 API，因为它使用更加简单。</p>
+<h1 id="2-Flink-DataStream-API-概览"><a href="#2-Flink-DataStream-API-概览" class="headerlink" title="2. Flink DataStream API 概览"></a>2. Flink DataStream API 概览</h1><p>基于前面对流处理的基本概念，本节将详细介绍 Flink DataStream API 的使用方式。我们首先还是从一个简单的例子开始看起。表3是一个流式 Word Count 的示例，虽然它只有 5 行代码，但是它给出了基于 Flink DataStream API 开发程序的基本结构。</p>
+<p>▼ 示例2. 基于 Flink DataStream API 的 Word Count 示例。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#x2F;&#x2F;1、设置运行环境</span><br><span class="line">StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">&#x2F;&#x2F;2、配置数据源读取数据</span><br><span class="line">DataStream&lt;String&gt; text &#x3D; env.readTextFile (&quot;input&quot;);</span><br><span class="line">&#x2F;&#x2F;3、进行一系列转换</span><br><span class="line">DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; counts &#x3D; text.flatMap(new Tokenizer()).keyBy(0).sum(1);</span><br><span class="line">&#x2F;&#x2F;4、配置数据汇写出数据</span><br><span class="line">counts.writeAsText(&quot;output&quot;);</span><br><span class="line">&#x2F;&#x2F;5、提交执行</span><br><span class="line">env.execute(&quot;Streaming WordCount&quot;);</span><br></pre></td></tr></table></figure>
+<p>为了实现流式 Word Count，我们首先要先获得一个 StreamExecutionEnvironment 对象。它是我们构建图过程中的上下文对象。基于这个对象，我们可以添加一些算子。对于流处理程度，我们一般需要首先创建一个数据源去接入数据。在这个例子中，我们使用了 Environment 对象中内置的读取文件的数据源。这一步之后，我们拿到的是一个 DataStream 对象，它可以看作一个无限的数据集，可以在该集合上进行一序列的操作。例如，在 Word Count 例子中，我们首先将每一条记录（即文件中的一行）分隔为单词，这是通过 FlatMap 操作来实现的。调用 FlatMap 将会在底层的 DAG 图中添加一个 FlatMap 算子。然后，我们得到了一个记录是单词的流。我们将流中的单词进行分组（keyBy），然后累积计算每一个单词的数据（sum(1)）。计算出的单词的数据组成了一个新的流，我们将它写入到输出文件中。</p>
+<p>最后，我们需要调用 env#execute 方法来开始程序的执行。需要强调的是，前面我们调用的所有方法，都不是在实际处理数据，而是在构通表达计算逻辑的 DAG 图。只有当我们将整个图构建完成并显式的调用 Execute 方法后，框架才会把计算图提供到集群中，接入数据并执行实际的逻辑。</p>
+<p>基于流式 Word Count 的例子可以看出，基于 Flink 的 DataStream API 来编写流处理程序一般需要三步：通过 Source 接入数据、进行一系统列的处理以及将数据写出。最后，不要忘记显式调用 Execute 方式，否则前面编写的逻辑并不会真正执行。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537294810_1004D3B6DA52ECDB957ACA30B9C3F264" alt="图片说明" title="图片标题"> </p>
+<p>图3. Flink DataStream 操作概览<br>从上面的例子中还可以看出，Flink DataStream API 的核心，就是代表流数据的 DataStream 对象。整个计算逻辑图的构建就是围绕调用 DataStream 对象上的不同操作产生新的 DataStream 对象展开的。整体来说，DataStream 上的操作可以分为四类。第一类是对于单条记录的操作，比如筛除掉不符合要求的记录（Filter 操作），或者将每条记录都做一个转换（Map 操作）。第二类是对多条记录的操作。比如说统计一个小时内的订单总成交量，就需要将一个小时内的所有订单记录的成交量加到一起。为了支持这种类型的操作，就得通过 Window 将需要的记录关联到一起进行处理。第三类是对多个流进行操作并转换为单个流。例如，多个流可以通过 Union、Join 或 Connect 等操作合到一起。这些操作合并的逻辑不同，但是它们最终都会产生了一个新的统一的流，从而可以进行一些跨流的操作。最后， DataStream 还支持与合并对称的操作，即把一个流按一定规则拆分为多个流（Split 操作），每个流是之前流的一个子集，这样我们就可以对不同的流作不同的处理。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537308371_60CD8BAC6B1F4A4CAFC6E077E20E337A" alt="图片说明" title="图片标题"><br>图4. 不同类型的 DataStream 子类型。不同的子类型支持不同的操作集合。<br>为了支持这些不同的流操作，Flink 引入了一组不同的流类型，用来表示某些操作的中间流数据集类型。完整的类型转换关系如图4所示。首先，对于一些针对单条记录的操作，如 Map 等，操作的结果仍然是是基本的 DataStream 类型。然后，对于 Split 操作，它会首先产生一个 SplitStream，基于 SplitStream 可以使用 Select 方法来筛选出符合要求的记录并再将得到一个基本的流。</p>
+<p>类似的，对于 Connect 操作，在调用 streamA.connect(streamB)后可以得到一个专门的 ConnectedStream。ConnectedStream 支持的操作与普通的 DataStream 有所区别，由于它代表两个不同的流混合的结果，因此它允许用户对两个流中的记录分别指定不同的处理逻辑，然后它们的处理结果形成一个新的 DataStream 流。由于不同记录的处理是在同一个算子中进行的，因此它们在处理时可以方便的共享一些状态信息。上层的一些 Join 操作，在底层也是需要依赖于 Connect 操作来实现的。</p>
+<p>另外，如前所述，我们可以通过 Window 操作对流可以按时间或者个数进行一些切分，从而将流切分成一个个较小的分组。具体的切分逻辑可以由用户进行选择。当一个分组中所有记录都到达后，用户可以拿到该分组中的所有记录，从而可以进行一些遍历或者累加操作。这样，对每个分组的处理都可以得到一组输出数据，这些输出数据形成了一个新的基本流。</p>
+<p>对于普通的 DataStream，我们必须使用 allWindow 操作，它代表对整个流进行统一的 Window 处理，因此是不能使用多个算子实例进行同时计算的。针对这一问题，就需要我们首先使用 KeyBy 方法对记录按 Key 进行分组，然后才可以并行的对不同 Key 对应的记录进行单独的 Window 操作。KeyBy 操作是我们日常编程中最重要的操作之一，下面我们会更详细的介绍。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538395925_84B3A35C34414BE73CE78565B377C9BE" alt="图片说明" title="图片标题"><br>图5. 基本流上的 Window 操作与 KeyedStream 上的 Window 操对比。KeyedStream 上的 Window 操作使采用多个实例并发处理成为了可能。<br>基本 DataStream 对象上的 allWindow 与 KeyedStream 上的 Window 操作的对比如图5所示。为了能够在多个并发实例上并行的对数据进行处理，我们需要通过 KeyBy 将数据进行分组。KeyBy 和 Window 操作都是对数据进行分组，但是 KeyBy 是在水平分向对流进行切分，而 Window 是在垂直方式对流进行切分。</p>
+<p>使用 KeyBy 进行数据切分之后，后续算子的每一个实例可以只处理特定 Key 集合对应的数据。除了处理本身外，Flink 中允许算子维护一部分状态（State），在KeyedStream 算子的状态也是可以分布式存储的。由于 KeyBy 是一种确定的数据分配方式（下文将介绍其它分配方式），因此即使发生 Failover 作业重启，甚至发生了并发度的改变，Flink 都可以重新分配 Key 分组并保证处理某个 Key 的分组一定包含该 Key 的状态，从而保证一致性。</p>
+<p>最后需要强调的是，KeyBy 操作只有当 Key 的数量超过算子的并发实例数才可以较好的工作。由于同一个 Key 对应的所有数据都会发送到同一个实例上，因此如果Key 的数量比实例数量少时，就会导致部分实例收不到数据，从而导致计算能力不能充分发挥。</p>
+<h1 id="3-其它问题"><a href="#3-其它问题" class="headerlink" title="3. 其它问题"></a>3. 其它问题</h1><p>除 KeyBy 之外，Flink 在算子之前交换数据时还支持其它的物理分组方式。如图 1 所示，Flink DataStream 中物理分组方式包括：</p>
+<p>Global: 上游算子将所有记录发送给下游算子的第一个实例。</p>
+<p>Broadcast: 上游算子将每一条记录发送给下游算子的所有实例。</p>
+<p>Forward：只适用于上游算子实例数与下游算子相同时，每个上游算子实例将记录发送给下游算子对应的实例。</p>
+<p>Shuffle：上游算子对每条记录随机选择一个下游算子进行发送。</p>
+<p>Rebalance：上游算子通过轮询的方式发送数据。</p>
+<p>Rescale：当上游和下游算子的实例数为 n 或 m 时，如果 n &lt; m，则每个上游实例向ceil(m/n)或floor(m/n)个下游实例轮询发送数据；如果 n &gt; m，则 floor(n/m) 或 ceil(n/m) 个上游实例向下游实例轮询发送数据。</p>
+<p>PartitionCustomer：当上述内置分配方式不满足需求时，用户还可以选择自定义分组方式。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538419242_C7E0BBE42E8516B40C29F7E7F9ABDCA5" alt="图片说明" title="图片标题"> </p>
+<p>图6. 除keyBy外其它的物理分组方式<br>除分组方式外，Flink DataStream API 中另一个重要概念就是类型系统。图 7 所示，Flink DataStream 对像都是强类型的，每一个 DataStream 对象都需要指定元素的类型，Flink 自己底层的序列化机制正是依赖于这些信息对序列化等进行优化。具体来说，在 Flink 底层，它是使用 TypeInformation 对象对类型进行描述的，TypeInformation 对象定义了一组类型相关的信息供序列化框架使用。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538432289_8C94F5A6149A0B5B45C667CC818EB879" alt="图片说明" title="图片标题"><br>图7. Flink DataStream API 中的类型系统<br>Flink 内置了一部分常用的基本类型，对于这些类型，Flink 也内置了它们的TypeInformation，用户一般可以直接使用而不需要额外的声明，Flink 自己可以通过类型推断机制识别出相应的类型。但是也会有一些例外的情况，比如，Flink DataStream API 同时支持 Java 和 Scala，Scala API 许多接口是通过隐式的参数来传递类型信息的，所以如果需要通过 Java 调用 Scala 的 API，则需要把这些类型信息通过隐式参数传递过去。另一个例子是 Java 中对泛型存在类型擦除，如果流的类型本身是一个泛型的话，则可能在擦除之后无法推断出类型信息，这时候也需要显式的指定。</p>
+<p>在 Flink 中，一般 Java 接口采用 Tuple 类型来组合多个字段，而 Scala 则更经常使用 Row 类型或 Case Class。相对于 Row，Tuple 类型存在两个问题，一个是字段个数不能超过 25 个，此外，所有字段不允许有 null 值。最后，Flink 也支持用户自定义新的类型和 TypeInformation，并通过 Kryo 来实现序列化，但是这种方式可带来一些迁移等方面的问题，所以尽量不要使用自定义的类型。</p>
+<h1 id="4-示例"><a href="#4-示例" class="headerlink" title="4. 示例"></a>4. 示例</h1><p>然后，我们再看一个更复杂的例子。假设我们有一个数据源，它监控系统中订单的情况，当有新订单时，它使用 Tuple2&lt;String, Integer&gt; 输出订单中商品的类型和交易额。然后，我们希望实时统计每个类别的交易额，以及实时统计全部类别的交易额。</p>
+<p>▼ 示例4. 实时订单统计示例。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class GroupedProcessingTimeWindowSample &#123;</span><br><span class="line">    private static class DataSource extends RichParallelSourceFunction&lt;Tuple2&lt;String, Integer&gt;&gt; &#123;</span><br><span class="line">        private volatile boolean isRunning &#x3D; true;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void run(SourceContext&lt;Tuple2&lt;String, Integer&gt;&gt; ctx) throws Exception &#123;</span><br><span class="line">            Random random &#x3D; new Random();</span><br><span class="line">            while (isRunning) &#123;</span><br><span class="line">                Thread.sleep((getRuntimeContext().getIndexOfThisSubtask() + 1) * 1000 * 5);</span><br><span class="line">                String key &#x3D; &quot;类别&quot; + (char) (&#39;A&#39; + random.nextInt(3));</span><br><span class="line">                int value &#x3D; random.nextInt(10) + 1;</span><br><span class="line"></span><br><span class="line">                System.out.println(String.format(&quot;Emits\t(%s, %d)&quot;, key, value));</span><br><span class="line">                ctx.collect(new Tuple2&lt;&gt;(key, value));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public void cancel() &#123;</span><br><span class="line">            isRunning &#x3D; false;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static void main(String[] args) throws Exception &#123;</span><br><span class="line">        StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        env.setParallelism(2);</span><br><span class="line"></span><br><span class="line">        DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; ds &#x3D; env.addSource(new DataSource());</span><br><span class="line">        KeyedStream&lt;Tuple2&lt;String, Integer&gt;, Tuple&gt; keyedStream &#x3D; ds.keyBy(0);</span><br><span class="line"></span><br><span class="line">        keyedStream.sum(1).keyBy(new KeySelector&lt;Tuple2&lt;String, Integer&gt;, Object&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public Object getKey(Tuple2&lt;String, Integer&gt; stringIntegerTuple2) throws Exception &#123;</span><br><span class="line">                return &quot;&quot;;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).fold(new HashMap&lt;String, Integer&gt;(), new FoldFunction&lt;Tuple2&lt;String, Integer&gt;, HashMap&lt;String, Integer&gt;&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public HashMap&lt;String, Integer&gt; fold(HashMap&lt;String, Integer&gt; accumulator, Tuple2&lt;String, Integer&gt; value) throws Exception &#123;</span><br><span class="line">                accumulator.put(value.f0, value.f1);</span><br><span class="line">                return accumulator;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).addSink(new SinkFunction&lt;HashMap&lt;String, Integer&gt;&gt;() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public void invoke(HashMap&lt;String, Integer&gt; value, Context context) throws Exception &#123;</span><br><span class="line">                  &#x2F;&#x2F; 每个类型的商品成交量</span><br><span class="line">                  System.out.println(value);</span><br><span class="line">                  &#x2F;&#x2F; 商品成交总量                </span><br><span class="line">                  System.out.println(value.values().stream().mapToInt(v -&gt; v).sum());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line"></span><br><span class="line">        env.execute();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>示例的实现如表4所示。首先，在该实现中，我们首先实现了一个模拟的数据源，它继承自 RichParallelSourceFunction，它是可以有多个实例的 SourceFunction 的接口。它有两个方法需要实现，一个是 Run 方法，Flink 在运行时对 Source 会直接调用该方法，该方法需要不断的输出数据，从而形成初始的流。在 Run 方法的实现中，我们随机的产生商品类别和交易量的记录，然后通过 ctx#collect 方法进行发送。另一个方法是 Cancel 方法，当 Flink 需要 Cancel Source Task 的时候会调用该方法，我们使用一个 Volatile 类型的变量来标记和控制执行的状态。</p>
+<p>然后，我们在 Main 方法中就可以开始图的构建。我们首先创建了一个 StreamExecutioniEnviroment 对象。创建对象调用的 getExecutionEnvironment 方法会自动判断所处的环境，从而创建合适的对象。例如，如果我们在 IDE 中直接右键运行，则会创建 LocalStreamExecutionEnvironment 对象；如果是在一个实际的环境中，则会创建 RemoteStreamExecutionEnvironment 对象。</p>
+<p>基于 Environment 对象，我们首先创建了一个 Source，从而得到初始的&lt;商品类型，成交量&gt;流。然后，为了统计每种类别的成交量，我们使用 KeyBy 按 Tuple 的第 1 个字段（即商品类型）对输入流进行分组，并对每一个 Key 对应的记录的第 2 个字段（即成交量）进行求合。在底层，Sum 算子内部会使用 State 来维护每个Key（即商品类型）对应的成交量之和。当有新记录到达时，Sum 算子内部会更新所维护的成交量之和，并输出一条&lt;商品类型，更新后的成交量&gt;记录。</p>
+<p>如果只统计各个类型的成交量，则程序可以到此为止，我们可以直接在 Sum 后添加一个 Sink 算子对不断更新的各类型成交量进行输出。但是，我们还需要统计所有类型的总成交量。为了做到这一点，我们需要将所有记录输出到同一个计算节点的实例上。我们可以通过 KeyBy 并且对所有记录返回同一个 Key，将所有记录分到同一个组中，从而可以全部发送到同一个实例上。</p>
+<p>然后，我们使用 Fold 方法来在算子中维护每种类型商品的成交量。注意虽然目前 Fold 方法已经被标记为 Deprecated，但是在 DataStream API 中暂时还没有能替代它的其它操作，所以我们仍然使用 Fold 方法。这一方法接收一个初始值，然后当后续流中每条记录到达的时候，算子会调用所传递的 FoldFunction 对初始值进行更新，并发送更新后的值。我们使用一个 HashMap 来对各个类别的当前成交量进行维护，当有一条新的&lt;商品类别，成交量&gt;到达时，我们就更新该 HashMap。这样在 Sink 中，我们收到的是最新的商品类别和成交量的 HashMap，我们可以依赖这个值来输出各个商品的成交量和总的成交量。</p>
+<p>需要指出的是，这个例子主要是用来演示 DataStream API 的用法，实际上还会有更高效的写法，此外，更上层的 Table / SQL 还支持 Retraction 机制，可以更好的处理这种情况。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570538470903_1A525E00557FBEAA217657B4AC618FB1" alt="图片说明" title="图片标题"><br>图8. API 原理图<br>最后，我们对 DataStream API 的原理进行简要的介绍。当我们调用 DataStream#map 算法时，Flink 在底层会创建一个 Transformation 对象，这一对象就代表我们计算逻辑图中的节点。它其中就记录了我们传入的 MapFunction，也就是 UDF（User Define Function）。随着我们调用更多的方法，我们创建了更多的 DataStream 对象，每个对象在内部都有一个 Transformation 对象，这些对象根据计算依赖关系组成一个图结构，就是我们的计算图。后续 Flink 将对这个图结构进行进一步的转换，从而最终生成提交作业所需要的 JobGraph。</p>
+<h1 id="5-总结"><a href="#5-总结" class="headerlink" title="5. 总结"></a>5. 总结</h1><p>本文主要介绍了 Flink DataStream API，它是当前 Flink 中比较底层的一套 API。在实际的开发中，基于该 API 需要用户自己处理 State 与 Time 等一些概念，因此需要较大的工作量。后续课程还会介绍更上层的 Table / SQL 层的 API，未来 Table / SQL 可能会成为 Flink 主流的 API，但是对于接口来说，越底层的接口表达能力越强，在一些需要精细操作的情况下，仍然需要依赖于 DataStream API。</p>
+]]></content>
+      <categories>
+        <category>Flink</category>
+      </categories>
+      <tags>
+        <tag>Flink</tag>
+        <tag>转载</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Apache Spark简单构建一个应用程序</title>
+    <url>/2020/06/14/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
+    <content><![CDATA[<h1 id="简单的构建一个Apache-Spark应用程序"><a href="#简单的构建一个Apache-Spark应用程序" class="headerlink" title="简单的构建一个Apache Spark应用程序"></a>简单的构建一个Apache Spark应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Spark 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Spark相关的依赖。<br>pom如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;project xmlns&#x3D;&quot;http:&#x2F;&#x2F;maven.apache.org&#x2F;POM&#x2F;4.0.0&quot; xmlns:xsi&#x3D;&quot;http:&#x2F;&#x2F;www.w3.org&#x2F;2001&#x2F;XMLSchema-instance&quot; xsi:schemaLocation&#x3D;&quot;http:&#x2F;&#x2F;maven.apache.org&#x2F;POM&#x2F;4.0.0 http:&#x2F;&#x2F;maven.apache.org&#x2F;maven-v4_0_0.xsd&quot;&gt;</span><br><span class="line">  &lt;modelVersion&gt;4.0.0&lt;&#x2F;modelVersion&gt;</span><br><span class="line">  &lt;groupId&gt;SparkDemo&lt;&#x2F;groupId&gt;</span><br><span class="line">  &lt;artifactId&gt;SparkDemo&lt;&#x2F;artifactId&gt;</span><br><span class="line">  &lt;version&gt;1.0-SNAPSHOT&lt;&#x2F;version&gt;</span><br><span class="line">  &lt;inceptionYear&gt;2008&lt;&#x2F;inceptionYear&gt;</span><br><span class="line">  &lt;properties&gt;</span><br><span class="line">    &lt;scala.version&gt;2.11.1&lt;&#x2F;scala.version&gt;</span><br><span class="line">  &lt;&#x2F;properties&gt;</span><br><span class="line"></span><br><span class="line">  &lt;repositories&gt;</span><br><span class="line">    &lt;repository&gt;</span><br><span class="line">      &lt;id&gt;scala-tools.org&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;name&gt;Scala-Tools Maven2 Repository&lt;&#x2F;name&gt;</span><br><span class="line">      &lt;url&gt;http:&#x2F;&#x2F;scala-tools.org&#x2F;repo-releases&lt;&#x2F;url&gt;</span><br><span class="line">    &lt;&#x2F;repository&gt;</span><br><span class="line">  &lt;&#x2F;repositories&gt;</span><br><span class="line"></span><br><span class="line">  &lt;pluginRepositories&gt;</span><br><span class="line">    &lt;pluginRepository&gt;</span><br><span class="line">      &lt;id&gt;scala-tools.org&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;name&gt;Scala-Tools Maven2 Repository&lt;&#x2F;name&gt;</span><br><span class="line">      &lt;url&gt;http:&#x2F;&#x2F;scala-tools.org&#x2F;repo-releases&lt;&#x2F;url&gt;</span><br><span class="line">    &lt;&#x2F;pluginRepository&gt;</span><br><span class="line">  &lt;&#x2F;pluginRepositories&gt;</span><br><span class="line"></span><br><span class="line">  &lt;dependencies&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.scala-lang&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;scala-library&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;$&#123;scala.version&#125;&lt;&#x2F;version&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!-- https:&#x2F;&#x2F;mvnrepository.com&#x2F;artifact&#x2F;org.apache.spark&#x2F;spark-core --&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.apache.spark&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;spark-core_2.11&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;2.2.0&lt;&#x2F;version&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;junit&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;junit&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;4.4&lt;&#x2F;version&gt;</span><br><span class="line">      &lt;scope&gt;test&lt;&#x2F;scope&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.specs&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;specs&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;1.2.5&lt;&#x2F;version&gt;</span><br><span class="line">      &lt;scope&gt;test&lt;&#x2F;scope&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line">  &lt;&#x2F;dependencies&gt;</span><br><span class="line"></span><br><span class="line">  &lt;build&gt;</span><br><span class="line">    &lt;sourceDirectory&gt;src&#x2F;main&#x2F;scala&lt;&#x2F;sourceDirectory&gt;</span><br><span class="line">    &lt;testSourceDirectory&gt;src&#x2F;test&#x2F;scala&lt;&#x2F;testSourceDirectory&gt;</span><br><span class="line">    &lt;plugins&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.scala-tools&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-scala-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;executions&gt;</span><br><span class="line">          &lt;execution&gt;</span><br><span class="line">            &lt;goals&gt;</span><br><span class="line">              &lt;goal&gt;compile&lt;&#x2F;goal&gt;</span><br><span class="line">              &lt;goal&gt;testCompile&lt;&#x2F;goal&gt;</span><br><span class="line">            &lt;&#x2F;goals&gt;</span><br><span class="line">          &lt;&#x2F;execution&gt;</span><br><span class="line">        &lt;&#x2F;executions&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;scalaVersion&gt;$&#123;scala.version&#125;&lt;&#x2F;scalaVersion&gt;</span><br><span class="line">          &lt;args&gt;</span><br><span class="line">            &lt;arg&gt;-target:jvm-1.5&lt;&#x2F;arg&gt;</span><br><span class="line">          &lt;&#x2F;args&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.apache.maven.plugins&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-eclipse-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;downloadSources&gt;true&lt;&#x2F;downloadSources&gt;</span><br><span class="line">          &lt;buildcommands&gt;</span><br><span class="line">            &lt;buildcommand&gt;ch.epfl.lamp.sdt.core.scalabuilder&lt;&#x2F;buildcommand&gt;</span><br><span class="line">          &lt;&#x2F;buildcommands&gt;</span><br><span class="line">          &lt;additionalProjectnatures&gt;</span><br><span class="line">            &lt;projectnature&gt;ch.epfl.lamp.sdt.core.scalanature&lt;&#x2F;projectnature&gt;</span><br><span class="line">          &lt;&#x2F;additionalProjectnatures&gt;</span><br><span class="line">          &lt;classpathContainers&gt;</span><br><span class="line">            &lt;classpathContainer&gt;org.eclipse.jdt.launching.JRE_CONTAINER&lt;&#x2F;classpathContainer&gt;</span><br><span class="line">            &lt;classpathContainer&gt;ch.epfl.lamp.sdt.launching.SCALA_CONTAINER&lt;&#x2F;classpathContainer&gt;</span><br><span class="line">          &lt;&#x2F;classpathContainers&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">    &lt;&#x2F;plugins&gt;</span><br><span class="line">  &lt;&#x2F;build&gt;</span><br><span class="line">  &lt;reporting&gt;</span><br><span class="line">    &lt;plugins&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.scala-tools&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-scala-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;scalaVersion&gt;$&#123;scala.version&#125;&lt;&#x2F;scalaVersion&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">    &lt;&#x2F;plugins&gt;</span><br><span class="line">  &lt;&#x2F;reporting&gt;</span><br><span class="line">&lt;&#x2F;project&gt;</span><br></pre></td></tr></table></figure><br>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571913840705_C0C094E4A298BFA098F8123797C7F7CC" alt="图片说明" title="图片标题"><br>编写Spark程序：<br>创建WordCount程序：<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">package SparkDemo</span><br><span class="line"></span><br><span class="line">import org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line">import org.apache.spark.rdd.RDD</span><br><span class="line">&#x2F;**</span><br><span class="line">  * @Author: luomo</span><br><span class="line">  * @CreateTime: 2019&#x2F;10&#x2F;24</span><br><span class="line">  * @Description:WordCount</span><br><span class="line">  *&#x2F;</span><br><span class="line">object WordCount &#123;</span><br><span class="line">  def main(args: Array[String]): Unit &#x3D; &#123;</span><br><span class="line">    &#x2F;&#x2F;配置文件</span><br><span class="line">    val conf &#x3D; new SparkConf().</span><br><span class="line">      setAppName(&quot;wordcount&quot;) &#x2F;&#x2F; 运行时候的作业名称</span><br><span class="line">      .setMaster(&quot;local&quot;)</span><br><span class="line">    &#x2F;&#x2F;上下文 拿着Conf信息创建出来 写spark应用程序的对象  通往集群的入口</span><br><span class="line">    val sc &#x3D; new SparkContext(conf)</span><br><span class="line">    &#x2F;&#x2F;传入文件对象 返回RDD集合</span><br><span class="line">    val input &#x3D; sc.textFile(&quot;E:&#x2F;&#x2F;&#x2F;test.txt&quot;)</span><br><span class="line">    &#x2F;&#x2F;对文件行数据 按照空格切割 返回RDD集合 得到每个单词</span><br><span class="line">    val lines &#x3D; input.flatMap(line &#x3D;&gt; line.split(&quot; &quot;))</span><br><span class="line">    &#x2F;&#x2F;统计单词数量 计数 得到RDD集合 按照相同的Key先分组，之后再对组内的Value进行操作</span><br><span class="line">    val count &#x3D; lines.map(word &#x3D;&gt; (word, 1)).reduceByKey(_ + _)</span><br><span class="line">    &#x2F;&#x2F;将结果遍历打印到控制台</span><br><span class="line">    count.foreach(x &#x3D;&gt;&#123;</span><br><span class="line">      println(x)</span><br><span class="line">    &#125;)</span><br><span class="line">    &#x2F;&#x2F;将结果输出到文件中</span><br><span class="line">    val output &#x3D; count.saveAsTextFile(&quot;E:&#x2F;&#x2F;&#x2F;wordCount&quot;)</span><br><span class="line">    &#x2F;&#x2F;关闭流 在内存中释放这个spark对象</span><br><span class="line">    &#x2F;&#x2F;sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br>运行程序如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571914229568_474EA976C3A9A912CB36A0631F855823" alt="图片说明" title="图片标题"> </p>
+]]></content>
+      <categories>
+        <category>Spark</category>
+      </categories>
+  </entry>
+  <entry>
     <title>Apache Flink 简单的构建一个应用程序</title>
     <url>/2020/06/12/Apache-Flink-%E7%AE%80%E5%8D%95%E7%9A%84%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
     <content><![CDATA[<h1 id="简单的构建一个ApacheFlink的应用程序"><a href="#简单的构建一个ApacheFlink的应用程序" class="headerlink" title="简单的构建一个ApacheFlink的应用程序"></a>简单的构建一个ApacheFlink的应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Flink 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Flink相关的依赖。</p>
@@ -215,15 +224,6 @@
       <tags>
         <tag>Flink</tag>
       </tags>
-  </entry>
-  <entry>
-    <title>Apache Spark简单构建一个应用程序</title>
-    <url>/2020/06/14/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
-    <content><![CDATA[<h1 id="简单的构建一个Apache-Spark应用程序"><a href="#简单的构建一个Apache-Spark应用程序" class="headerlink" title="简单的构建一个Apache Spark应用程序"></a>简单的构建一个Apache Spark应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Spark 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Spark相关的依赖。<br>pom如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;project xmlns&#x3D;&quot;http:&#x2F;&#x2F;maven.apache.org&#x2F;POM&#x2F;4.0.0&quot; xmlns:xsi&#x3D;&quot;http:&#x2F;&#x2F;www.w3.org&#x2F;2001&#x2F;XMLSchema-instance&quot; xsi:schemaLocation&#x3D;&quot;http:&#x2F;&#x2F;maven.apache.org&#x2F;POM&#x2F;4.0.0 http:&#x2F;&#x2F;maven.apache.org&#x2F;maven-v4_0_0.xsd&quot;&gt;</span><br><span class="line">  &lt;modelVersion&gt;4.0.0&lt;&#x2F;modelVersion&gt;</span><br><span class="line">  &lt;groupId&gt;SparkDemo&lt;&#x2F;groupId&gt;</span><br><span class="line">  &lt;artifactId&gt;SparkDemo&lt;&#x2F;artifactId&gt;</span><br><span class="line">  &lt;version&gt;1.0-SNAPSHOT&lt;&#x2F;version&gt;</span><br><span class="line">  &lt;inceptionYear&gt;2008&lt;&#x2F;inceptionYear&gt;</span><br><span class="line">  &lt;properties&gt;</span><br><span class="line">    &lt;scala.version&gt;2.11.1&lt;&#x2F;scala.version&gt;</span><br><span class="line">  &lt;&#x2F;properties&gt;</span><br><span class="line"></span><br><span class="line">  &lt;repositories&gt;</span><br><span class="line">    &lt;repository&gt;</span><br><span class="line">      &lt;id&gt;scala-tools.org&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;name&gt;Scala-Tools Maven2 Repository&lt;&#x2F;name&gt;</span><br><span class="line">      &lt;url&gt;http:&#x2F;&#x2F;scala-tools.org&#x2F;repo-releases&lt;&#x2F;url&gt;</span><br><span class="line">    &lt;&#x2F;repository&gt;</span><br><span class="line">  &lt;&#x2F;repositories&gt;</span><br><span class="line"></span><br><span class="line">  &lt;pluginRepositories&gt;</span><br><span class="line">    &lt;pluginRepository&gt;</span><br><span class="line">      &lt;id&gt;scala-tools.org&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;name&gt;Scala-Tools Maven2 Repository&lt;&#x2F;name&gt;</span><br><span class="line">      &lt;url&gt;http:&#x2F;&#x2F;scala-tools.org&#x2F;repo-releases&lt;&#x2F;url&gt;</span><br><span class="line">    &lt;&#x2F;pluginRepository&gt;</span><br><span class="line">  &lt;&#x2F;pluginRepositories&gt;</span><br><span class="line"></span><br><span class="line">  &lt;dependencies&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.scala-lang&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;scala-library&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;$&#123;scala.version&#125;&lt;&#x2F;version&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!-- https:&#x2F;&#x2F;mvnrepository.com&#x2F;artifact&#x2F;org.apache.spark&#x2F;spark-core --&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.apache.spark&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;spark-core_2.11&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;2.2.0&lt;&#x2F;version&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;junit&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;junit&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;4.4&lt;&#x2F;version&gt;</span><br><span class="line">      &lt;scope&gt;test&lt;&#x2F;scope&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.specs&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;specs&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;1.2.5&lt;&#x2F;version&gt;</span><br><span class="line">      &lt;scope&gt;test&lt;&#x2F;scope&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line">  &lt;&#x2F;dependencies&gt;</span><br><span class="line"></span><br><span class="line">  &lt;build&gt;</span><br><span class="line">    &lt;sourceDirectory&gt;src&#x2F;main&#x2F;scala&lt;&#x2F;sourceDirectory&gt;</span><br><span class="line">    &lt;testSourceDirectory&gt;src&#x2F;test&#x2F;scala&lt;&#x2F;testSourceDirectory&gt;</span><br><span class="line">    &lt;plugins&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.scala-tools&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-scala-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;executions&gt;</span><br><span class="line">          &lt;execution&gt;</span><br><span class="line">            &lt;goals&gt;</span><br><span class="line">              &lt;goal&gt;compile&lt;&#x2F;goal&gt;</span><br><span class="line">              &lt;goal&gt;testCompile&lt;&#x2F;goal&gt;</span><br><span class="line">            &lt;&#x2F;goals&gt;</span><br><span class="line">          &lt;&#x2F;execution&gt;</span><br><span class="line">        &lt;&#x2F;executions&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;scalaVersion&gt;$&#123;scala.version&#125;&lt;&#x2F;scalaVersion&gt;</span><br><span class="line">          &lt;args&gt;</span><br><span class="line">            &lt;arg&gt;-target:jvm-1.5&lt;&#x2F;arg&gt;</span><br><span class="line">          &lt;&#x2F;args&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.apache.maven.plugins&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-eclipse-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;downloadSources&gt;true&lt;&#x2F;downloadSources&gt;</span><br><span class="line">          &lt;buildcommands&gt;</span><br><span class="line">            &lt;buildcommand&gt;ch.epfl.lamp.sdt.core.scalabuilder&lt;&#x2F;buildcommand&gt;</span><br><span class="line">          &lt;&#x2F;buildcommands&gt;</span><br><span class="line">          &lt;additionalProjectnatures&gt;</span><br><span class="line">            &lt;projectnature&gt;ch.epfl.lamp.sdt.core.scalanature&lt;&#x2F;projectnature&gt;</span><br><span class="line">          &lt;&#x2F;additionalProjectnatures&gt;</span><br><span class="line">          &lt;classpathContainers&gt;</span><br><span class="line">            &lt;classpathContainer&gt;org.eclipse.jdt.launching.JRE_CONTAINER&lt;&#x2F;classpathContainer&gt;</span><br><span class="line">            &lt;classpathContainer&gt;ch.epfl.lamp.sdt.launching.SCALA_CONTAINER&lt;&#x2F;classpathContainer&gt;</span><br><span class="line">          &lt;&#x2F;classpathContainers&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">    &lt;&#x2F;plugins&gt;</span><br><span class="line">  &lt;&#x2F;build&gt;</span><br><span class="line">  &lt;reporting&gt;</span><br><span class="line">    &lt;plugins&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.scala-tools&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-scala-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;scalaVersion&gt;$&#123;scala.version&#125;&lt;&#x2F;scalaVersion&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">    &lt;&#x2F;plugins&gt;</span><br><span class="line">  &lt;&#x2F;reporting&gt;</span><br><span class="line">&lt;&#x2F;project&gt;</span><br></pre></td></tr></table></figure><br>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571913840705_C0C094E4A298BFA098F8123797C7F7CC" alt="图片说明" title="图片标题"><br>编写Spark程序：<br>创建WordCount程序：<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">package SparkDemo</span><br><span class="line"></span><br><span class="line">import org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line">import org.apache.spark.rdd.RDD</span><br><span class="line">&#x2F;**</span><br><span class="line">  * @Author: luomo</span><br><span class="line">  * @CreateTime: 2019&#x2F;10&#x2F;24</span><br><span class="line">  * @Description:WordCount</span><br><span class="line">  *&#x2F;</span><br><span class="line">object WordCount &#123;</span><br><span class="line">  def main(args: Array[String]): Unit &#x3D; &#123;</span><br><span class="line">    &#x2F;&#x2F;配置文件</span><br><span class="line">    val conf &#x3D; new SparkConf().</span><br><span class="line">      setAppName(&quot;wordcount&quot;) &#x2F;&#x2F; 运行时候的作业名称</span><br><span class="line">      .setMaster(&quot;local&quot;)</span><br><span class="line">    &#x2F;&#x2F;上下文 拿着Conf信息创建出来 写spark应用程序的对象  通往集群的入口</span><br><span class="line">    val sc &#x3D; new SparkContext(conf)</span><br><span class="line">    &#x2F;&#x2F;传入文件对象 返回RDD集合</span><br><span class="line">    val input &#x3D; sc.textFile(&quot;E:&#x2F;&#x2F;&#x2F;test.txt&quot;)</span><br><span class="line">    &#x2F;&#x2F;对文件行数据 按照空格切割 返回RDD集合 得到每个单词</span><br><span class="line">    val lines &#x3D; input.flatMap(line &#x3D;&gt; line.split(&quot; &quot;))</span><br><span class="line">    &#x2F;&#x2F;统计单词数量 计数 得到RDD集合 按照相同的Key先分组，之后再对组内的Value进行操作</span><br><span class="line">    val count &#x3D; lines.map(word &#x3D;&gt; (word, 1)).reduceByKey(_ + _)</span><br><span class="line">    &#x2F;&#x2F;将结果遍历打印到控制台</span><br><span class="line">    count.foreach(x &#x3D;&gt;&#123;</span><br><span class="line">      println(x)</span><br><span class="line">    &#125;)</span><br><span class="line">    &#x2F;&#x2F;将结果输出到文件中</span><br><span class="line">    val output &#x3D; count.saveAsTextFile(&quot;E:&#x2F;&#x2F;&#x2F;wordCount&quot;)</span><br><span class="line">    &#x2F;&#x2F;关闭流 在内存中释放这个spark对象</span><br><span class="line">    &#x2F;&#x2F;sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br>运行程序如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571914229568_474EA976C3A9A912CB36A0631F855823" alt="图片说明" title="图片标题"> </p>
-]]></content>
-      <categories>
-        <category>Spark</category>
-      </categories>
   </entry>
   <entry>
     <title>Flume监控之Ganglia</title>
@@ -256,6 +256,64 @@
       </categories>
       <tags>
         <tag>集群监控</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HDFS(1.0)与(2.0)</title>
+    <url>/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>当数据集超过一个单独的物理计算机的存储能力时，便有必要将它分部到多个独立的计算机。管理跨计算机网络存储的文件系统成为分布式文件系统。因为它们是基于网络的，所有网络编程的复杂性都会随之而来，所以分布式文件系统比普通磁盘文件系统更复杂。使这个文件系统能容忍节点故障而不损失数据就是一个极大的挑战。</p>
+<h2 id="HDFS的设计"><a href="#HDFS的设计" class="headerlink" title="HDFS的设计"></a>HDFS的设计</h2><p>HDFS是为以流式出局访问模式存储超大文件而设计的文件系统，在商用硬件的集群上运行。让我们看看它的优势：<br><strong>超大文件</strong><br>“超大文件”在这里指几百MB，几百GB甚至几百TB大小的文件。目前已经有Hadoop集群存储PB级的数据了。<br><strong>流式数据</strong><br>HDFS建立在这样一个思想上：一次写入、多次读取模式是最高效的。一个数据集通常由数据源生成或复制，接着在此基础上进行各种各样的分析。每个分析至少都会涉及数据集中的大部分数据（甚至全部）。<br><strong>商用硬件</strong><br>Hadoop不需要运行在昂贵并且高可靠的硬件上。它被设计运行在商用硬件（在各种零售店都能买到的普通硬件）的集群上，因此至少对于大的集群来说，节点故障的几率还是较高的。HDFS在面对这种故障时，被设计为能够继续运行而让用户察觉不到明显的中断。</p>
+<h2 id="HDFS-1-0架构："><a href="#HDFS-1-0架构：" class="headerlink" title="HDFS 1.0架构："></a>HDFS 1.0架构：</h2><p> HDFS采用的是Master/Slave架构一个 HDFS 集群包含一个单独的 NameNode 和多个 DataNode 节点。</p>
+<h2 id="HDFS-1-0-的问题"><a href="#HDFS-1-0-的问题" class="headerlink" title="HDFS 1.0 的问题"></a>HDFS 1.0 的问题</h2><p>进入了 PB 级的大数据时代，HDFS 1.0的设计缺陷已经无法满足生产的需求，最致命的问题有以下两点：</p>
+<ul>
+<li>NameNode 的单点问题，如果 NameNode 挂掉了，数据读写都会受到影响，HDFS 整体将变得不可用，这在生产环境中是不可接受的；</li>
+<li>水平扩展问题，随着集群规模的扩大，1.0 时集群规模达到3000时，会导致整个集群管理的文件数目达到上限（因为 NameNode 要管理整个集群 block 元信息、数据目录信息等）。  </li>
+</ul>
+<p>为了解决上面的两个问题，Hadoop2.0 提供一套统一的解决方案：</p>
+<ul>
+<li>HA（High Availability 高可用方案）：这个是为了解决 NameNode 单点问题；</li>
+<li>NameNode Federation：是用来解决 HDFS 集群的线性扩展能力。  </li>
+</ul>
+<h2 id="HDFS-2-0-的-HA-实现"><a href="#HDFS-2-0-的-HA-实现" class="headerlink" title="HDFS 2.0 的 HA 实现"></a>HDFS 2.0 的 HA 实现</h2><p>这里先看下 HDFS 高可用解决方案的架构设计，如下图</p>
+<p><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/1.png" alt="图片说明"> </p>
+<p>这里与前面 1.0 的架构已经有很大变化，简单介绍一下的组件：</p>
+<ol>
+<li>Active NameNode 和 Standby NameNode：两台 NameNode 形成互备，一台处于 Active 状态，为主 NameNode，另外一台处于 Standby 状态，为备 NameNode，只有主 NameNode 才能对外提供读写服务；</li>
+<li>ZKFailoverController（主备切换控制器，FC）：ZKFailoverController 作为独立的进程运行，对 NameNode 的主备切换进行总体控。ZKFailoverController 能及时检测到 NameNode 的健康状况，在主 NameNode 故障时借助 Zookeeper 实现自动的主备选举和切换（当然 NameNode 目前也支持不依赖于Zookeeper 的手动主备切换）；</li>
+<li>Zookeeper 集群：为主备切换控制器提供主备选举支持；</li>
+<li>共享存储系统：共享存储系统是实现 NameNode 的高可用最为关键的部分，共享存储系统保存了 NameNode 在运行过程中所产生的 HDFS 的元数据。主 NameNode 和备NameNode 通过共享存储系统实现元数据同步。在进行主备切换的时候，新的主 NameNode 在确认元数据完全同步之后才能继续对外提供服务。</li>
+<li>DataNode 节点：因为主 NameNode 和备 NameNode 需要共享 HDFS 的数据块和 DataNode 之间的映射关系，为了使故障切换能够快速进行，DataNode 会同时向主 NameNode 和备 NameNode 上报数据块的位置信息。</li>
+</ol>
+<h2 id="HDFS-2-0-Federation-实现"><a href="#HDFS-2-0-Federation-实现" class="headerlink" title="HDFS 2.0 Federation 实现"></a>HDFS 2.0 Federation 实现</h2><p>在 1.0 中，HDFS 的架构设计有以下缺点：</p>
+<p>namespace 扩展性差：在单一的 NN 情况下，因为所有 namespace 数据都需要加载到内存，所以物理机内存的大小限制了整个 HDFS 能够容纳文件的最大个数（namespace 指的是 HDFS 中树形目录和文件结构以及文件对应的 block 信息）；<br>性能可扩展性差：由于所有请求都需要经过 NN，单一 NN 导致所有请求都由一台机器进行处理，很容易达到单台机器的吞吐；<br>隔离性差：多租户的情况下，单一 NN 的架构无法在租户间进行隔离，会造成不可避免的相互影响。<br>而 Federation 的设计就是为了解决这些问题，采用 Federation 的最主要原因是设计实现简单，而且还能解决问题。</p>
+<h2 id="Federation-架构"><a href="#Federation-架构" class="headerlink" title="Federation 架构"></a>Federation 架构</h2><p>Federation 的架构设计如下图所示（图片来自 HDFS Federation）：<br><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/2.png" alt="图片说明"> </p>
+<h3 id="HDFS-Federation-架构实现"><a href="#HDFS-Federation-架构实现" class="headerlink" title="HDFS Federation 架构实现"></a>HDFS Federation 架构实现</h3><p>Federation 的核心设计思想<br>Federation 的核心思想是将一个大的 namespace 划分多个子 namespace，并且每个 namespace 分别由单独的 NameNode 负责，这些 NameNode 之间互相独立，不会影响，不需要做任何协调工作（其实跟拆集群有一些相似），集群的所有 DataNode 会被多个 NameNode 共享。</p>
+<p>其中，每个子 namespace 和 DataNode 之间会由数据块管理层作为中介建立映射关系，数据块管理层由若干数据块池（Pool）构成，每个数据块只会唯一属于某个固定的数据块池，而一个子 namespace 可以对应多个数据块池。每个 DataNode 需要向集群中所有的 NameNode 注册，且周期性地向所有 NameNode 发送心跳和块报告，并执行来自所有 NameNode 的命令。</p>
+<ol>
+<li>一个 block pool 由属于同一个 namespace 的数据块组成，每个 DataNode 可能会存储集群中所有 block pool 的数据块；</li>
+<li>每个 block pool 内部自治，也就是说各自管理各自的 block，不会与其他 block pool 交流，如果一个 NameNode 挂掉了，不会影响其他 NameNode;</li>
+<li>某个 NameNode 上的 namespace 和它对应的 block pool 一起被称为 namespace volume，它是管理的基本单位。当一个 NameNode/namespace 被删除后，其所有 DataNode 上对应的 block pool 也会被删除，当集群升级时，每个 namespace volume 可以作为一个基本单元进行升级。<br>参考链接：<br><a href="https://www.ibm.com/developerworks/cn/opensource/os-cn-hadoop-name-node/" target="_blank" rel="noopener">https://www.ibm.com/developerworks/cn/opensource/os-cn-hadoop-name-node/</a><br><a href="http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/Federation.html" target="_blank" rel="noopener">http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/Federation.html</a></li>
+</ol>
+]]></content>
+      <categories>
+        <category>Hadoop</category>
+      </categories>
+      <tags>
+        <tag>Hadoop</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HDFS NameNode的工作机制</title>
+    <url>/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<h2 id="NameNode"><a href="#NameNode" class="headerlink" title="NameNode"></a>NameNode</h2><p><img src="/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/1.png" alt=" "> </p>
+<h3 id="1-第一阶段：-namenode-启动"><a href="#1-第一阶段：-namenode-启动" class="headerlink" title="1 第一阶段： namenode 启动"></a>1 第一阶段： namenode 启动</h3><p>1）第一次启动 namenode 格式化后， 创建 fsimage 和 edits 文件。如果不是第一次启动，直接加载编辑日志和镜像文件到内存。<br>2） 客户端对元数据进行增删改的请求。<br>3） namenode 记录操作日志，更新滚动日志。<br>4） namenode 在内存中对数据进行增删改查。</p>
+<h3 id="2-第二阶段：-Secondary-NameNode-工作"><a href="#2-第二阶段：-Secondary-NameNode-工作" class="headerlink" title="2 第二阶段： Secondary NameNode 工作"></a>2 第二阶段： Secondary NameNode 工作</h3><p>1） Secondary NameNode 询问 namenode 是否需要 checkpoint。 直接带回 namenode 是否检查结果。<br>2） Secondary NameNode 请求执行 checkpoint。<br>3） namenode 滚动正在写的 edits 日志。<br>4）将滚动前的编辑日志和镜像文件拷贝到 Secondary NameNode。<br>5） Secondary NameNode 加载编辑日志和镜像文件到内存，并合并。<br>6） 生成新的镜像文件 fsimage.chkpoint。<br>7） 拷贝 fsimage.chkpoint 到 namenode。<br>8） namenode 将 fsimage.chkpoint 重新命名成 fsimage。</p>
+]]></content>
+      <categories>
+        <category>Hadoop</category>
+      </categories>
+      <tags>
+        <tag>Hadoop</tag>
       </tags>
   </entry>
   <entry>
@@ -327,64 +385,6 @@
       </categories>
       <tags>
         <tag>Hadoop部署</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HDFS NameNode的工作机制</title>
-    <url>/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/</url>
-    <content><![CDATA[<h2 id="NameNode"><a href="#NameNode" class="headerlink" title="NameNode"></a>NameNode</h2><p><img src="/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/1.png" alt=" "> </p>
-<h3 id="1-第一阶段：-namenode-启动"><a href="#1-第一阶段：-namenode-启动" class="headerlink" title="1 第一阶段： namenode 启动"></a>1 第一阶段： namenode 启动</h3><p>1）第一次启动 namenode 格式化后， 创建 fsimage 和 edits 文件。如果不是第一次启动，直接加载编辑日志和镜像文件到内存。<br>2） 客户端对元数据进行增删改的请求。<br>3） namenode 记录操作日志，更新滚动日志。<br>4） namenode 在内存中对数据进行增删改查。</p>
-<h3 id="2-第二阶段：-Secondary-NameNode-工作"><a href="#2-第二阶段：-Secondary-NameNode-工作" class="headerlink" title="2 第二阶段： Secondary NameNode 工作"></a>2 第二阶段： Secondary NameNode 工作</h3><p>1） Secondary NameNode 询问 namenode 是否需要 checkpoint。 直接带回 namenode 是否检查结果。<br>2） Secondary NameNode 请求执行 checkpoint。<br>3） namenode 滚动正在写的 edits 日志。<br>4）将滚动前的编辑日志和镜像文件拷贝到 Secondary NameNode。<br>5） Secondary NameNode 加载编辑日志和镜像文件到内存，并合并。<br>6） 生成新的镜像文件 fsimage.chkpoint。<br>7） 拷贝 fsimage.chkpoint 到 namenode。<br>8） namenode 将 fsimage.chkpoint 重新命名成 fsimage。</p>
-]]></content>
-      <categories>
-        <category>Hadoop</category>
-      </categories>
-      <tags>
-        <tag>Hadoop</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HDFS(1.0)与(2.0)</title>
-    <url>/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>当数据集超过一个单独的物理计算机的存储能力时，便有必要将它分部到多个独立的计算机。管理跨计算机网络存储的文件系统成为分布式文件系统。因为它们是基于网络的，所有网络编程的复杂性都会随之而来，所以分布式文件系统比普通磁盘文件系统更复杂。使这个文件系统能容忍节点故障而不损失数据就是一个极大的挑战。</p>
-<h2 id="HDFS的设计"><a href="#HDFS的设计" class="headerlink" title="HDFS的设计"></a>HDFS的设计</h2><p>HDFS是为以流式出局访问模式存储超大文件而设计的文件系统，在商用硬件的集群上运行。让我们看看它的优势：<br><strong>超大文件</strong><br>“超大文件”在这里指几百MB，几百GB甚至几百TB大小的文件。目前已经有Hadoop集群存储PB级的数据了。<br><strong>流式数据</strong><br>HDFS建立在这样一个思想上：一次写入、多次读取模式是最高效的。一个数据集通常由数据源生成或复制，接着在此基础上进行各种各样的分析。每个分析至少都会涉及数据集中的大部分数据（甚至全部）。<br><strong>商用硬件</strong><br>Hadoop不需要运行在昂贵并且高可靠的硬件上。它被设计运行在商用硬件（在各种零售店都能买到的普通硬件）的集群上，因此至少对于大的集群来说，节点故障的几率还是较高的。HDFS在面对这种故障时，被设计为能够继续运行而让用户察觉不到明显的中断。</p>
-<h2 id="HDFS-1-0架构："><a href="#HDFS-1-0架构：" class="headerlink" title="HDFS 1.0架构："></a>HDFS 1.0架构：</h2><p> HDFS采用的是Master/Slave架构一个 HDFS 集群包含一个单独的 NameNode 和多个 DataNode 节点。</p>
-<h2 id="HDFS-1-0-的问题"><a href="#HDFS-1-0-的问题" class="headerlink" title="HDFS 1.0 的问题"></a>HDFS 1.0 的问题</h2><p>进入了 PB 级的大数据时代，HDFS 1.0的设计缺陷已经无法满足生产的需求，最致命的问题有以下两点：</p>
-<ul>
-<li>NameNode 的单点问题，如果 NameNode 挂掉了，数据读写都会受到影响，HDFS 整体将变得不可用，这在生产环境中是不可接受的；</li>
-<li>水平扩展问题，随着集群规模的扩大，1.0 时集群规模达到3000时，会导致整个集群管理的文件数目达到上限（因为 NameNode 要管理整个集群 block 元信息、数据目录信息等）。  </li>
-</ul>
-<p>为了解决上面的两个问题，Hadoop2.0 提供一套统一的解决方案：</p>
-<ul>
-<li>HA（High Availability 高可用方案）：这个是为了解决 NameNode 单点问题；</li>
-<li>NameNode Federation：是用来解决 HDFS 集群的线性扩展能力。  </li>
-</ul>
-<h2 id="HDFS-2-0-的-HA-实现"><a href="#HDFS-2-0-的-HA-实现" class="headerlink" title="HDFS 2.0 的 HA 实现"></a>HDFS 2.0 的 HA 实现</h2><p>这里先看下 HDFS 高可用解决方案的架构设计，如下图</p>
-<p><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/1.png" alt="图片说明"> </p>
-<p>这里与前面 1.0 的架构已经有很大变化，简单介绍一下的组件：</p>
-<ol>
-<li>Active NameNode 和 Standby NameNode：两台 NameNode 形成互备，一台处于 Active 状态，为主 NameNode，另外一台处于 Standby 状态，为备 NameNode，只有主 NameNode 才能对外提供读写服务；</li>
-<li>ZKFailoverController（主备切换控制器，FC）：ZKFailoverController 作为独立的进程运行，对 NameNode 的主备切换进行总体控。ZKFailoverController 能及时检测到 NameNode 的健康状况，在主 NameNode 故障时借助 Zookeeper 实现自动的主备选举和切换（当然 NameNode 目前也支持不依赖于Zookeeper 的手动主备切换）；</li>
-<li>Zookeeper 集群：为主备切换控制器提供主备选举支持；</li>
-<li>共享存储系统：共享存储系统是实现 NameNode 的高可用最为关键的部分，共享存储系统保存了 NameNode 在运行过程中所产生的 HDFS 的元数据。主 NameNode 和备NameNode 通过共享存储系统实现元数据同步。在进行主备切换的时候，新的主 NameNode 在确认元数据完全同步之后才能继续对外提供服务。</li>
-<li>DataNode 节点：因为主 NameNode 和备 NameNode 需要共享 HDFS 的数据块和 DataNode 之间的映射关系，为了使故障切换能够快速进行，DataNode 会同时向主 NameNode 和备 NameNode 上报数据块的位置信息。</li>
-</ol>
-<h2 id="HDFS-2-0-Federation-实现"><a href="#HDFS-2-0-Federation-实现" class="headerlink" title="HDFS 2.0 Federation 实现"></a>HDFS 2.0 Federation 实现</h2><p>在 1.0 中，HDFS 的架构设计有以下缺点：</p>
-<p>namespace 扩展性差：在单一的 NN 情况下，因为所有 namespace 数据都需要加载到内存，所以物理机内存的大小限制了整个 HDFS 能够容纳文件的最大个数（namespace 指的是 HDFS 中树形目录和文件结构以及文件对应的 block 信息）；<br>性能可扩展性差：由于所有请求都需要经过 NN，单一 NN 导致所有请求都由一台机器进行处理，很容易达到单台机器的吞吐；<br>隔离性差：多租户的情况下，单一 NN 的架构无法在租户间进行隔离，会造成不可避免的相互影响。<br>而 Federation 的设计就是为了解决这些问题，采用 Federation 的最主要原因是设计实现简单，而且还能解决问题。</p>
-<h2 id="Federation-架构"><a href="#Federation-架构" class="headerlink" title="Federation 架构"></a>Federation 架构</h2><p>Federation 的架构设计如下图所示（图片来自 HDFS Federation）：<br><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/2.png" alt="图片说明"> </p>
-<h3 id="HDFS-Federation-架构实现"><a href="#HDFS-Federation-架构实现" class="headerlink" title="HDFS Federation 架构实现"></a>HDFS Federation 架构实现</h3><p>Federation 的核心设计思想<br>Federation 的核心思想是将一个大的 namespace 划分多个子 namespace，并且每个 namespace 分别由单独的 NameNode 负责，这些 NameNode 之间互相独立，不会影响，不需要做任何协调工作（其实跟拆集群有一些相似），集群的所有 DataNode 会被多个 NameNode 共享。</p>
-<p>其中，每个子 namespace 和 DataNode 之间会由数据块管理层作为中介建立映射关系，数据块管理层由若干数据块池（Pool）构成，每个数据块只会唯一属于某个固定的数据块池，而一个子 namespace 可以对应多个数据块池。每个 DataNode 需要向集群中所有的 NameNode 注册，且周期性地向所有 NameNode 发送心跳和块报告，并执行来自所有 NameNode 的命令。</p>
-<ol>
-<li>一个 block pool 由属于同一个 namespace 的数据块组成，每个 DataNode 可能会存储集群中所有 block pool 的数据块；</li>
-<li>每个 block pool 内部自治，也就是说各自管理各自的 block，不会与其他 block pool 交流，如果一个 NameNode 挂掉了，不会影响其他 NameNode;</li>
-<li>某个 NameNode 上的 namespace 和它对应的 block pool 一起被称为 namespace volume，它是管理的基本单位。当一个 NameNode/namespace 被删除后，其所有 DataNode 上对应的 block pool 也会被删除，当集群升级时，每个 namespace volume 可以作为一个基本单元进行升级。<br>参考链接：<br><a href="https://www.ibm.com/developerworks/cn/opensource/os-cn-hadoop-name-node/" target="_blank" rel="noopener">https://www.ibm.com/developerworks/cn/opensource/os-cn-hadoop-name-node/</a><br><a href="http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/Federation.html" target="_blank" rel="noopener">http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/Federation.html</a></li>
-</ol>
-]]></content>
-      <categories>
-        <category>Hadoop</category>
-      </categories>
-      <tags>
-        <tag>Hadoop</tag>
       </tags>
   </entry>
   <entry>
@@ -558,26 +558,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Spark Demo(Serializable)</title>
-    <url>/2020/06/14/Spark-Demo-Serializable/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在本文中将介绍spark中Task执行序列化的开发问题</p>
-<h1 id="开发环境准备"><a href="#开发环境准备" class="headerlink" title="开发环境准备"></a>开发环境准备</h1><p>本实验Spark运行在Windows上，为了开发Spark应用程序，在本地机器上需要有Jdk1.8和Maven环境。<br>确保我们的环境配置正常，我们可以使用快捷键 Win+R 输入cmd：<br>环境如下：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341256892_8D8973B8667179A2319B041328F690BD" alt="图片说明" title="图片标题"><br>程序开发工具我们使用IDEA，创建maven项目，添加pom依赖</p>
-<h1 id="编写Spark程序"><a href="#编写Spark程序" class="headerlink" title="编写Spark程序"></a>编写Spark程序</h1><h2 id="目录结构如下"><a href="#目录结构如下" class="headerlink" title="目录结构如下:"></a>目录结构如下:</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341490332_07386CADB58D4E8A80763A83F9F6B34D" alt="图片说明" title="图片标题"> </p>
-<h2 id="创建Serializable-scala"><a href="#创建Serializable-scala" class="headerlink" title="创建Serializable.scala:"></a>创建Serializable.scala:</h2><p>首先我们需要了解RDD中的函数传递：<br>在实际开发中我们往往需要自己定义一些对于RDD的操作，那么此时需要主要的是，初始化工作是在Driver端进行的，而实际运行程序是在Executor端进行的，这就涉及到了跨进程通信，是需要序列化的。<br>如果我们对我们自定义的类不进行序列化：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">package SparkDemo</span><br><span class="line"></span><br><span class="line">import org.apache.spark.rdd.RDD</span><br><span class="line">import org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line">  * @Author: luomo</span><br><span class="line">  * @CreateTime: 2019&#x2F;10&#x2F;29</span><br><span class="line">  * @Description: Serializable from Driver to Executor</span><br><span class="line">  *&#x2F;</span><br><span class="line">object Serializable &#123;</span><br><span class="line"></span><br><span class="line">  def main(args: Array[String]): Unit &#x3D; &#123;</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;创建Spark上下文对象</span><br><span class="line">    val config:SparkConf &#x3D;new SparkConf().setMaster(&quot;local[*]&quot;).setAppName(&quot;Serializable&quot;)</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;创建Spark上下文对象</span><br><span class="line">    val sc &#x3D; new SparkContext(config)</span><br><span class="line"></span><br><span class="line">    val rdd:RDD[String] &#x3D; sc.parallelize(Array(&quot;hadoop&quot;,&quot;spark&quot;,&quot;hive&quot;,&quot;Flink&quot;))</span><br><span class="line"></span><br><span class="line">    val search &#x3D; new Search(&quot;h&quot;)</span><br><span class="line"></span><br><span class="line">    val match1:RDD[String] &#x3D;search.getMatch1(rdd)</span><br><span class="line">    match1.collect().foreach(println)</span><br><span class="line">    sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">  class Search(query:String)&#123;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的数据</span><br><span class="line">    def  isMatch(s:String):Boolean &#x3D;&#123;</span><br><span class="line">      s.contains(query)</span><br><span class="line">    &#125;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的RDD</span><br><span class="line">    def getMatch1(rdd:RDD[String]) :RDD[String] &#x3D; &#123;</span><br><span class="line">      rdd.filter(isMatch)</span><br><span class="line">    &#125;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的RDD</span><br><span class="line">    def getMatche2(rdd: RDD[String]): RDD[String] &#x3D;&#123;</span><br><span class="line">      rdd.filter(x&#x3D;&gt; x.contains(query))</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572346997711_619AA778B91D5D25CAB063D1C7D53FFE" alt="图片说明" title="图片标题"> </p>
-<p>可见，对于自己定义的普通类，Spark是无法直接将其序列化的。<br>需要我们自定义的类继承java.io.Serializable</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">package SparkDemo</span><br><span class="line"></span><br><span class="line">import org.apache.spark.rdd.RDD</span><br><span class="line">import org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line">  * @Author: luomo</span><br><span class="line">  * @CreateTime: 2019&#x2F;10&#x2F;29</span><br><span class="line">  * @Description: Serializable from Driver to Executor</span><br><span class="line">  *&#x2F;</span><br><span class="line">object Serializable &#123;</span><br><span class="line"></span><br><span class="line">  def main(args: Array[String]): Unit &#x3D; &#123;</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;创建Spark上下文对象</span><br><span class="line">    val config:SparkConf &#x3D;new SparkConf().setMaster(&quot;local[*]&quot;).setAppName(&quot;Serializable&quot;)</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;创建Spark上下文对象</span><br><span class="line">    val sc &#x3D; new SparkContext(config)</span><br><span class="line"></span><br><span class="line">    val rdd:RDD[String] &#x3D; sc.parallelize(Array(&quot;hadoop&quot;,&quot;spark&quot;,&quot;hive&quot;,&quot;Flink&quot;))</span><br><span class="line"></span><br><span class="line">    val search &#x3D; new Search(&quot;h&quot;)</span><br><span class="line"></span><br><span class="line">    val match1:RDD[String] &#x3D;search.getMatch1(rdd)</span><br><span class="line">    match1.collect().foreach(println)</span><br><span class="line">    sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">  &#x2F;&#x2F;自定义类</span><br><span class="line">  class Search(query:String) extends  java.io.Serializable &#123;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的数据</span><br><span class="line">    def  isMatch(s:String):Boolean &#x3D;&#123;</span><br><span class="line">      s.contains(query)</span><br><span class="line">    &#125;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的RDD</span><br><span class="line">    def getMatch1(rdd:RDD[String]) :RDD[String] &#x3D; &#123;</span><br><span class="line">      rdd.filter(isMatch)</span><br><span class="line">    &#125;</span><br><span class="line">    &#x2F;&#x2F;过滤出包含字符串的RDD</span><br><span class="line">    def getMatche2(rdd: RDD[String]): RDD[String] &#x3D;&#123;</span><br><span class="line">      rdd.filter(x&#x3D;&gt; x.contains(query))</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>如图我们过滤出包含字符h的字符串：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572351464995_DFD27DCB713FEB02D8628E6C67FD4273" alt="图片说明" title="图片标题"> </p>
-]]></content>
-      <categories>
-        <category>Spark</category>
-      </categories>
-      <tags>
-        <tag>Serializable</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Scala</title>
     <url>/2020/06/19/Scala/</url>
     <content><![CDATA[<p>Scala 是 Scalable Language 的简写，是一门多范式的编程语言<br>联邦理工学院洛桑（EPFL）的Martin Odersky于2001年基于Funnel的工作开始设计Scala。<br>Funnel是把函数式编程思想和Petri网相结合的一种编程语言。<br>Odersky先前的工作是Generic Java和javac（Sun Java编译器）。Java平台的Scala于2003年底/2004年初发布。.NET平台的Scala发布于2004年6月。该语言第二个版本，v2.0，发布于2006年3月。<br>截至2009年9月，最新版本是版本2.7.6 。Scala 2.8预计的特性包括重写的Scala类库（Scala collections library）、方法的命名参数和默认参数、包对象（package object），以及Continuation。<br>2009年4月，Twitter宣布他们已经把大部分后端程序从Ruby迁移到Scala，其余部分也打算要迁移。此外， Wattzon已经公开宣称，其整个平台都已经是基于Scala基础设施编写的。</p>
@@ -588,6 +568,26 @@
       </categories>
       <tags>
         <tag>编程语言</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spark Demo(Serializable)</title>
+    <url>/2020/06/14/Spark-Demo-Serializable/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在本文中将介绍spark中Task执行序列化的开发问题</p>
+<h1 id="开发环境准备"><a href="#开发环境准备" class="headerlink" title="开发环境准备"></a>开发环境准备</h1><p>本实验Spark运行在Windows上，为了开发Spark应用程序，在本地机器上需要有Jdk1.8和Maven环境。<br>确保我们的环境配置正常，我们可以使用快捷键 Win+R 输入cmd：<br>环境如下：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341256892_8D8973B8667179A2319B041328F690BD" alt="图片说明" title="图片标题"><br>程序开发工具我们使用IDEA，创建maven项目，添加pom依赖</p>
+<h1 id="编写Spark程序"><a href="#编写Spark程序" class="headerlink" title="编写Spark程序"></a>编写Spark程序</h1><h2 id="目录结构如下"><a href="#目录结构如下" class="headerlink" title="目录结构如下:"></a>目录结构如下:</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341490332_07386CADB58D4E8A80763A83F9F6B34D" alt="图片说明" title="图片标题"> </p>
+<h2 id="创建Serializable-scala"><a href="#创建Serializable-scala" class="headerlink" title="创建Serializable.scala:"></a>创建Serializable.scala:</h2><p>首先我们需要了解RDD中的函数传递：<br>在实际开发中我们往往需要自己定义一些对于RDD的操作，那么此时需要主要的是，初始化工作是在Driver端进行的，而实际运行程序是在Executor端进行的，这就涉及到了跨进程通信，是需要序列化的。<br>如果我们对我们自定义的类不进行序列化：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> SparkDemo</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.spark.rdd.RDD</span><br><span class="line"><span class="keyword">import</span> org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>: luomo</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>: 2019/10/29</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>: Serializable from Driver to Executor</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">object Serializable &#123;</span><br><span class="line"></span><br><span class="line">  <span class="function">def <span class="title">main</span><span class="params">(args: Array[String])</span>: Unit </span>= &#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val config:SparkConf =<span class="keyword">new</span> SparkConf().setMaster(<span class="string">"local[*]"</span>).setAppName(<span class="string">"Serializable"</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val sc = <span class="keyword">new</span> SparkContext(config)</span><br><span class="line"></span><br><span class="line">    val rdd:RDD[String] = sc.parallelize(Array(<span class="string">"hadoop"</span>,<span class="string">"spark"</span>,<span class="string">"hive"</span>,<span class="string">"Flink"</span>))</span><br><span class="line"></span><br><span class="line">    val search = <span class="keyword">new</span> Search(<span class="string">"h"</span>)</span><br><span class="line"></span><br><span class="line">    val match1:RDD[String] =search.getMatch1(rdd)</span><br><span class="line">    match1.collect().foreach(println)</span><br><span class="line">    sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">  class Search(query:String)&#123;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的数据</span></span><br><span class="line">    <span class="function">def  <span class="title">isMatch</span><span class="params">(s:String)</span>:Boolean </span>=&#123;</span><br><span class="line">      s.contains(query)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatch1</span><span class="params">(rdd:RDD[String])</span> :RDD[String] </span>= &#123;</span><br><span class="line">      rdd.filter(isMatch)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatche2</span><span class="params">(rdd: RDD[String])</span>: RDD[String] </span>=&#123;</span><br><span class="line">      rdd.filter(x=&gt; x.contains(query))</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572346997711_619AA778B91D5D25CAB063D1C7D53FFE" alt="图片说明" title="图片标题"> </p>
+<p>可见，对于自己定义的普通类，Spark是无法直接将其序列化的。<br>需要我们自定义的类继承java.io.Serializable</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> SparkDemo</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.spark.rdd.RDD</span><br><span class="line"><span class="keyword">import</span> org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>: luomo</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>: 2019/10/29</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>: Serializable from Driver to Executor</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">object Serializable &#123;</span><br><span class="line"></span><br><span class="line">  <span class="function">def <span class="title">main</span><span class="params">(args: Array[String])</span>: Unit </span>= &#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val config:SparkConf =<span class="keyword">new</span> SparkConf().setMaster(<span class="string">"local[*]"</span>).setAppName(<span class="string">"Serializable"</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val sc = <span class="keyword">new</span> SparkContext(config)</span><br><span class="line"></span><br><span class="line">    val rdd:RDD[String] = sc.parallelize(Array(<span class="string">"hadoop"</span>,<span class="string">"spark"</span>,<span class="string">"hive"</span>,<span class="string">"Flink"</span>))</span><br><span class="line"></span><br><span class="line">    val search = <span class="keyword">new</span> Search(<span class="string">"h"</span>)</span><br><span class="line"></span><br><span class="line">    val match1:RDD[String] =search.getMatch1(rdd)</span><br><span class="line">    match1.collect().foreach(println)</span><br><span class="line">    sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">//自定义类</span></span><br><span class="line">  class Search(query:String) extends  java.io.Serializable &#123;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的数据</span></span><br><span class="line">    <span class="function">def  <span class="title">isMatch</span><span class="params">(s:String)</span>:Boolean </span>=&#123;</span><br><span class="line">      s.contains(query)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatch1</span><span class="params">(rdd:RDD[String])</span> :RDD[String] </span>= &#123;</span><br><span class="line">      rdd.filter(isMatch)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatche2</span><span class="params">(rdd: RDD[String])</span>: RDD[String] </span>=&#123;</span><br><span class="line">      rdd.filter(x=&gt; x.contains(query))</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>如图我们过滤出包含字符h的字符串：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572351464995_DFD27DCB713FEB02D8628E6C67FD4273" alt="图片说明" title="图片标题"> </p>
+]]></content>
+      <categories>
+        <category>Spark</category>
+      </categories>
+      <tags>
+        <tag>Serializable</tag>
       </tags>
   </entry>
   <entry>
@@ -603,6 +603,49 @@
       </categories>
       <tags>
         <tag>Error</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spark 概述</title>
+    <url>/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/</url>
+    <content><![CDATA[<h1 id="大数据处理框架"><a href="#大数据处理框架" class="headerlink" title="大数据处理框架"></a>大数据处理框架</h1><p>集群环境对于编程来说带来了很多挑战，首先就是并行化：这就要求我们以并行化的方式重写应用程序，以便我们可以利用更大范围节点的计算能力。集群环境的第二个挑战就是对单点失败的处理，节点宕机以及个别节点计算缓慢在集群环境中非常普遍，这会极大地影响程序的性能。最后一个挑战是集群在大多数情况下都会被多个用户分享，那么动态地进行计算资源的分配，也会干扰程序的执行。因此，针对集群环境出现了大量的大数据编程框架。首先我们要提到的就是Google的MapReduce，它给我们展示了一个简单通用和自动容错的批处理计算模型。<br>但是对于其他类型的计算，比如交互式和流式计算，MapReduce并不适合，这也导致了大量的不同于MapReduce的专有的数据处理模型的出现，比如Storm、Impala和GraphLab。随着新模型的不断出现，似乎对于大数据处理而言，我们应对不同类型的作业需要一系列不同的处理框架才能很好地完成。但是这些专有系统也有一些不足。</p>
+<ul>
+<li>重复工作：许多专有系统在解决同样的问题，比如分布式作业以及容错。举例来说，一个分布式的SQL引擎或者一个机器学习系统都需要实现并行聚合。这些问题在每个专有系统中会重复地被解决。</li>
+<li>组合问题：在不同的系统之间进行组合计算是一件费力又不讨好的事情。对于特定的大数据应用程序而言，中间数据集是非常大的，而且移动的成本也非常高昂。在目前的环境中，我们需要将数据复制到稳定的存储系统中（比如HDFS），以便在不同的计算引擎中进行分享。然而，这样的复制可能比真正的计算所花费的代价要大，所以以流水线的形式将多个系统组合起来效率并不高。</li>
+<li>适用范围的局限性：如果一个应用不适合一个专有的计算系统，那么使用者只能换一个系统，或者重写一个新的计算系统。</li>
+<li>资源分配：在不同的计算引擎之间进行资源的动态共享是比较困难的，因为大多数的计算引擎都会假设它们在程序运行结束之前拥有相同的机器节点的资源。</li>
+<li>管理问题：对于多个专有系统，需要花费更多的精力和时间来管理和部署。<br>尤其是对于终端使用者而言，他们需要学习多种API和系统模型。  </li>
+</ul>
+<h1 id="Spark"><a href="#Spark" class="headerlink" title="Spark"></a>Spark</h1><p>针对MapReduce及各种专有系统中出现的不足，伯克利大学推出了全新的统一大数据处理框架Spark，创新性地提出了RDD概念（一种新的抽象的弹性数据集），在某种程度上Spark是对MapReduce模型的一种扩展。要在MapReduce上实现其不擅长的计算工作（比如迭代式、交互式和流式），看上去是一件非常困难的事情，其实主要的原因是MapReduce缺乏一种特性，即在并行计算的各个阶段进行有效的数据共享，这种共享就是RDD的本质。利用这种有效的数据共享和类似MapReduce的操作接口，上述的各种专有类型计算都能够有效地表达，而且能够获得与专有系统同等的性能。<br>特别值得一提的是，从前对于集群处理的容错方式，比如MapReduce和Dryad，是将计算构建成为一个有向无环图的任务集。而这只能允许它们有效地重新计算部分DAG。在单独的计算之间（在迭代的计算步骤之间），除了复制文件，这些模型没有提供其他的存储抽象，这就显著地增加了在网络之间复制文件的代价。RDD能够适应当前大部分的数据并行算法和编程模型。  </p>
+<h1 id="RDD表达能力"><a href="#RDD表达能力" class="headerlink" title="RDD表达能力"></a>RDD表达能力</h1><p>可以使用RDD实现很多现有的集群编程模型以及一些以前的模型不支持的新应用。在这些模型中，RDD能够取得和专有系统同样的性能，还能提供包括容错处理、滞后节点（straggler node）处理等这些专有系统缺乏的特性。这里会重点讨论如下四类模型。</p>
+<ul>
+<li>迭代算法：这是目前专有系统实现的非常普遍的一种应用场景，比如迭代算法可以用于图处理和机器学习。RDD能够很好地实现这些模型，包括Pregel、HaLoop和GraphLab等模型。</li>
+<li>关系型查询：对于MapReduce来说非常重要的需求就是运行SQL查询，包括长期运行、数小时的批处理作业和交互式的查询。然而对于MapReduce而言，对比并行数据库进行交互式查询，有其内在的缺点，比如由于其容错的模型而导致速度很慢。利用RDD模型，可以通过实现许多通用的数据库引擎特性，从而获得非常好的性能。</li>
+<li>MapReduce 批处理：RDD提供的接口是MapReduce的超集，所以RDD可以有效地运行利用MapReduce实现的应用程序，另外RDD还适合更加抽象的基于DAG的应用程序，比如DryadLINQ。</li>
+<li>流式处理：目前的流式系统也只提供了有限的容错处理，需要消耗系统非常大的拷贝代价或者非常长的容错时间。特别是在目前的系统中，基本都是基于连续计算的模型，常驻的有状态的操作会处理到达的每一条记录。为了恢复失败的节点，它们需要为每一个操作复制两份操作，或者是将上游的数据进行代价非常大的操作重放。利用RDD实现一种新的模型——离散数据流（D-Stream），可以克服上面的这些问题。D-Stream将流式计算当作一系列的短小而确定的批处理操作，而不是常驻的有状态的操作，将两个离散流之间的状态保存在RDD中。离散流模型能够允许通过RDD的继承关系图（lineage）进行并行性的恢复而不需要进行数据拷贝。  </li>
+</ul>
+<h1 id="Spark子系统"><a href="#Spark子系统" class="headerlink" title="Spark子系统"></a>Spark子系统</h1><p>如果按照目前流行的大数据处理场景来划分，可以将大数据处理分为如下三种情况。</p>
+<ul>
+<li>复杂的批量数据处理（batch data processing），通常的时间跨度为数十分钟到数小时。</li>
+<li>基于历史数据的交互式查询（interactive query），通常的时间跨度为数十秒到数分钟。</li>
+<li>基于实时数据流的数据处理（streaming data processing），通常的时间跨度为数百毫秒到数秒。<br>由于RDD具有丰富的表达能力，所以伯克利在Spark Core的基础之上衍生出了能够同时处理上述三种情形的统一大数据处理平台，如图1-1所示。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/spark.png" alt="图片说明"></div></li>
+<li>Spark Core：基于RDD提供了丰富的操作接口，利用DAG进行统一的任务规划，使得Spark能够更加灵活地处理类似MapReduce的批处理作业。</li>
+<li>Shark/Spark SQL:兼容Hive的接口HQL，提供了比Hive高出10~100倍的查询速度的分布式SQL引擎。</li>
+<li>Spark Streaming：将流式计算分解成一系列的短小的批处理作业，利用Spark轻量级和低延时的调度框架，可以很好的支持流式处理。目前已经支持的数据输入源包括Kafka、Flume、Twitter、TCP sockets。</li>
+<li>GraphX：基于Spark的图计算框架，兼容Pregel和GraphLab接口，增强了图构建以及图转换功能。</li>
+<li>MLlib:Spark Core 天然地非常适合于迭代式运算，MLlib就是构建在Spark上的机器学习算法库。目前已经可以支持常用的分类算法、聚类算法、推荐算法等。<br>Spark生态系统的目标就是将批处理、交互式处理、流式处理融合到同一个软件栈中。对于最终的用户或者是开发者而言，Spark生态系统有如下特性。</li>
+<li>Spark生态系统兼容Hadoop生态系统。这个特性对于最终用户至关重要，虽然Spark 通用引擎在一定程度上是用来取代MapReduce系统的，但是Spark能够完美兼容Hadoop生态中的HDFS和YARN等其他组件，使得现有的Hadoop用户能够非常容易地迁移到Spark系统中。图1-2显示了Spark与Hadoop生态的兼容性。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/1-2.png" alt></div></li>
+<li>Spark生态系统学习成本很低。要实现一个相对完整的端到端解决方案，以前需要部署维护多个专有系统，现在只需要一个Spark系统。另外，如果开发者对Spark Core的原理有比较深入的理解，对构架在Spark Core之上的其他组件的运用将会非常容易。图1-3对比了Spark生态和其他大数据专有系统的代码量。在图1-3中的Spark一项中，批处理对应Spark Core，交互式处理对应Shark/Spark SQL，流计算对应Spark Streaming，而图计算对应GraphX。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/1-3.png" alt></div></li>
+<li>Spark 性能表现优异。由于Spark利用DAG进行调度执行规划，所以在多任务计算以及迭代计算中能够大量减少磁盘I/O的时间。另外，对于每一项任务启动一个线程，而不是启动一个进程，大大缩短了任务启动时间。</li>
+<li>Spark有强大的社区支持。Spark近一年多来保持非常迅猛的发展势头，被誉为大数据处理的未来。Spark的创始团队成立了Databricks公司，全力支持Spark 生态的发展。目前Hadoop商业版本发行公司中，已经有Cloudera、Hortonworks、MapR等公司相继宣布支持Spark软件栈。图1-4显示了Spark不同版本发布时对社区做出贡献的贡献者数量变化情况。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/1-4.png" alt></div></li>
+<li>Spark 支持多种语言编程接口。Spark生态本身是使用Scala语言编写的，但是考虑到其流行性，因此Spark从一开始就支持Java和Python接口，方便Spark 程序开发者自由选择。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Spark</category>
+      </categories>
+      <tags>
+        <tag>Spark</tag>
       </tags>
   </entry>
   <entry>
@@ -648,49 +691,6 @@
       </categories>
       <tags>
         <tag>性能调优</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spark 概述</title>
-    <url>/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/</url>
-    <content><![CDATA[<h1 id="大数据处理框架"><a href="#大数据处理框架" class="headerlink" title="大数据处理框架"></a>大数据处理框架</h1><p>集群环境对于编程来说带来了很多挑战，首先就是并行化：这就要求我们以并行化的方式重写应用程序，以便我们可以利用更大范围节点的计算能力。集群环境的第二个挑战就是对单点失败的处理，节点宕机以及个别节点计算缓慢在集群环境中非常普遍，这会极大地影响程序的性能。最后一个挑战是集群在大多数情况下都会被多个用户分享，那么动态地进行计算资源的分配，也会干扰程序的执行。因此，针对集群环境出现了大量的大数据编程框架。首先我们要提到的就是Google的MapReduce，它给我们展示了一个简单通用和自动容错的批处理计算模型。<br>但是对于其他类型的计算，比如交互式和流式计算，MapReduce并不适合，这也导致了大量的不同于MapReduce的专有的数据处理模型的出现，比如Storm、Impala和GraphLab。随着新模型的不断出现，似乎对于大数据处理而言，我们应对不同类型的作业需要一系列不同的处理框架才能很好地完成。但是这些专有系统也有一些不足。</p>
-<ul>
-<li>重复工作：许多专有系统在解决同样的问题，比如分布式作业以及容错。举例来说，一个分布式的SQL引擎或者一个机器学习系统都需要实现并行聚合。这些问题在每个专有系统中会重复地被解决。</li>
-<li>组合问题：在不同的系统之间进行组合计算是一件费力又不讨好的事情。对于特定的大数据应用程序而言，中间数据集是非常大的，而且移动的成本也非常高昂。在目前的环境中，我们需要将数据复制到稳定的存储系统中（比如HDFS），以便在不同的计算引擎中进行分享。然而，这样的复制可能比真正的计算所花费的代价要大，所以以流水线的形式将多个系统组合起来效率并不高。</li>
-<li>适用范围的局限性：如果一个应用不适合一个专有的计算系统，那么使用者只能换一个系统，或者重写一个新的计算系统。</li>
-<li>资源分配：在不同的计算引擎之间进行资源的动态共享是比较困难的，因为大多数的计算引擎都会假设它们在程序运行结束之前拥有相同的机器节点的资源。</li>
-<li>管理问题：对于多个专有系统，需要花费更多的精力和时间来管理和部署。<br>尤其是对于终端使用者而言，他们需要学习多种API和系统模型。  </li>
-</ul>
-<h1 id="Spark"><a href="#Spark" class="headerlink" title="Spark"></a>Spark</h1><p>针对MapReduce及各种专有系统中出现的不足，伯克利大学推出了全新的统一大数据处理框架Spark，创新性地提出了RDD概念（一种新的抽象的弹性数据集），在某种程度上Spark是对MapReduce模型的一种扩展。要在MapReduce上实现其不擅长的计算工作（比如迭代式、交互式和流式），看上去是一件非常困难的事情，其实主要的原因是MapReduce缺乏一种特性，即在并行计算的各个阶段进行有效的数据共享，这种共享就是RDD的本质。利用这种有效的数据共享和类似MapReduce的操作接口，上述的各种专有类型计算都能够有效地表达，而且能够获得与专有系统同等的性能。<br>特别值得一提的是，从前对于集群处理的容错方式，比如MapReduce和Dryad，是将计算构建成为一个有向无环图的任务集。而这只能允许它们有效地重新计算部分DAG。在单独的计算之间（在迭代的计算步骤之间），除了复制文件，这些模型没有提供其他的存储抽象，这就显著地增加了在网络之间复制文件的代价。RDD能够适应当前大部分的数据并行算法和编程模型。  </p>
-<h1 id="RDD表达能力"><a href="#RDD表达能力" class="headerlink" title="RDD表达能力"></a>RDD表达能力</h1><p>可以使用RDD实现很多现有的集群编程模型以及一些以前的模型不支持的新应用。在这些模型中，RDD能够取得和专有系统同样的性能，还能提供包括容错处理、滞后节点（straggler node）处理等这些专有系统缺乏的特性。这里会重点讨论如下四类模型。</p>
-<ul>
-<li>迭代算法：这是目前专有系统实现的非常普遍的一种应用场景，比如迭代算法可以用于图处理和机器学习。RDD能够很好地实现这些模型，包括Pregel、HaLoop和GraphLab等模型。</li>
-<li>关系型查询：对于MapReduce来说非常重要的需求就是运行SQL查询，包括长期运行、数小时的批处理作业和交互式的查询。然而对于MapReduce而言，对比并行数据库进行交互式查询，有其内在的缺点，比如由于其容错的模型而导致速度很慢。利用RDD模型，可以通过实现许多通用的数据库引擎特性，从而获得非常好的性能。</li>
-<li>MapReduce 批处理：RDD提供的接口是MapReduce的超集，所以RDD可以有效地运行利用MapReduce实现的应用程序，另外RDD还适合更加抽象的基于DAG的应用程序，比如DryadLINQ。</li>
-<li>流式处理：目前的流式系统也只提供了有限的容错处理，需要消耗系统非常大的拷贝代价或者非常长的容错时间。特别是在目前的系统中，基本都是基于连续计算的模型，常驻的有状态的操作会处理到达的每一条记录。为了恢复失败的节点，它们需要为每一个操作复制两份操作，或者是将上游的数据进行代价非常大的操作重放。利用RDD实现一种新的模型——离散数据流（D-Stream），可以克服上面的这些问题。D-Stream将流式计算当作一系列的短小而确定的批处理操作，而不是常驻的有状态的操作，将两个离散流之间的状态保存在RDD中。离散流模型能够允许通过RDD的继承关系图（lineage）进行并行性的恢复而不需要进行数据拷贝。  </li>
-</ul>
-<h1 id="Spark子系统"><a href="#Spark子系统" class="headerlink" title="Spark子系统"></a>Spark子系统</h1><p>如果按照目前流行的大数据处理场景来划分，可以将大数据处理分为如下三种情况。</p>
-<ul>
-<li>复杂的批量数据处理（batch data processing），通常的时间跨度为数十分钟到数小时。</li>
-<li>基于历史数据的交互式查询（interactive query），通常的时间跨度为数十秒到数分钟。</li>
-<li>基于实时数据流的数据处理（streaming data processing），通常的时间跨度为数百毫秒到数秒。<br>由于RDD具有丰富的表达能力，所以伯克利在Spark Core的基础之上衍生出了能够同时处理上述三种情形的统一大数据处理平台，如图1-1所示。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/spark.png" alt="图片说明"></div></li>
-<li>Spark Core：基于RDD提供了丰富的操作接口，利用DAG进行统一的任务规划，使得Spark能够更加灵活地处理类似MapReduce的批处理作业。</li>
-<li>Shark/Spark SQL:兼容Hive的接口HQL，提供了比Hive高出10~100倍的查询速度的分布式SQL引擎。</li>
-<li>Spark Streaming：将流式计算分解成一系列的短小的批处理作业，利用Spark轻量级和低延时的调度框架，可以很好的支持流式处理。目前已经支持的数据输入源包括Kafka、Flume、Twitter、TCP sockets。</li>
-<li>GraphX：基于Spark的图计算框架，兼容Pregel和GraphLab接口，增强了图构建以及图转换功能。</li>
-<li>MLlib:Spark Core 天然地非常适合于迭代式运算，MLlib就是构建在Spark上的机器学习算法库。目前已经可以支持常用的分类算法、聚类算法、推荐算法等。<br>Spark生态系统的目标就是将批处理、交互式处理、流式处理融合到同一个软件栈中。对于最终的用户或者是开发者而言，Spark生态系统有如下特性。</li>
-<li>Spark生态系统兼容Hadoop生态系统。这个特性对于最终用户至关重要，虽然Spark 通用引擎在一定程度上是用来取代MapReduce系统的，但是Spark能够完美兼容Hadoop生态中的HDFS和YARN等其他组件，使得现有的Hadoop用户能够非常容易地迁移到Spark系统中。图1-2显示了Spark与Hadoop生态的兼容性。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/1-2.png" alt></div></li>
-<li>Spark生态系统学习成本很低。要实现一个相对完整的端到端解决方案，以前需要部署维护多个专有系统，现在只需要一个Spark系统。另外，如果开发者对Spark Core的原理有比较深入的理解，对构架在Spark Core之上的其他组件的运用将会非常容易。图1-3对比了Spark生态和其他大数据专有系统的代码量。在图1-3中的Spark一项中，批处理对应Spark Core，交互式处理对应Shark/Spark SQL，流计算对应Spark Streaming，而图计算对应GraphX。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/1-3.png" alt></div></li>
-<li>Spark 性能表现优异。由于Spark利用DAG进行调度执行规划，所以在多任务计算以及迭代计算中能够大量减少磁盘I/O的时间。另外，对于每一项任务启动一个线程，而不是启动一个进程，大大缩短了任务启动时间。</li>
-<li>Spark有强大的社区支持。Spark近一年多来保持非常迅猛的发展势头，被誉为大数据处理的未来。Spark的创始团队成立了Databricks公司，全力支持Spark 生态的发展。目前Hadoop商业版本发行公司中，已经有Cloudera、Hortonworks、MapR等公司相继宣布支持Spark软件栈。图1-4显示了Spark不同版本发布时对社区做出贡献的贡献者数量变化情况。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/1-4.png" alt></div></li>
-<li>Spark 支持多种语言编程接口。Spark生态本身是使用Scala语言编写的，但是考虑到其流行性，因此Spark从一开始就支持Java和Python接口，方便Spark 程序开发者自由选择。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>Spark</category>
-      </categories>
-      <tags>
-        <tag>Spark</tag>
       </tags>
   </entry>
   <entry>
@@ -752,33 +752,20 @@
 ]]></content>
   </entry>
   <entry>
-    <title>Zookeeper分布式集群部署</title>
-    <url>/2020/06/17/Zookeeper%E5%88%86%E5%B8%83%E5%BC%8F%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>&lt;blockquote&gt;<br>ZooKeeper是一个开放源代码的分布式协调服务，由知名互联网公司雅虎创建，是Google Chubby的开源实现。ZooKeeper的设计目标是将那些复杂且容易出错的分布式一致性服务封装起来，构成一个高效可靠的原语集，并以一系列简单易用的接口提供给用户使用。  </p>
-<p>ZooKeeper是一个典型的分布式数据一致性的解决方案，分布式应用程序可以基于它实现诸如数据发布/订阅、负载均衡、命名服务、分布式协调/通知、集群管理、Master选举、分布式锁和分布式队列等功能。ZooKeeper可以保证如下分布式一致性特性。<br>今天我们来看看如何分布式安装</p>
-<p>&lt;/blockquote&gt;  </p>
-<h1 id="Zookeeper分布式集群部署"><a href="#Zookeeper分布式集群部署" class="headerlink" title="Zookeeper分布式集群部署"></a>Zookeeper分布式集群部署</h1><h2 id="下载Zookeeper"><a href="#下载Zookeeper" class="headerlink" title="下载Zookeeper"></a>下载Zookeeper</h2><p>这里可以参考官网，下载需要的版本：<br><a href="https://zookeeper.apache.org/" target="_blank" rel="noopener">https://zookeeper.apache.org/</a></p>
-<h2 id="解压Zookeeper到我们指定的目录"><a href="#解压Zookeeper到我们指定的目录" class="headerlink" title="解压Zookeeper到我们指定的目录"></a>解压Zookeeper到我们指定的目录</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 software]#  tar -zxvf zookeeper-3.4.10 -C &#x2F;opt&#x2F;module&#x2F;</span><br></pre></td></tr></table></figure>
-<h2 id="修改配置文件"><a href="#修改配置文件" class="headerlink" title="修改配置文件"></a>修改配置文件</h2><p><strong>1.修改zoo_sample.cfg zoo.cfg 为zoo.cfg</strong><br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 software]#  mv zoo_sample.cfg zoo.cfg zoo.cfg</span><br></pre></td></tr></table></figure><br><strong>2.修改配置文件</strong><br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 software]# vi zoo.cfg</span><br></pre></td></tr></table></figure><br>&lt;blockquote&gt;</p>
-<p>#数据目录需要提前创建  </p>
-<p>dataDir=/opt/module/zookeeper-3.4.5-cdh5.10.0/zkData  </p>
-<p>#server.每个节点服务编号=服务器ip地址：集群通信端口：选举端口<br>server.1=bigdata107 :2888:3888<br>server.2=bigdata108 :2888:3888<br>server.3=bigdata109 :2888:3888<br>&lt;/blockquote&gt;  </p>
-<p><strong>3.分发到各个节点</strong>  </p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 software]#   scp -r zookeeper-3.4.10&#x2F; bigdata108:&#x2F;opt&#x2F;module&#x2F;</span><br><span class="line">[root@bigdata107 software]#  scp -r zookeeper-3.4.10&#x2F; bigdata109:&#x2F;opt&#x2F;module&#x2F;</span><br><span class="line">&#96;&#96;&#96;   </span><br><span class="line"></span><br><span class="line">**4.创建相关目录**</span><br></pre></td></tr></table></figure>
-<p>[root@bigdata107 zookeeper-3.4.10]# mkdir zkData<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">**5.在各个节点zkData目录下，创建myid**</span><br></pre></td></tr></table></figure></p>
-<p>#bigdata107 节点<br>[root@bigdata107 zookeeper-3.4.10]# touch myid<br>[root@bigdata107 zookeeper-3.4.10]# vi myid<br>1</p>
-<p>#bigdata108 节点<br>[root@bigdata108 zookeeper-3.4.10]# touch myid<br>[root@bigdata108 zookeeper-3.4.10]# vi myid<br>2</p>
-<p>#bigdata109 节点<br>[root@bigdata109 zookeeper-3.4.10]# touch myid<br>[root@bigdata109 zookeeper-3.4.10]# vi myid<br>3<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line"></span><br><span class="line">**6.启动Zookeeper服务**</span><br></pre></td></tr></table></figure></p>
-<p>#启动Zookeeper服务<br>[root@bigdata107 zookeeper-3.4.10]# bin/zkServer.sh start</p>
-<p>#查看各个节点服务状态<br>[root@bigdata107 zookeeper-3.4.10]# bin/zkServer.sh status</p>
-<p>#关闭各个节点服务<br>[root@bigdata107 zookeeper-3.4.10]# bin/zkServer.sh stop<br><code>`</code></p>
+    <title>Zeppelin</title>
+    <url>/2020/06/17/Zeppelin/</url>
+    <content><![CDATA[<h1 id="什么是ApacheZeppelin？"><a href="#什么是ApacheZeppelin？" class="headerlink" title="什么是ApacheZeppelin？"></a>什么是ApacheZeppelin？</h1><p>Apache Zeppelin 是一个可以进行大数据可视化分析的交互式开发系统，可以承担数据接入、数据发现、数据分析、数据可视化、数据协作等任务，其前端提供丰富的可视化图形库，不限于SparkSQL，后端支持HBase、Flink 等大数据系统以插件扩展的方式，并支持Spark、Python、JDBC、Markdown、Shell 等各种常用Interpreter，这使得开发者可以方便地使用SQL 在 Zeppelin 中做数据开发。在 Zeppelin 中还可以完成机器学习的数据预处理、算法开发和调试、算法作业调度的工作，同时，Zeppelin 还提供了单机 Docker、分布式、K8s、Yarn 四种系统运行模式，以适应各类团队的需求。</p>
+<h1 id="多功能笔记本"><a href="#多功能笔记本" class="headerlink" title="多功能笔记本"></a>多功能笔记本</h1><p>1）数据摄取<br>2）数据发现<br>3）数据可视化与协作<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025783514_8CF155AE412A82C78071201381CEAC20" alt="图片说明" title="图片标题"> </p>
+<h1 id="多语言后端"><a href="#多语言后端" class="headerlink" title="多语言后端"></a>多语言后端</h1><p>Apache Zeppelin解释器概念允许将任何语言数据/数据处理后端插入Zeppelin。当前，Apache Zeppelin支持许多解释器，例如Apache Spark，Python，JDBC，Markdown和Shell。</p>
+<h1 id="Apache-Spark集成"><a href="#Apache-Spark集成" class="headerlink" title="Apache Spark集成"></a>Apache Spark集成</h1><p>特别是，Apache Zeppelin提供了内置的Apache Spark集成。不需要为其构建单独的模块，插件或库。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025811557_14FF85F448A85399AA74361F7B957506" alt="图片说明" title="图片标题"><br>Apache Zeppelin与Spark集成提供<br>Apache Zeppelin与Spark集成提供<br>自动SparkContext和SQLContext注入<br>从本地文件系统或Maven存储库加载运行时jar依赖项。<br>取消作业并显示其进度</p>
+<h1 id="数据可视化"><a href="#数据可视化" class="headerlink" title="数据可视化"></a>数据可视化</h1><p>Apache Zeppelin中已经包含一些基本图表，可视化不仅限于SparkSQL查询，任何语言后端的任何输出都可以被识别和可视化<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025841915_3FDB2A16838FA1D3A8DE66597442CDB1" alt="图片说明" title="图片标题"> </p>
+<h2 id="枢轴图表"><a href="#枢轴图表" class="headerlink" title="枢轴图表"></a>枢轴图表</h2><p>Apache Zeppelin 汇总值并通过简单的拖放将其显示在数据透视图中。您可以轻松地创建具有多个汇总值的图表，包括综合，计数，平均值，最小值，最大值。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025877924_B5510C7235B1E872B0A8BF2CADE4D1CA" alt="图片说明" title="图片标题"><br>在Apache Zeppelin中了解有关基本显示系统和Angular API（frontend，backend）的更多信息。</p>
+<h1 id="动态表格"><a href="#动态表格" class="headerlink" title="动态表格"></a>动态表格</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025899397_63E60EDEB1CCD12D3A765295F3FE0018" alt="图片说明" title="图片标题"> </p>
+<h1 id="通过共享您的笔记本和段落进行协作"><a href="#通过共享您的笔记本和段落进行协作" class="headerlink" title="通过共享您的笔记本和段落进行协作"></a>通过共享您的笔记本和段落进行协作</h1><p>您的笔记本URL可以在协作者之间共享。然后，Apache Zeppelin将实时广播所有更改，就像Google文档中的协作一样。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025913843_7E9D16C843B30DC30C36EBED3FC80485" alt="图片说明" title="图片标题"> </p>
 ]]></content>
       <categories>
-        <category>Zookeeper</category>
+        <category>Zeppelin</category>
       </categories>
-      <tags>
-        <tag>集群部署</tag>
-      </tags>
   </entry>
   <entry>
     <title>Zeppelin 安装</title>
@@ -818,20 +805,33 @@
       </tags>
   </entry>
   <entry>
-    <title>Zeppelin</title>
-    <url>/2020/06/17/Zeppelin/</url>
-    <content><![CDATA[<h1 id="什么是ApacheZeppelin？"><a href="#什么是ApacheZeppelin？" class="headerlink" title="什么是ApacheZeppelin？"></a>什么是ApacheZeppelin？</h1><p>Apache Zeppelin 是一个可以进行大数据可视化分析的交互式开发系统，可以承担数据接入、数据发现、数据分析、数据可视化、数据协作等任务，其前端提供丰富的可视化图形库，不限于SparkSQL，后端支持HBase、Flink 等大数据系统以插件扩展的方式，并支持Spark、Python、JDBC、Markdown、Shell 等各种常用Interpreter，这使得开发者可以方便地使用SQL 在 Zeppelin 中做数据开发。在 Zeppelin 中还可以完成机器学习的数据预处理、算法开发和调试、算法作业调度的工作，同时，Zeppelin 还提供了单机 Docker、分布式、K8s、Yarn 四种系统运行模式，以适应各类团队的需求。</p>
-<h1 id="多功能笔记本"><a href="#多功能笔记本" class="headerlink" title="多功能笔记本"></a>多功能笔记本</h1><p>1）数据摄取<br>2）数据发现<br>3）数据可视化与协作<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025783514_8CF155AE412A82C78071201381CEAC20" alt="图片说明" title="图片标题"> </p>
-<h1 id="多语言后端"><a href="#多语言后端" class="headerlink" title="多语言后端"></a>多语言后端</h1><p>Apache Zeppelin解释器概念允许将任何语言数据/数据处理后端插入Zeppelin。当前，Apache Zeppelin支持许多解释器，例如Apache Spark，Python，JDBC，Markdown和Shell。</p>
-<h1 id="Apache-Spark集成"><a href="#Apache-Spark集成" class="headerlink" title="Apache Spark集成"></a>Apache Spark集成</h1><p>特别是，Apache Zeppelin提供了内置的Apache Spark集成。不需要为其构建单独的模块，插件或库。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025811557_14FF85F448A85399AA74361F7B957506" alt="图片说明" title="图片标题"><br>Apache Zeppelin与Spark集成提供<br>Apache Zeppelin与Spark集成提供<br>自动SparkContext和SQLContext注入<br>从本地文件系统或Maven存储库加载运行时jar依赖项。<br>取消作业并显示其进度</p>
-<h1 id="数据可视化"><a href="#数据可视化" class="headerlink" title="数据可视化"></a>数据可视化</h1><p>Apache Zeppelin中已经包含一些基本图表，可视化不仅限于SparkSQL查询，任何语言后端的任何输出都可以被识别和可视化<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025841915_3FDB2A16838FA1D3A8DE66597442CDB1" alt="图片说明" title="图片标题"> </p>
-<h2 id="枢轴图表"><a href="#枢轴图表" class="headerlink" title="枢轴图表"></a>枢轴图表</h2><p>Apache Zeppelin 汇总值并通过简单的拖放将其显示在数据透视图中。您可以轻松地创建具有多个汇总值的图表，包括综合，计数，平均值，最小值，最大值。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025877924_B5510C7235B1E872B0A8BF2CADE4D1CA" alt="图片说明" title="图片标题"><br>在Apache Zeppelin中了解有关基本显示系统和Angular API（frontend，backend）的更多信息。</p>
-<h1 id="动态表格"><a href="#动态表格" class="headerlink" title="动态表格"></a>动态表格</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025899397_63E60EDEB1CCD12D3A765295F3FE0018" alt="图片说明" title="图片标题"> </p>
-<h1 id="通过共享您的笔记本和段落进行协作"><a href="#通过共享您的笔记本和段落进行协作" class="headerlink" title="通过共享您的笔记本和段落进行协作"></a>通过共享您的笔记本和段落进行协作</h1><p>您的笔记本URL可以在协作者之间共享。然后，Apache Zeppelin将实时广播所有更改，就像Google文档中的协作一样。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025913843_7E9D16C843B30DC30C36EBED3FC80485" alt="图片说明" title="图片标题"> </p>
+    <title>Zookeeper分布式集群部署</title>
+    <url>/2020/06/17/Zookeeper%E5%88%86%E5%B8%83%E5%BC%8F%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>&lt;blockquote&gt;<br>ZooKeeper是一个开放源代码的分布式协调服务，由知名互联网公司雅虎创建，是Google Chubby的开源实现。ZooKeeper的设计目标是将那些复杂且容易出错的分布式一致性服务封装起来，构成一个高效可靠的原语集，并以一系列简单易用的接口提供给用户使用。  </p>
+<p>ZooKeeper是一个典型的分布式数据一致性的解决方案，分布式应用程序可以基于它实现诸如数据发布/订阅、负载均衡、命名服务、分布式协调/通知、集群管理、Master选举、分布式锁和分布式队列等功能。ZooKeeper可以保证如下分布式一致性特性。<br>今天我们来看看如何分布式安装</p>
+<p>&lt;/blockquote&gt;  </p>
+<h1 id="Zookeeper分布式集群部署"><a href="#Zookeeper分布式集群部署" class="headerlink" title="Zookeeper分布式集群部署"></a>Zookeeper分布式集群部署</h1><h2 id="下载Zookeeper"><a href="#下载Zookeeper" class="headerlink" title="下载Zookeeper"></a>下载Zookeeper</h2><p>这里可以参考官网，下载需要的版本：<br><a href="https://zookeeper.apache.org/" target="_blank" rel="noopener">https://zookeeper.apache.org/</a></p>
+<h2 id="解压Zookeeper到我们指定的目录"><a href="#解压Zookeeper到我们指定的目录" class="headerlink" title="解压Zookeeper到我们指定的目录"></a>解压Zookeeper到我们指定的目录</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 software]#  tar -zxvf zookeeper-3.4.10 -C &#x2F;opt&#x2F;module&#x2F;</span><br></pre></td></tr></table></figure>
+<h2 id="修改配置文件"><a href="#修改配置文件" class="headerlink" title="修改配置文件"></a>修改配置文件</h2><p><strong>1.修改zoo_sample.cfg zoo.cfg 为zoo.cfg</strong><br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 software]#  mv zoo_sample.cfg zoo.cfg zoo.cfg</span><br></pre></td></tr></table></figure><br><strong>2.修改配置文件</strong><br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 software]# vi zoo.cfg</span><br></pre></td></tr></table></figure><br>&lt;blockquote&gt;</p>
+<p>#数据目录需要提前创建  </p>
+<p>dataDir=/opt/module/zookeeper-3.4.5-cdh5.10.0/zkData  </p>
+<p>#server.每个节点服务编号=服务器ip地址：集群通信端口：选举端口<br>server.1=bigdata107 :2888:3888<br>server.2=bigdata108 :2888:3888<br>server.3=bigdata109 :2888:3888<br>&lt;/blockquote&gt;  </p>
+<p><strong>3.分发到各个节点</strong>  </p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 software]#   scp -r zookeeper-3.4.10&#x2F; bigdata108:&#x2F;opt&#x2F;module&#x2F;</span><br><span class="line">[root@bigdata107 software]#  scp -r zookeeper-3.4.10&#x2F; bigdata109:&#x2F;opt&#x2F;module&#x2F;</span><br><span class="line">&#96;&#96;&#96;   </span><br><span class="line"></span><br><span class="line">**4.创建相关目录**</span><br></pre></td></tr></table></figure>
+<p>[root@bigdata107 zookeeper-3.4.10]# mkdir zkData<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">**5.在各个节点zkData目录下，创建myid**</span><br></pre></td></tr></table></figure></p>
+<p>#bigdata107 节点<br>[root@bigdata107 zookeeper-3.4.10]# touch myid<br>[root@bigdata107 zookeeper-3.4.10]# vi myid<br>1</p>
+<p>#bigdata108 节点<br>[root@bigdata108 zookeeper-3.4.10]# touch myid<br>[root@bigdata108 zookeeper-3.4.10]# vi myid<br>2</p>
+<p>#bigdata109 节点<br>[root@bigdata109 zookeeper-3.4.10]# touch myid<br>[root@bigdata109 zookeeper-3.4.10]# vi myid<br>3<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line"></span><br><span class="line">**6.启动Zookeeper服务**</span><br></pre></td></tr></table></figure></p>
+<p>#启动Zookeeper服务<br>[root@bigdata107 zookeeper-3.4.10]# bin/zkServer.sh start</p>
+<p>#查看各个节点服务状态<br>[root@bigdata107 zookeeper-3.4.10]# bin/zkServer.sh status</p>
+<p>#关闭各个节点服务<br>[root@bigdata107 zookeeper-3.4.10]# bin/zkServer.sh stop<br><code>`</code></p>
 ]]></content>
       <categories>
-        <category>Zeppelin</category>
+        <category>Zookeeper</category>
       </categories>
+      <tags>
+        <tag>集群部署</tag>
+      </tags>
   </entry>
   <entry>
     <title>代码测试</title>
@@ -852,30 +852,6 @@
       </categories>
       <tags>
         <tag>test</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>如何判断对象是否死亡?</title>
-    <url>/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在堆里面存放着Java世界中几乎所有的对象实例，垃圾收集器在对堆进行回收前，第一件事情就是要确定这些对象之中哪些还“存活”着，哪些已经“死去”，判断对象的生死存活都有那些算法？</p>
-<h2 id="引用计数算法"><a href="#引用计数算法" class="headerlink" title="引用计数算法"></a>引用计数算法</h2><p>实现原理：给对象中添加一个引用计数器，每当一个地方引用它是，计数器值就加1；任何时刻计数器为0的对象就是不可能再被使用的。<br>但是主流的Java虚拟机里面没有选用引用计数算法来管理内存，其中主要的原因是它很难解决对象之间相互引用的问题。<br>如下一个简单的例子：请看测试代码：对象objA和objB都有字段instance，赋值令 objA.instance=objB及objB.instance=objA，实际上这两个对象已经不可能再被访问了，但是他们因为互相引用这对方，导致引用计数都不为0，于是引用计数算法无法通过GC收集器回收他们。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">public class ReferenceCountingGC &#123;</span><br><span class="line">    &#x2F;**</span><br><span class="line">     * @Author: luomo</span><br><span class="line">     * @CreateTime: 2019&#x2F;11&#x2F;4</span><br><span class="line">     * @Description: 引用计数算法</span><br><span class="line">     *&#x2F;</span><br><span class="line">    public Object instance &#x3D; null;</span><br><span class="line">    private  static final int _1MB&#x3D;1024*1024;</span><br><span class="line">    &#x2F;**</span><br><span class="line">     *  这个成员属性的唯一意义就是占点内存，以便能在GC日志中看清楚是否被回收</span><br><span class="line">     *&#x2F;</span><br><span class="line">    private  byte[] bigSize &#x3D;new byte[2 * _1MB];</span><br><span class="line">    public static void testGC()&#123;</span><br><span class="line">        ReferenceCountingGC objA &#x3D;new  ReferenceCountingGC();</span><br><span class="line">        ReferenceCountingGC objB &#x3D;new ReferenceCountingGC();</span><br><span class="line">        objA.instance&#x3D;objB;</span><br><span class="line">        objB.instance&#x3D;objA;</span><br><span class="line">        objA &#x3D;null;</span><br><span class="line">        objB &#x3D;null;</span><br><span class="line">        System.gc();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">    public  static void main(String[] args)&#123;</span><br><span class="line">        testGC();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>程序运行结果如下：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/1.png" alt=" "><br>从运行结果中可以清楚看出虚拟机并没有因为互相引用就不回收他们，这也从侧面说明虚拟机并不是通过引用计数算法来判断对象是否存活的。</p>
-<h2 id="可达性分析算法"><a href="#可达性分析算法" class="headerlink" title="可达性分析算法"></a>可达性分析算法</h2><p>实现原理：在主流的语言的主流实现中，比如Java、C#、甚至是古老的Lisp都是使用的可达性分析算法来判断对象是否存活的。</p>
-<p>这个算法的核心思路就是通过一些列的“GC Roots”对象作为起始点，从这些对象开始往下搜索，搜索所经过的路径称之为“引用链”。</p>
-<p>当一个对象到GC Roots没有任何引用链相连的时候，证明此对象是可以被回收的。如下图所示：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/2.png" alt="图片说明"><br>在Java中，可作为GC Roots对象的列表：</p>
-<ul>
-<li>Java虚拟机栈中的引用对象。</li>
-<li>本地方法栈中JNI（既一般说的Native方法）引用的对象。</li>
-<li>方法区中类静态常量的引用对象。</li>
-<li>方法区中常量的引用对象。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>JVM</category>
-      </categories>
-      <tags>
-        <tag>JVM</tag>
       </tags>
   </entry>
   <entry>
@@ -936,6 +912,30 @@
       </categories>
       <tags>
         <tag>垃圾收集算法</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>如何判断对象是否死亡?</title>
+    <url>/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在堆里面存放着Java世界中几乎所有的对象实例，垃圾收集器在对堆进行回收前，第一件事情就是要确定这些对象之中哪些还“存活”着，哪些已经“死去”，判断对象的生死存活都有那些算法？</p>
+<h2 id="引用计数算法"><a href="#引用计数算法" class="headerlink" title="引用计数算法"></a>引用计数算法</h2><p>实现原理：给对象中添加一个引用计数器，每当一个地方引用它是，计数器值就加1；任何时刻计数器为0的对象就是不可能再被使用的。<br>但是主流的Java虚拟机里面没有选用引用计数算法来管理内存，其中主要的原因是它很难解决对象之间相互引用的问题。<br>如下一个简单的例子：请看测试代码：对象objA和objB都有字段instance，赋值令 objA.instance=objB及objB.instance=objA，实际上这两个对象已经不可能再被访问了，但是他们因为互相引用这对方，导致引用计数都不为0，于是引用计数算法无法通过GC收集器回收他们。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">public class ReferenceCountingGC &#123;</span><br><span class="line">    &#x2F;**</span><br><span class="line">     * @Author: luomo</span><br><span class="line">     * @CreateTime: 2019&#x2F;11&#x2F;4</span><br><span class="line">     * @Description: 引用计数算法</span><br><span class="line">     *&#x2F;</span><br><span class="line">    public Object instance &#x3D; null;</span><br><span class="line">    private  static final int _1MB&#x3D;1024*1024;</span><br><span class="line">    &#x2F;**</span><br><span class="line">     *  这个成员属性的唯一意义就是占点内存，以便能在GC日志中看清楚是否被回收</span><br><span class="line">     *&#x2F;</span><br><span class="line">    private  byte[] bigSize &#x3D;new byte[2 * _1MB];</span><br><span class="line">    public static void testGC()&#123;</span><br><span class="line">        ReferenceCountingGC objA &#x3D;new  ReferenceCountingGC();</span><br><span class="line">        ReferenceCountingGC objB &#x3D;new ReferenceCountingGC();</span><br><span class="line">        objA.instance&#x3D;objB;</span><br><span class="line">        objB.instance&#x3D;objA;</span><br><span class="line">        objA &#x3D;null;</span><br><span class="line">        objB &#x3D;null;</span><br><span class="line">        System.gc();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">    public  static void main(String[] args)&#123;</span><br><span class="line">        testGC();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>程序运行结果如下：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/1.png" alt=" "><br>从运行结果中可以清楚看出虚拟机并没有因为互相引用就不回收他们，这也从侧面说明虚拟机并不是通过引用计数算法来判断对象是否存活的。</p>
+<h2 id="可达性分析算法"><a href="#可达性分析算法" class="headerlink" title="可达性分析算法"></a>可达性分析算法</h2><p>实现原理：在主流的语言的主流实现中，比如Java、C#、甚至是古老的Lisp都是使用的可达性分析算法来判断对象是否存活的。</p>
+<p>这个算法的核心思路就是通过一些列的“GC Roots”对象作为起始点，从这些对象开始往下搜索，搜索所经过的路径称之为“引用链”。</p>
+<p>当一个对象到GC Roots没有任何引用链相连的时候，证明此对象是可以被回收的。如下图所示：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/2.png" alt="图片说明"><br>在Java中，可作为GC Roots对象的列表：</p>
+<ul>
+<li>Java虚拟机栈中的引用对象。</li>
+<li>本地方法栈中JNI（既一般说的Native方法）引用的对象。</li>
+<li>方法区中类静态常量的引用对象。</li>
+<li>方法区中常量的引用对象。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>JVM</tag>
       </tags>
   </entry>
 </search>
