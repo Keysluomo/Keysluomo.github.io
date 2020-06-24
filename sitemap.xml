@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://keysluomo.github.io/2020/01/19/Hadoop%25E5%25AE%2589%25E8%25A3%2585/</loc>
+    
+    <lastmod>2020-06-24T06:52:12.239Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://keysluomo.github.io/2020/06/21/Flink-DataStream-API%25E7%25BC%2596%25E7%25A8%258B/</loc>
     
     <lastmod>2020-06-24T06:43:05.963Z</lastmod>
@@ -54,13 +61,6 @@
     <loc>https://keysluomo.github.io/2020/06/14/Spark-Demo-Serializable/</loc>
     
     <lastmod>2020-06-20T03:15:38.162Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>https://keysluomo.github.io/2020/06/19/Hadoop%25E5%25AE%2589%25E8%25A3%2585/</loc>
-    
-    <lastmod>2020-06-20T03:04:53.640Z</lastmod>
     
   </url>
   
