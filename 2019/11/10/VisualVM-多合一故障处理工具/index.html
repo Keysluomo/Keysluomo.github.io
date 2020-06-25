@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="baidu-site-verification" content="L6Lm9d5Crl"/>
+  
+  
+  
+  
+  <title>VisualVM:多合一故障处理工具 | 落墨</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="VisualVM (All-in-One Java Troubleshooting Tool)是到目前为止随JDK发布的功能最强大的运行监视和故障处理程序，并且可以预见在未来一段时间内都是官方助力发展的虚拟机故障处理工具。官方在VisualVM的软件说明中写上了“All in One”的描述字样，预示着它除了运行监视，故障处理 外，还提供了很多其他方面的功能。如性能分析，VisualVM的性能分析">
+<meta property="og:type" content="article">
+<meta property="og:title" content="VisualVM:多合一故障处理工具">
+<meta property="og:url" content="https://keysluomo.github.io/2019/11/10/VisualVM-%E5%A4%9A%E5%90%88%E4%B8%80%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7/index.html">
+<meta property="og:site_name" content="落墨">
+<meta property="og:description" content="VisualVM (All-in-One Java Troubleshooting Tool)是到目前为止随JDK发布的功能最强大的运行监视和故障处理程序，并且可以预见在未来一段时间内都是官方助力发展的虚拟机故障处理工具。官方在VisualVM的软件说明中写上了“All in One”的描述字样，预示着它除了运行监视，故障处理 外，还提供了很多其他方面的功能。如性能分析，VisualVM的性能分析">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573376421667_0603DDC2187E3F359DFF1C4A07BF61DF">
+<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573377093671_1269F967A1AE25FDC458A14CB4CB4B37">
+<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573377517433_B76A4E6CB4F70B4F3FD192B97C655C83">
+<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573378591042_FAB281188970DB420E1323E98D38BBAA">
+<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573379709800_6C3B2CC29B95904A4B0C47224C44304A">
+<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191111/9094293_1573475795296_506A122025C95B87465048F8325621A5">
+<meta property="og:image" content="https://uploadfiles.nowcoder.com/images/20191111/9094293_1573477699767_FA5FB94755C7F76228C24ADC9E5CF1A9">
+<meta property="article:published_time" content="2019-11-09T16:47:40.000Z">
+<meta property="article:modified_time" content="2020-06-25T16:31:28.408Z">
+<meta property="article:author" content="落墨">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573376421667_0603DDC2187E3F359DFF1C4A07BF61DF">
+  
+    <link rel="alternative" href="/atom.xml" title="落墨" type="application/atom+xml">
+  
+  
+  
+  
+<link rel="stylesheet" href="//cdn.bootcss.com/animate.css/3.5.0/animate.min.css">
+
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  <link rel="stylesheet" href="/font-awesome/css/font-awesome.min.css">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  
+  
+      <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  
+  <!-- 加载特效 -->
+    <script src="/js/pace.js"></script>
+    <link href="/css/pace/pace-theme-flash.css" rel="stylesheet" />
+  <script>
+      var yiliaConfig = {
+          fancybox: true,
+          animate: true,
+          isHome: false,
+          isPost: true,
+          isArchive: false,
+          isTag: false,
+          isCategory: false,
+          open_in_new: false
+      }
+  </script>
+<meta name="generator" content="Hexo 4.2.1"></head>
+<body>
+  <div id="container">
+    <div class="left-col">
+    <div class="overlay"></div>
+<div class="intrude-less">
+    <header id="header" class="inner">
+        
+<script src="https://7.url.cn/edu/jslib/comb/require-2.1.6,jquery-1.9.1.min.js"></script>
+
+        <a href="/" class="profilepic">
+            
+            <img lazy-src="/img/avatar.png" class="js-avatar">
+            
+        </a>
+        <hgroup>
+          <h1 class="header-author"><a href="/">落墨</a></h1>
+        </hgroup>
+        
+        <p class="header-subtitle">凡心所向，素履以往</p>
+        
+        
+        
+        
+            <div id="switch-btn" class="switch-btn">
+                <div class="icon">
+                    <div class="icon-ctn">
+                        <div class="icon-wrap icon-house" data-idx="0">
+                            <div class="birdhouse"></div>
+                            <div class="birdhouse_holes"></div>
+                        </div>
+                        <div class="icon-wrap icon-ribbon hide" data-idx="1">
+                            <div class="ribbon"></div>
+                        </div>
+                        
+                        <div class="icon-wrap icon-link hide" data-idx="2">
+                            <div class="loopback_l"></div>
+                            <div class="loopback_r"></div>
+                        </div>
+                        
+                        
+                        <div class="icon-wrap icon-me hide" data-idx="3">
+                            <div class="user"></div>
+                            <div class="shoulder"></div>
+                        </div>
+                        
+                    </div>
+                </div>
+                <div class="tips-box hide">
+                    <div class="tips-arrow"></div>
+                    <ul class="tips-inner">
+                        <li>菜单</li>
+                        <li>标签</li>
+                        
+                        <li>友情链接</li>
+                        
+                        
+                        <li>关于我</li>
+                        
+                    </ul>
+                </div>
+            </div>
+        
+        <div id="switch-area" class="switch-area">
+            <div class="switch-wrap">
+                <section class="switch-part switch-part1">
+                    <nav class="header-menu">
+                        <ul>
+                        
+                            <li><a  href="/archives/">所有文章</a></li>
+                        
+                            <li><a  href="/categories/Flink/">Flink</a></li>
+                        
+                            <li><a  href="/categories/Spark/">Spark</a></li>
+                        
+                            <li><a  href="/categories/Java/">Java</a></li>
+                        
+                            <li><a  href="/categories/JVM">JVM</a></li>
+                        
+                            <li><a  href="/categories/Scala/">Scala</a></li>
+                        
+                            <li><a  href="/categories/Kafka">Kafka</a></li>
+                        
+                            <li><a  href="/categories/Hadoop">Hadoop生态圈</a></li>
+                        
+                            <li><a  href="/categories/Zookeeper">Zookeeper</a></li>
+                        
+                            <li><a  href="/categories/Zeppelin">Zeppelin</a></li>
+                        
+                            <li><a  href="/categories/Tools">Tools</a></li>
+                        
+                        </ul>
+                    </nav>
+                    <nav class="header-nav">
+                        <ul class="social">
+                            
+                                <a class="fl github"  target="_blank" href="/xxxxx" title="github">github</a>
+                            
+                                <a class="fl weibo"  target="_blank" href="/xxxxxxxx" title="weibo">weibo</a>
+                            
+                                <a class="fl rss"  target="_blank" href="/atom.xml" title="rss">rss</a>
+                            
+                        </ul>
+                    </nav>
+                </section>
+                
+                <section class="switch-part switch-part2">
+                    <div class="widget tagcloud" id="js-tagcloud">
+                        <a href="/tags/DataStream-API/" style="font-size: 10px;">DataStream API</a> <a href="/tags/Error/" style="font-size: 10px;">Error</a> <a href="/tags/Flink/" style="font-size: 20px;">Flink</a> <a href="/tags/Hadoop/" style="font-size: 15px;">Hadoop</a> <a href="/tags/Hadoop%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">Hadoop部署</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kafka/" style="font-size: 10px;">Kafka</a> <a href="/tags/Serializable/" style="font-size: 10px;">Serializable</a> <a href="/tags/Spark/" style="font-size: 10px;">Spark</a> <a href="/tags/Table-API-SQL/" style="font-size: 10px;">Table API & SQL</a> <a href="/tags/VMware/" style="font-size: 10px;">VMware</a> <a href="/tags/Zeppelin-%E5%AE%89%E8%A3%85/" style="font-size: 10px;">Zeppelin 安装</a> <a href="/tags/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/" style="font-size: 10px;">垃圾收集器</a> <a href="/tags/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/" style="font-size: 10px;">垃圾收集算法</a> <a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" style="font-size: 10px;">性能调优</a> <a href="/tags/%E6%AD%BB%E9%94%81/" style="font-size: 10px;">死锁</a> <a href="/tags/%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6/" style="font-size: 10px;">状态管理与容错机制</a> <a href="/tags/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/" style="font-size: 10px;">编程语言</a> <a href="/tags/%E8%BD%AC%E8%BD%BD/" style="font-size: 15px;">转载</a> <a href="/tags/%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F/" style="font-size: 10px;">运行时数据区域</a> <a href="/tags/%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7/" style="font-size: 10px;">集群监控</a> <a href="/tags/%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">集群部署</a> <a href="/tags/%E9%9B%B6%E6%8B%B7%E8%B4%9D/" style="font-size: 10px;">零拷贝</a>
+                    </div>
+                </section>
+                
+                
+                <section class="switch-part switch-part3">
+                    <div id="js-friends">
+                    
+                      <a target="_blank"  class="main-nav-link switch-friends-link" href="http://blog.csdn.net/baidu_21483933">csdn</a>
+                    
+                      <a target="_blank"  class="main-nav-link switch-friends-link" href="https://segmentfault.com/blog/maocg_web">segmentfault</a>
+                    
+                      <a target="_blank"  class="main-nav-link switch-friends-link" href="http://www.jianshu.com/users/eb37ef89c746/latest_articles">简书</a>
+                    
+                    </div>
+                </section>
+                
+                
+                
+                <section class="switch-part switch-part4">
+                
+                    <div id="js-aboutme">本人性格开朗、有活力，待人热情，能迅速的适应各种环境。 热衷于新技术学习和实践，乐于寻求挑战和突破自我。</div>
+                </section>
+                
+            </div>
+        </div>
+    </header>
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+      <div class="overlay">
+          <div class="slider-trigger"></div>
+          <h1 class="header-author js-mobile-header hide"><a href="/" title="回到主页">落墨</a></h1>
+      </div>
+    <div class="intrude-less">
+        <header id="header" class="inner">
+            <a href="/" class="profilepic">
+                
+                    <img lazy-src="/img/avatar.png" class="js-avatar">
+                
+            </a>
+            <hgroup>
+              <h1 class="header-author"><a href="/" title="回到主页">落墨</a></h1>
+            </hgroup>
+            
+            <p class="header-subtitle">凡心所向，素履以往</p>
+            
+            <nav class="header-menu">
+                <ul>
+                
+                    <li><a href="/archives/">所有文章</a></li>
+                
+                    <li><a href="/categories/Flink/">Flink</a></li>
+                
+                    <li><a href="/categories/Spark/">Spark</a></li>
+                
+                    <li><a href="/categories/Java/">Java</a></li>
+                
+                    <li><a href="/categories/JVM">JVM</a></li>
+                
+                    <li><a href="/categories/Scala/">Scala</a></li>
+                
+                    <li><a href="/categories/Kafka">Kafka</a></li>
+                
+                    <li><a href="/categories/Hadoop">Hadoop生态圈</a></li>
+                
+                    <li><a href="/categories/Zookeeper">Zookeeper</a></li>
+                
+                    <li><a href="/categories/Zeppelin">Zeppelin</a></li>
+                
+                    <li><a href="/categories/Tools">Tools</a></li>
+                
+                <div class="clearfix"></div>
+                </ul>
+            </nav>
+            <nav class="header-nav">
+                <div class="social">
+                    
+                        <a class="github" target="_blank" href="/xxxxx" title="github">github</a>
+                    
+                        <a class="weibo" target="_blank" href="/xxxxxxxx" title="weibo">weibo</a>
+                    
+                        <a class="rss" target="_blank" href="/atom.xml" title="rss">rss</a>
+                    
+                </div>
+            </nav>
+        </header>
+    </div>
+</nav>
+      <div class="body-wrap"><article id="post-VisualVM-多合一故障处理工具" class="article article-type-post" itemscope itemprop="blogPost">
+  
+    <div class="article-meta">
+      <a  href="/2019/11/10/VisualVM-%E5%A4%9A%E5%90%88%E4%B8%80%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7/" class="article-date">
+      <time datetime="2019-11-09T16:47:40.000Z" itemprop="datePublished">2019-11-10</time>
+</a>
+
+    </div>
+  
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      VisualVM:多合一故障处理工具
+    </h1>
+  
+
+
+      </header>
+      
+      <div class="article-info article-info-post">
+        
+
+        
+        <div class="clearfix"></div>
+      </div>
+      
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+          
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>VisualVM (All-in-One Java Troubleshooting Tool)是到目前为止随JDK发布的功能最强大的运行监视和故障处理程序，并且可以预见在未来一段时间内都是官方助力发展的虚拟机故障处理工具。官方在VisualVM的软件说明中写上了“All in One”的描述字样，预示着它除了运行监视，故障处理 外，还提供了很多其他方面的功能。如性能分析，VisualVM的性能分析功能甚至比起JProfiler、YourKit等专业收费的Profiling工具都不会逊色多少，而且VisualVM的还有一个很大的优点：不需要被监视的程序基于特殊Agent运行，因此它对应用程序的实际性能的影响很小，使用它可以直接应用在生产环境中。这个是JProfiler、YourKit等工具无法与之媲美的。</p>
+<h2 id="Visual兼容范围与插件安装"><a href="#Visual兼容范围与插件安装" class="headerlink" title="Visual兼容范围与插件安装"></a>Visual兼容范围与插件安装</h2><p>VisualVM基于NetBeans平台开发，因此它一开始就具备了插件扩展功能的特性，通过插件扩展支持，VisualVM可以做到：</p>
+<ul>
+<li>显示虚拟机进程以及进程的配置、环境信息。</li>
+<li>监视应用程序的CPU、GC、堆、方法区以及线程的信息（jstat、jstack）。</li>
+<li>dump以及分析堆转储快照。</li>
+<li>方法级的程序运行性能分析，找出被调用最多、运行时间最长的方法。</li>
+<li>离线程序快照：收集程序的运行时配置、线程dump、内存dump等信息建立一个快照，可以将快照发送开发者处进行Bug反馈。</li>
+<li>其他plugins的无限的可能性。。<br>主要特性的兼容性见表：</li>
+</ul>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573376421667_0603DDC2187E3F359DFF1C4A07BF61DF" alt="图片说明" title="图片标题"> </p>
+<p>首先我们在jdk1.8/bin目录下启动jvisualvm,我们先不着急找应用程序进行监测，因为现在VisualVM还没有加载任何插件，虽然基本的监视、线程面板的功能主程序都以默认插件的形式提供了但是不给VisualVM装任何扩展插件，就相当于放弃了它最精华的功能，和没有安装任何应用软件操作系统差不多。<br>插件我们进行手工安装：<br>打开“工具 -&gt; 插件 -&gt; 可用插件 “选中“Visual GC”默认进行安装<br>安装成功后：</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573377093671_1269F967A1AE25FDC458A14CB4CB4B37" alt="图片说明" title="图片标题"> </p>
+<p>大家可以根据自己的工作需要和兴趣选择合适的插件，然后点击安装即可。<br>安装完插件，选择一个需要监视的程序就进入程序的主界面了，如图所示。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573377517433_B76A4E6CB4F70B4F3FD192B97C655C83" alt="图片说明" title="图片标题"> </p>
+<p>VisualVM中“概述”、“监视”、“线程”、“MBeans”的功能与前面介绍的JConsole差别不大，下面介绍几个特色的功能、插件。</p>
+<h2 id="2-生成、浏览堆转储快照"><a href="#2-生成、浏览堆转储快照" class="headerlink" title="2.生成、浏览堆转储快照"></a>2.生成、浏览堆转储快照</h2><p>在VisualVM中生成dump文件有两种方式，可以执行下列任一操作：</p>
+<ul>
+<li>在“应用程序”窗口中右键”单击应用程序节点，然后选择“堆Dump”。</li>
+<li>在“应用程序”窗口中双击应用程序节点以打开应用程序标签，然后在“监视”标签中单击“堆Dump”。<br>生成dump文件之后，应用程序页签将在该堆的应用程序下增加一个以[heapdump]开头的子节点，并且在主页签中打开了该转储快照，如图。如果需要把dump文件保存或发送出去，要在heapdump节点上右键选择“另存为”菜单，否则当VisualVM关闭时，生成的dump文件会被当做临时文件删除掉。要打开一个已经存在的dump文件，通过菜单“装入”功能，选择硬盘上的dump文件即可。</li>
+</ul>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573378591042_FAB281188970DB420E1323E98D38BBAA" alt="图片说明" title="图片标题"> </p>
+<h2 id="分析程序性能"><a href="#分析程序性能" class="headerlink" title="分析程序性能"></a>分析程序性能</h2><p>在Profiler页签中，VisualVM提供了程序运行期间方法级的CPU执行时间分析以及内存分析，做Profiling分析肯定会对程序运行性能有较大的影响，所以一般不在生产环境中使用这项功能。<br>要开始分析，先选择“CPU”和“内存”按钮中的一个，然后切换到应用程序中对程序进行操作，VisualVM会记录到这段时间中应用程序执行过的方法。如果是CPU分析，将会统计每个方法的执行次数、执行耗时；如果是内存分析，则会统计每个方法关联的对象数以及这些对象所占的空间。分析结束后，点击“停止”按钮结束监控过程，如图：</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191110/9094293_1573379709800_6C3B2CC29B95904A4B0C47224C44304A" alt="图片说明" title="图片标题"> </p>
+<h2 id="4-BTrace动态日志跟踪"><a href="#4-BTrace动态日志跟踪" class="headerlink" title="4.BTrace动态日志跟踪"></a>4.BTrace动态日志跟踪</h2><p>BTrace是一个很“有趣”的VisualVM插件，本身也是可以独立运行的程序，它的作用是在不停止目标程序运行的前提下，通过HotSpot虚拟机的HotSwap技术动态缴入原本并不存在的调试代码。这项功能对实际生产中的程序很有意义：经常遇到程序出现问题，但排查错误的一些必要信息，譬如方法参数、返回值等，在开发时并没有打印到日止之中，以至于不得不停掉服务，通过调试增量来加入日志代码以解决问题。当遇到生产环境服务无法随便停止是，缺一两句日志导致排错进行不下去是一件非常郁闷的事情。<br>在VisualVM中安装了BTrace插件后，在应用程序面板中右键点击要调试的程序，会出现“Trace Application。。。”菜单，点击将进入BTrace面板。这个面板里面看起来就像一个简单的Java程序开发环境，里面还有一段Java代码。如图：</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191111/9094293_1573475795296_506A122025C95B87465048F8325621A5" alt="图片说明" title="图片标题"> </p>
+<p>这里准备了一个Demo来演示BTrace的功能：产生 两个1000以内的随机整数，输出两个数字相加的结果代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">import java.io.BufferedReader;</span><br><span class="line">import java.io.IOException;</span><br><span class="line">import java.io.InputStreamReader;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * @Author: luomo</span><br><span class="line"> * @CreateTime: 2019&#x2F;11&#x2F;11</span><br><span class="line"> * @Description: 对BTrace插件简单的使用</span><br><span class="line"> *&#x2F;</span><br><span class="line">public class BTraceTest &#123;</span><br><span class="line">    public int add(int a,int b)&#123;</span><br><span class="line">        return a+b;</span><br><span class="line">    &#125;</span><br><span class="line">    public static void main(String[] args)throws IOException &#123;</span><br><span class="line">        BTraceTest test&#x3D;new BTraceTest();</span><br><span class="line">        BufferedReader reader&#x3D;new BufferedReader(new InputStreamReader(System.in));</span><br><span class="line">        for(int i&#x3D;0;i&lt;10;i++)</span><br><span class="line">        &#123;</span><br><span class="line">            reader.readLine();</span><br><span class="line">            int a&#x3D;(int) Math.round(Math.random()*1000);</span><br><span class="line">            int b&#x3D;(int) Math.round(Math.random()*1000);</span><br><span class="line">            System.out.println(test.add(a,b));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>程序运行后，在VisualVM中打开该程序的监视，在BTrace页签填充TracingScript内容，输入的调试代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;* BTrace Script Template *&#x2F;</span><br><span class="line">import com.sun.btrace.annotations.*;</span><br><span class="line">import static com.sun.btrace.BTraceUtils.*;</span><br><span class="line"></span><br><span class="line">@BTrace</span><br><span class="line">public class TracingScript &#123;</span><br><span class="line">	&#x2F;* put your code here *&#x2F;</span><br><span class="line">    @OnMethod(</span><br><span class="line">        clazz&#x3D;&quot;BTraceTest&quot;,</span><br><span class="line">        method&#x3D;&quot;add&quot;,</span><br><span class="line">        location&#x3D;@Location(Kind.RETURN)</span><br><span class="line">)</span><br><span class="line">public static void func(@Self BTraceTest instance,int a,int b,@Return int result)&#123;</span><br><span class="line">println(&quot;调用堆栈：&quot;);</span><br><span class="line">jstack();</span><br><span class="line">println(strcat(&quot;方法参数A：&quot;,str(a)));</span><br><span class="line">println(strcat(&quot;方法参数B:&quot;,str(b)));</span><br><span class="line">println(strcat(&quot;方法结果：&quot;,str(result)));</span><br><span class="line">    </span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>点击“Start”按钮后稍等片刻，编译完成后，可见Output面板上出现“BTrace code sucessfuly deployed”的字样。程序运行的时候在Output面板将会输出如图的调试信息。</p>
+<p><img src="https://uploadfiles.nowcoder.com/images/20191111/9094293_1573477699767_FA5FB94755C7F76228C24ADC9E5CF1A9" alt="图片说明" title="图片标题"> </p>
+<p>BTrace的用法还有许多，打印调用堆栈、参数、返回值只是最基本的应用，在他的网站上有使用BTrace进行性能监视、定位连接泄漏和内存泄漏、解决多线程竞争问题等例子。</p>
+
+      
+    </div>
+    
+  </div>
+  
+    
+         
+
+
+
+<nav id="article-nav">
+  
+    <a  href="/2019/11/17/Zookeeper%E5%88%86%E5%B8%83%E5%BC%8F%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption"><</strong>
+      <div class="article-nav-title">
+        
+          Zookeeper分布式集群部署
+        
+      </div>
+    </a>
+  
+  
+    <a  href="/2019/11/09/JConsole-Java%E7%9B%91%E8%A7%86%E4%B8%8E%E7%AE%A1%E7%90%86%E6%8E%A7%E5%88%B6%E5%8F%B0/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">JConsole:Java监视与管理控制台</div>
+      <strong class="article-nav-caption">></strong>
+    </a>
+  
+</nav>
+
+
+  
+</article>
+
+    <div id="toc" class="toc-article">
+    <strong class="toc-title">文章目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#前言"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Visual兼容范围与插件安装"><span class="toc-number">1.1.</span> <span class="toc-text">Visual兼容范围与插件安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-生成、浏览堆转储快照"><span class="toc-number">1.2.</span> <span class="toc-text">2.生成、浏览堆转储快照</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析程序性能"><span class="toc-number">1.3.</span> <span class="toc-text">分析程序性能</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-BTrace动态日志跟踪"><span class="toc-number">1.4.</span> <span class="toc-text">4.BTrace动态日志跟踪</span></a></li></ol></li></ol>
+</div>
+<style>
+    .left-col .switch-btn {
+        display: none;
+    }
+    .left-col .switch-area {
+        display: none;
+    }
+</style>
+<input type="button" id="tocButton" value="隐藏目录"  title="点击按钮隐藏或者显示文章目录">
+
+<script src="https://7.url.cn/edu/jslib/comb/require-2.1.6,jquery-1.9.1.min.js"></script>
+
+<script>
+    var valueHide = "隐藏目录";
+    var valueShow = "显示目录";
+    if ($(".left-col").is(":hidden")) {
+        $("#tocButton").attr("value", valueShow);
+    }
+    $("#tocButton").click(function() {
+        if ($("#toc").is(":hidden")) {
+            $("#tocButton").attr("value", valueHide);
+            $("#toc").slideDown(320);
+            $(".switch-btn, .switch-area").fadeOut(300);
+        }
+        else {
+            $("#tocButton").attr("value", valueShow);
+            $("#toc").slideUp(350);
+            $(".switch-btn, .switch-area").fadeIn(500);
+        }
+    })
+    if ($(".toc").length < 1) {
+        $("#toc, #tocButton").hide();
+        $(".switch-btn, .switch-area").show();
+    }
+</script>
+
+
+
+
+
+
+    
+        <section class="changyan" id="comments">
+  <!--<div id="uyan_frame"></div>-->
+  <div id="SOHUCS"></div>
+  <script charset="utf-8" type="text/javascript" src="https://changyan.sohu.com/upload/changyan.js"></script>
+  <script type="text/javascript">
+    window.changyan.api.config({
+      appid: 'xxxx',
+      conf: 'xxxxxxxxx'
+    });
+  </script>
+</section>
+    
+
+
+
+    <div class="scroll" id="post-nav-button">
+        
+            <a  href="/2019/11/17/Zookeeper%E5%88%86%E5%B8%83%E5%BC%8F%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2/" title="上一篇: Zookeeper分布式集群部署">
+                <i class="fa fa-angle-left"></i>
+            </a>
+        
+        <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
+        
+            <a  href="/2019/11/09/JConsole-Java%E7%9B%91%E8%A7%86%E4%B8%8E%E7%AE%A1%E7%90%86%E6%8E%A7%E5%88%B6%E5%8F%B0/" title="下一篇: JConsole:Java监视与管理控制台">
+                <i class="fa fa-angle-right"></i>
+            </a>
+        
+    </div>
+    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/06/21/Flink-DataStream-API%E7%BC%96%E7%A8%8B/">Flink DataStream API编程</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/21/Flink-Table-API-SQL%E7%BC%96%E7%A8%8B/">Flink Table API&SQL编程</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/04/27/Scala/">Scala</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/">Flume监控之Ganglia</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/04/02/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/">HDFS NameNode的工作机制</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/03/28/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/">Java线程死锁</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/">Zeppelin 安装</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/12/09/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/">Kafka实现高吞吐之零拷贝</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/12/02/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F/">Java虚拟机运行时数据区域</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/11/23/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/">VMwareWorkstation pro无法在Windows上运行的问题</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/11/17/Zookeeper%E5%88%86%E5%B8%83%E5%BC%8F%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2/">Zookeeper分布式集群部署</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/11/10/VisualVM-%E5%A4%9A%E5%90%88%E4%B8%80%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7/">VisualVM:多合一故障处理工具</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/11/09/JConsole-Java%E7%9B%91%E8%A7%86%E4%B8%8E%E7%AE%A1%E7%90%86%E6%8E%A7%E5%88%B6%E5%8F%B0/">JConsole:Java监视与管理控制台</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/11/08/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/">垃圾收集器</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/11/07/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/">HotSpot虚拟机对象探秘</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/11/06/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/">垃圾收集算法</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/11/04/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/">如何判断对象是否死亡?</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/10/29/Spark-Demo-Serializable/">Spark Demo(Serializable)</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/10/16/Spark-%E6%A6%82%E8%BF%B0/">Spark 概述</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/10/16/Spark-Error/">Spark Error</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/10/15/Spark%E5%8E%8B%E7%BC%A9%E6%96%87%E4%BB%B6%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/">Spark压缩文件性能分析</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/10/13/Apache-Flink-%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6/">Apache Flink 状态管理与容错机制</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/10/10/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/">Apache Spark简单构建一个应用程序</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/10/10/Apache-Flink-%E7%AE%80%E5%8D%95%E7%9A%84%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/">Apache Flink 简单的构建一个应用程序</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/10/08/Apache-Flink-DataStream-API-%E7%BC%96%E7%A8%8B/">Apache Flink DataStream API 编程</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/10/05/Apache-Flink%E6%A6%82%E5%BF%B5/">Apache Flink概念</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/10/02/Zeppelin/">Zeppelin</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/09/20/Kafka-%E6%A6%82%E8%BF%B0/">Kafka 概述</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/09/08/HDFS-1-0-%E4%B8%8E-2-0/">HDFS(1.0)与(2.0)</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/09/03/Hadoop%E5%AE%89%E8%A3%85/">Hadoop安装</a></li></ul>
+    
+<script src="https://7.url.cn/edu/jslib/comb/require-2.1.6,jquery-1.9.1.min.js"></script>
+
+    <script>
+        $(".post-list").addClass("toc-article");
+        // $(".post-list-item a").attr("target","_blank");
+        $("#post-nav-button > a:nth-child(2)").click(function() {
+            $(".fa-bars, .fa-times").toggle();
+            $(".post-list").toggle(300);
+            if ($(".toc").length > 0) {
+                $("#toc, #tocButton").toggle(200, function() {
+                    if ($(".switch-area").is(":visible")) {
+                        $("#toc, .switch-btn, .switch-area").toggle();
+                        $("#tocButton").attr("value", valueHide);
+                        }
+                    })
+            }
+            else {
+                $(".switch-btn, .switch-area").fadeToggle(300);
+            }
+        })
+    </script>
+
+
+
+
+    <script>
+        
+    </script>
+
+</div>
+      <footer id="footer">
+    <div class="outer">
+        <div id="footer-info">
+            <div class="footer-left">
+                &copy; 2020 落墨
+            </div>
+         
+        </div>
+        
+            <div class="visit">
+                
+                    <span id="busuanzi_container_site_pv" style='display:none'>
+                        <span id="site-visit" >极客到访数: 
+                            <span id="busuanzi_value_site_uv"></span>
+                        </span>
+                    </span>
+                
+                
+                    <span>, </span>
+                
+                
+                    <span id="busuanzi_container_page_pv" style='display:none'>
+                        <span id="page-visit">本页阅读量: 
+                            <span id="busuanzi_value_page_pv"></span>
+                        </span>
+                    </span>
+                
+            </div>
+        
+    </div>
+</footer>
+
+    </div>
+    
+<script src="https://7.url.cn/edu/jslib/comb/require-2.1.6,jquery-1.9.1.min.js"></script>
+
+
+<script src="/js/main.js"></script>
+
+
+    <script>
+        $(document).ready(function() {
+            var backgroundnum = 1;
+            var backgroundimg = "url(/background/bg-x.jpg)".replace(/x/gi, Math.ceil(Math.random() * backgroundnum));
+            $("#mobile-nav").css({"background-image": backgroundimg,"background-size": "cover","background-position": "center"});
+            $(".left-col").css({"background-image": backgroundimg,"background-size": "cover","background-position": "center"});
+        })
+    </script>
+
+
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'xxxxx', 'auto');
+ga('send', 'pageview');
+
+</script>
+<!-- End Google Analytics -->
+
+
+
+	<script>
+	var _hmt = _hmt || [];
+	(function() {
+	  var hm = document.createElement("script");
+	  hm.src = "//hm.baidu.com/hm.js?xxxxxx";
+	  var s = document.getElementsByTagName("script")[0]; 
+	  s.parentNode.insertBefore(hm, s);
+	})();
+	</script>
+
+
+
+<div class="scroll" id="scroll">
+    <a href="#"><i class="fa fa-arrow-up"></i></a>
+    <a href="#comments"><i class="fa fa-comments-o"></i></a>
+    <a href="#footer"><i class="fa fa-arrow-down"></i></a>
+</div>
+<script>
+    $(document).ready(function() {
+        if ($("#comments").length < 1) {
+            $("#scroll > a:nth-child(2)").hide();
+        };
+    })
+</script>
+
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js">
+</script>
+
+  <script language="javascript">
+    $(function() {
+        $("a[title]").each(function() {
+            var a = $(this);
+            var title = a.attr('title');
+            if (title == undefined || title == "") return;
+            a.data('title', title).removeAttr('title').hover(
+            function() {
+                var offset = a.offset();
+                $("<div id=\"anchortitlecontainer\"></div>").appendTo($("body")).html(title).css({
+                    top: offset.top - a.outerHeight() - 15,
+                    left: offset.left + a.outerWidth()/2 + 1
+                }).fadeIn(function() {
+                    var pop = $(this);
+                    setTimeout(function() {
+                        pop.remove();
+                    }, pop.text().length * 800);
+                });
+            }, function() {
+                $("#anchortitlecontainer").remove();
+            });
+        });
+    });
+</script>
+
+
+  </div>
+</body>
+</html>

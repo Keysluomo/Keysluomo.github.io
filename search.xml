@@ -2,7 +2,7 @@
 <search>
   <entry>
     <title>Apache Flink DataStream API 编程</title>
-    <url>/2020/06/12/Apache-Flink-DataStream-API-%E7%BC%96%E7%A8%8B/</url>
+    <url>/2019/10/08/Apache-Flink-DataStream-API-%E7%BC%96%E7%A8%8B/</url>
     <content><![CDATA[<p>#转载<br>作者：崔星灿<br>整理：高赟<br><a href="https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/" target="_blank" rel="noopener">https://ververica.cn/developers/apache-flink-basic-zero-iii-datastream-api-programming/</a></p>
 <h1 id="1-流处理基本概念"><a href="#1-流处理基本概念" class="headerlink" title="1. 流处理基本概念"></a>1. 流处理基本概念</h1><p>对于什么是流处理，从不同的角度有不同的定义。其实流处理与批处理这两个概念是对立统一的，它们的关系有点类似于对于 Java 中的 ArrayList 中的元素，是直接看作一个有限数据集并用下标去访问，还是用迭代器去访问。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537175558_C8AF084FBC88BD49BD6B715195F1B6C1" alt="图片说明" title="图片标题"> </p>
 <p>图1. 左图硬币分类器。硬币分类器也可以看作一个流处理系统，用于硬币分类的各部分组件提前串联在一起，硬币不断进入系统，并最终被输出到不同的队列中供后续使用。右图同理。<br>流处理系统本身有很多自己的特点。一般来说，由于需要支持无限数据集的处理，流处理系统一般采用一种数据驱动的处理方式。它会提前设置一些算子，然后等到数据到达后对数据进行处理。为了表达复杂的计算逻辑，包括 Flink 在内的分布式流处理引擎一般采用 DAG 图来表示整个计算逻辑，其中 DAG 图中的每一个点就代表一个基本的逻辑单元，也就是前面说的算子。由于计算逻辑被组织成有向图，数据会按照边的方向，从一些特殊的 Source 节点流入系统，然后通过网络传输、本地传输等不同的数据传输方式在算子之间进行发送和处理，最后会通过另外一些特殊的 Sink 节点将计算结果发送到某个外部系统或数据库中。<br><img src="https://uploadfiles.nowcoder.com/images/20191008/9094293_1570537192886_27A88C12397D0EF8F47E865DFEE4A173" alt="图片说明" title="图片标题"> </p>
@@ -60,7 +60,7 @@
   </entry>
   <entry>
     <title>Apache Flink 状态管理与容错机制</title>
-    <url>/2020/06/12/Apache-Flink-%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6/</url>
+    <url>/2019/10/13/Apache-Flink-%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6/</url>
     <content><![CDATA[<h1 id="转载"><a href="#转载" class="headerlink" title="转载"></a>转载</h1><h3 id="作者：孙梦瑶"><a href="#作者：孙梦瑶" class="headerlink" title="作者：孙梦瑶"></a>作者：孙梦瑶</h3><h3 id="整理：韩非"><a href="#整理：韩非" class="headerlink" title="整理：韩非"></a>整理：韩非</h3><h3 id="校对：邱从贤（山智）"><a href="#校对：邱从贤（山智）" class="headerlink" title="校对：邱从贤（山智）"></a>校对：邱从贤（山智）</h3><p><a href="https://ververica.cn/developers/state-management/" target="_blank" rel="noopener">https://ververica.cn/developers/state-management/</a><br>本文主要分享内容如下：</p>
 <p>状态管理的基本概念；</p>
 <p>状态的类型与使用示例；</p>
@@ -138,7 +138,7 @@
   </entry>
   <entry>
     <title>Apache Flink 简单的构建一个应用程序</title>
-    <url>/2020/06/12/Apache-Flink-%E7%AE%80%E5%8D%95%E7%9A%84%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
+    <url>/2019/10/10/Apache-Flink-%E7%AE%80%E5%8D%95%E7%9A%84%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
     <content><![CDATA[<h1 id="简单的构建一个ApacheFlink的应用程序"><a href="#简单的构建一个ApacheFlink的应用程序" class="headerlink" title="简单的构建一个ApacheFlink的应用程序"></a>简单的构建一个ApacheFlink的应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Flink 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Flink相关的依赖。</p>
 <p>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191012/9094293_1570843930821_A4D48C34269A213CE6F6CE74BF95681C" alt="图片说明" title="图片标题"> </p>
 <h1 id="编写Flink程序"><a href="#编写Flink程序" class="headerlink" title="编写Flink程序"></a>编写Flink程序</h1><p>创建 SocketWindowWordCount.java 文件：</p>
@@ -155,7 +155,7 @@
   </entry>
   <entry>
     <title>Apache Flink概念</title>
-    <url>/2020/06/03/Apache-Flink%E6%A6%82%E5%BF%B5/</url>
+    <url>/2019/10/05/Apache-Flink%E6%A6%82%E5%BF%B5/</url>
     <content><![CDATA[<h1 id="转载"><a href="#转载" class="headerlink" title="转载"></a>转载</h1><p>作者：陈守元 &amp; 戴资力<a href="https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/" target="_blank" rel="noopener">https://ververica.cn/developers/flink-basic-tutorial-1-basic-concept/</a></p>
 <h1 id="一、Apache-Flink-的定义、架构及原理"><a href="#一、Apache-Flink-的定义、架构及原理" class="headerlink" title="一、Apache Flink 的定义、架构及原理"></a>一、Apache Flink 的定义、架构及原理</h1><p>Apache Flink 是一个分布式大数据处理引擎，可对有限数据流和无限数据流进行有状态或无状态的计算，能够部署在各种集群环境，对各种规模大小的数据进行快速计算。</p>
 <h2 id="1-Flink-Application"><a href="#1-Flink-Application" class="headerlink" title="1. Flink Application"></a>1. Flink Application</h2><p>了解Flink 应用开发需要先理解Flink 的Streams、State、Time 等基础处理语义以及Flink 兼顾灵活性和方便性的多层次API。</p>
@@ -218,7 +218,7 @@
   </entry>
   <entry>
     <title>Apache Spark简单构建一个应用程序</title>
-    <url>/2020/06/14/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
+    <url>/2019/10/10/Apache-Spark%E7%AE%80%E5%8D%95%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/</url>
     <content><![CDATA[<h1 id="简单的构建一个Apache-Spark应用程序"><a href="#简单的构建一个Apache-Spark应用程序" class="headerlink" title="简单的构建一个Apache Spark应用程序"></a>简单的构建一个Apache Spark应用程序</h1><h2 id="开发环境的准备："><a href="#开发环境的准备：" class="headerlink" title="开发环境的准备："></a>开发环境的准备：</h2><p>Spark 可以运行在 Linux, Max OS X, 或者是 Windows 上。这里我是在Windows上运行的。在本地机器上需要有Java8.x和maven环境，另外我们推荐使用 ItelliJ IDEA 作为 Flink 应用程序的开发 IDE。<br>首先在我们的pom.xml文件中添加Spark相关的依赖。<br>pom如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;project xmlns&#x3D;&quot;http:&#x2F;&#x2F;maven.apache.org&#x2F;POM&#x2F;4.0.0&quot; xmlns:xsi&#x3D;&quot;http:&#x2F;&#x2F;www.w3.org&#x2F;2001&#x2F;XMLSchema-instance&quot; xsi:schemaLocation&#x3D;&quot;http:&#x2F;&#x2F;maven.apache.org&#x2F;POM&#x2F;4.0.0 http:&#x2F;&#x2F;maven.apache.org&#x2F;maven-v4_0_0.xsd&quot;&gt;</span><br><span class="line">  &lt;modelVersion&gt;4.0.0&lt;&#x2F;modelVersion&gt;</span><br><span class="line">  &lt;groupId&gt;SparkDemo&lt;&#x2F;groupId&gt;</span><br><span class="line">  &lt;artifactId&gt;SparkDemo&lt;&#x2F;artifactId&gt;</span><br><span class="line">  &lt;version&gt;1.0-SNAPSHOT&lt;&#x2F;version&gt;</span><br><span class="line">  &lt;inceptionYear&gt;2008&lt;&#x2F;inceptionYear&gt;</span><br><span class="line">  &lt;properties&gt;</span><br><span class="line">    &lt;scala.version&gt;2.11.1&lt;&#x2F;scala.version&gt;</span><br><span class="line">  &lt;&#x2F;properties&gt;</span><br><span class="line"></span><br><span class="line">  &lt;repositories&gt;</span><br><span class="line">    &lt;repository&gt;</span><br><span class="line">      &lt;id&gt;scala-tools.org&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;name&gt;Scala-Tools Maven2 Repository&lt;&#x2F;name&gt;</span><br><span class="line">      &lt;url&gt;http:&#x2F;&#x2F;scala-tools.org&#x2F;repo-releases&lt;&#x2F;url&gt;</span><br><span class="line">    &lt;&#x2F;repository&gt;</span><br><span class="line">  &lt;&#x2F;repositories&gt;</span><br><span class="line"></span><br><span class="line">  &lt;pluginRepositories&gt;</span><br><span class="line">    &lt;pluginRepository&gt;</span><br><span class="line">      &lt;id&gt;scala-tools.org&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;name&gt;Scala-Tools Maven2 Repository&lt;&#x2F;name&gt;</span><br><span class="line">      &lt;url&gt;http:&#x2F;&#x2F;scala-tools.org&#x2F;repo-releases&lt;&#x2F;url&gt;</span><br><span class="line">    &lt;&#x2F;pluginRepository&gt;</span><br><span class="line">  &lt;&#x2F;pluginRepositories&gt;</span><br><span class="line"></span><br><span class="line">  &lt;dependencies&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.scala-lang&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;scala-library&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;$&#123;scala.version&#125;&lt;&#x2F;version&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!-- https:&#x2F;&#x2F;mvnrepository.com&#x2F;artifact&#x2F;org.apache.spark&#x2F;spark-core --&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.apache.spark&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;spark-core_2.11&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;2.2.0&lt;&#x2F;version&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;junit&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;junit&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;4.4&lt;&#x2F;version&gt;</span><br><span class="line">      &lt;scope&gt;test&lt;&#x2F;scope&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;org.specs&lt;&#x2F;groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;specs&lt;&#x2F;artifactId&gt;</span><br><span class="line">      &lt;version&gt;1.2.5&lt;&#x2F;version&gt;</span><br><span class="line">      &lt;scope&gt;test&lt;&#x2F;scope&gt;</span><br><span class="line">    &lt;&#x2F;dependency&gt;</span><br><span class="line">  &lt;&#x2F;dependencies&gt;</span><br><span class="line"></span><br><span class="line">  &lt;build&gt;</span><br><span class="line">    &lt;sourceDirectory&gt;src&#x2F;main&#x2F;scala&lt;&#x2F;sourceDirectory&gt;</span><br><span class="line">    &lt;testSourceDirectory&gt;src&#x2F;test&#x2F;scala&lt;&#x2F;testSourceDirectory&gt;</span><br><span class="line">    &lt;plugins&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.scala-tools&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-scala-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;executions&gt;</span><br><span class="line">          &lt;execution&gt;</span><br><span class="line">            &lt;goals&gt;</span><br><span class="line">              &lt;goal&gt;compile&lt;&#x2F;goal&gt;</span><br><span class="line">              &lt;goal&gt;testCompile&lt;&#x2F;goal&gt;</span><br><span class="line">            &lt;&#x2F;goals&gt;</span><br><span class="line">          &lt;&#x2F;execution&gt;</span><br><span class="line">        &lt;&#x2F;executions&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;scalaVersion&gt;$&#123;scala.version&#125;&lt;&#x2F;scalaVersion&gt;</span><br><span class="line">          &lt;args&gt;</span><br><span class="line">            &lt;arg&gt;-target:jvm-1.5&lt;&#x2F;arg&gt;</span><br><span class="line">          &lt;&#x2F;args&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.apache.maven.plugins&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-eclipse-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;downloadSources&gt;true&lt;&#x2F;downloadSources&gt;</span><br><span class="line">          &lt;buildcommands&gt;</span><br><span class="line">            &lt;buildcommand&gt;ch.epfl.lamp.sdt.core.scalabuilder&lt;&#x2F;buildcommand&gt;</span><br><span class="line">          &lt;&#x2F;buildcommands&gt;</span><br><span class="line">          &lt;additionalProjectnatures&gt;</span><br><span class="line">            &lt;projectnature&gt;ch.epfl.lamp.sdt.core.scalanature&lt;&#x2F;projectnature&gt;</span><br><span class="line">          &lt;&#x2F;additionalProjectnatures&gt;</span><br><span class="line">          &lt;classpathContainers&gt;</span><br><span class="line">            &lt;classpathContainer&gt;org.eclipse.jdt.launching.JRE_CONTAINER&lt;&#x2F;classpathContainer&gt;</span><br><span class="line">            &lt;classpathContainer&gt;ch.epfl.lamp.sdt.launching.SCALA_CONTAINER&lt;&#x2F;classpathContainer&gt;</span><br><span class="line">          &lt;&#x2F;classpathContainers&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">    &lt;&#x2F;plugins&gt;</span><br><span class="line">  &lt;&#x2F;build&gt;</span><br><span class="line">  &lt;reporting&gt;</span><br><span class="line">    &lt;plugins&gt;</span><br><span class="line">      &lt;plugin&gt;</span><br><span class="line">        &lt;groupId&gt;org.scala-tools&lt;&#x2F;groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;maven-scala-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">        &lt;configuration&gt;</span><br><span class="line">          &lt;scalaVersion&gt;$&#123;scala.version&#125;&lt;&#x2F;scalaVersion&gt;</span><br><span class="line">        &lt;&#x2F;configuration&gt;</span><br><span class="line">      &lt;&#x2F;plugin&gt;</span><br><span class="line">    &lt;&#x2F;plugins&gt;</span><br><span class="line">  &lt;&#x2F;reporting&gt;</span><br><span class="line">&lt;&#x2F;project&gt;</span><br></pre></td></tr></table></figure><br>工作目录：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571913840705_C0C094E4A298BFA098F8123797C7F7CC" alt="图片说明" title="图片标题"><br>编写Spark程序：<br>创建WordCount程序：<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">package SparkDemo</span><br><span class="line"></span><br><span class="line">import org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line">import org.apache.spark.rdd.RDD</span><br><span class="line">&#x2F;**</span><br><span class="line">  * @Author: luomo</span><br><span class="line">  * @CreateTime: 2019&#x2F;10&#x2F;24</span><br><span class="line">  * @Description:WordCount</span><br><span class="line">  *&#x2F;</span><br><span class="line">object WordCount &#123;</span><br><span class="line">  def main(args: Array[String]): Unit &#x3D; &#123;</span><br><span class="line">    &#x2F;&#x2F;配置文件</span><br><span class="line">    val conf &#x3D; new SparkConf().</span><br><span class="line">      setAppName(&quot;wordcount&quot;) &#x2F;&#x2F; 运行时候的作业名称</span><br><span class="line">      .setMaster(&quot;local&quot;)</span><br><span class="line">    &#x2F;&#x2F;上下文 拿着Conf信息创建出来 写spark应用程序的对象  通往集群的入口</span><br><span class="line">    val sc &#x3D; new SparkContext(conf)</span><br><span class="line">    &#x2F;&#x2F;传入文件对象 返回RDD集合</span><br><span class="line">    val input &#x3D; sc.textFile(&quot;E:&#x2F;&#x2F;&#x2F;test.txt&quot;)</span><br><span class="line">    &#x2F;&#x2F;对文件行数据 按照空格切割 返回RDD集合 得到每个单词</span><br><span class="line">    val lines &#x3D; input.flatMap(line &#x3D;&gt; line.split(&quot; &quot;))</span><br><span class="line">    &#x2F;&#x2F;统计单词数量 计数 得到RDD集合 按照相同的Key先分组，之后再对组内的Value进行操作</span><br><span class="line">    val count &#x3D; lines.map(word &#x3D;&gt; (word, 1)).reduceByKey(_ + _)</span><br><span class="line">    &#x2F;&#x2F;将结果遍历打印到控制台</span><br><span class="line">    count.foreach(x &#x3D;&gt;&#123;</span><br><span class="line">      println(x)</span><br><span class="line">    &#125;)</span><br><span class="line">    &#x2F;&#x2F;将结果输出到文件中</span><br><span class="line">    val output &#x3D; count.saveAsTextFile(&quot;E:&#x2F;&#x2F;&#x2F;wordCount&quot;)</span><br><span class="line">    &#x2F;&#x2F;关闭流 在内存中释放这个spark对象</span><br><span class="line">    &#x2F;&#x2F;sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br>运行程序如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191024/9094293_1571914229568_474EA976C3A9A912CB36A0631F855823" alt="图片说明" title="图片标题"> </p>
 ]]></content>
       <categories>
@@ -227,29 +227,29 @@
   </entry>
   <entry>
     <title>Flume监控之Ganglia</title>
-    <url>/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/</url>
+    <url>/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/</url>
     <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Ganglia是UC Berkeley发起的一个开源集群监视项目，设计用于测量数以千计的节点。Ganglia的核心包含gmond、gmetad以及一个Web前端。主要是用来监控系统性能，如：cpu 、mem、硬盘利用率， I/O负载、网络流量情况等，通过曲线很容易见到每个节点的工作状态，对合理调整、分配系统资源，提高系统整体性能起到重要作用。今天我们来看看如何用Ganglia来监控我们的flume集群数据。</p>
 <h1 id="Ganglia的安装与部署"><a href="#Ganglia的安装与部署" class="headerlink" title="Ganglia的安装与部署"></a>Ganglia的安装与部署</h1><h2 id="1-安装httpd服务与php"><a href="#1-安装httpd服务与php" class="headerlink" title="1.安装httpd服务与php"></a>1.安装httpd服务与php</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# sudo yum -y install httpd php</span><br></pre></td></tr></table></figure>
 <h2 id="2-安装其他依赖"><a href="#2-安装其他依赖" class="headerlink" title="2.安装其他依赖"></a>2.安装其他依赖</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# sudo yum -y install rrdtool perl-rrdtool rrdtool-devel</span><br><span class="line">[root@bigdata107 flume]# sudo yum -y install apr-devel</span><br></pre></td></tr></table></figure>
 <p>##3.安装ganglia<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# rpm -Uvh http:&#x2F;&#x2F;dl.fedoraproject.org&#x2F;pub&#x2F;epel&#x2F;6&#x2F;x86_64&#x2F;epel-release-6-8.noarch.rpm</span><br><span class="line"></span><br><span class="line">[root@bigdata107 flume]# yum -y install ganglia-gmetad</span><br><span class="line">[root@bigdata107 flume]# yum -y install ganglia-web</span><br><span class="line">[root@bigdata107 flume]# yum install -y ganglia-gmond</span><br></pre></td></tr></table></figure></p>
 <h2 id="4-修改配置文件"><a href="#4-修改配置文件" class="headerlink" title="4.修改配置文件"></a>4.修改配置文件</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;httpd&#x2F;conf.d&#x2F;ganglia.conf</span><br></pre></td></tr></table></figure>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/1.png" alt="图片说明"> </p>
+<p><img src="/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/1.png" alt="图片说明"> </p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;ganglia&#x2F;gmetad.conf</span><br></pre></td></tr></table></figure>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/2.png" alt="图片说明"> </p>
+<p><img src="/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/2.png" alt="图片说明"> </p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim &#x2F;etc&#x2F;ganglia&#x2F;gmond.conf</span><br></pre></td></tr></table></figure>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/3.png" alt="图片说明"> </p>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/4.png" alt="图片说明"> </p>
+<p><img src="/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/3.png" alt="图片说明"> </p>
+<p><img src="/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/4.png" alt="图片说明"> </p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]#  vim &#x2F;etc&#x2F;selinux&#x2F;config</span><br></pre></td></tr></table></figure>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/5.png" alt="图片说明"> </p>
+<p><img src="/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/5.png" alt="图片说明"> </p>
 <h2 id="5-selinux本次生效关闭必须重启-如果此时不想重启-可以临时生效"><a href="#5-selinux本次生效关闭必须重启-如果此时不想重启-可以临时生效" class="headerlink" title="5.selinux本次生效关闭必须重启,如果此时不想重启,可以临时生效"></a>5.selinux本次生效关闭必须重启,如果此时不想重启,可以临时生效</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]#  sudo setenforce 0</span><br></pre></td></tr></table></figure>
 <h1 id="启动Ganglia"><a href="#启动Ganglia" class="headerlink" title="启动Ganglia"></a>启动Ganglia</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# service httpd start</span><br><span class="line">正在启动 httpd：</span><br><span class="line">[root@bigdata107 flume]# service gmetad start</span><br><span class="line">Starting GANGLIA gmetad:  [确定]</span><br><span class="line">[root@bigdata107 flume]# service gmond start</span><br><span class="line">Starting GANGLIA gmond:  [确定]</span><br></pre></td></tr></table></figure>
-<h2 id="1-打开web-UI"><a href="#1-打开web-UI" class="headerlink" title="1.打开web UI"></a>1.打开web UI</h2><p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/6.png" alt=" "> </p>
+<h2 id="1-打开web-UI"><a href="#1-打开web-UI" class="headerlink" title="1.打开web UI"></a>1.打开web UI</h2><p><img src="/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/6.png" alt=" "> </p>
 <h2 id="2-通过Ganglia监控Flume"><a href="#2-通过Ganglia监控Flume" class="headerlink" title="2.通过Ganglia监控Flume"></a>2.通过Ganglia监控Flume</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# vim flume-env.sh</span><br></pre></td></tr></table></figure>
 <p>添加如下内容：<br>export JAVA_OPTS=&quot;-Dflume.monitoring.type=ganglia -Dflume.monitoring.hosts=192.168.216.107:8649 -Xms100m -Xmx200m&quot;</p>
 <h2 id="3-启动flume任务"><a href="#3-启动flume任务" class="headerlink" title="3.启动flume任务"></a>3.启动flume任务</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# bin&#x2F;flume-ng agent </span><br><span class="line">--conf conf&#x2F; </span><br><span class="line">--name agent1 </span><br><span class="line">--conf-file job&#x2F;flume_telnet_logger.conf </span><br><span class="line">-Dflume.root.logger&#x3D;&#x3D;INFO,console </span><br><span class="line">-Dflume.monitoring.type&#x3D;ganglia </span><br><span class="line">-Dflume.monitoring.hosts&#x3D;192.168.216.107:8649</span><br></pre></td></tr></table></figure>
 <h2 id="4-发送数据查看Ganglia监测图"><a href="#4-发送数据查看Ganglia监测图" class="headerlink" title="4.发送数据查看Ganglia监测图"></a>4.发送数据查看Ganglia监测图</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[root@bigdata107 flume]# telnet bigdata107 44444</span><br></pre></td></tr></table></figure>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/7.png" alt="图片说明"></p>
-<p><img src="/2020/06/17/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/8.png" alt="图片说明"> </p>
+<p><img src="/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/7.png" alt="图片说明"></p>
+<p><img src="/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/8.png" alt="图片说明"> </p>
 ]]></content>
       <categories>
         <category>Flume</category>
@@ -259,101 +259,8 @@
       </tags>
   </entry>
   <entry>
-    <title>Flink Table API&amp;SQL编程</title>
-    <url>/2020/06/21/Flink-Table-API-SQL%E7%BC%96%E7%A8%8B/</url>
-    <content><![CDATA[<h1 id="什么是Flink关系型API"><a href="#什么是Flink关系型API" class="headerlink" title="什么是Flink关系型API"></a>什么是Flink关系型API</h1><p>Flink提供了三层API。每个API在简介型和表达性之间提供了不同的权衡，并且针对不同的用例</p>
-<p><img src="/2020/06/21/Flink-Table-API-SQL%E7%BC%96%E7%A8%8B/1.png" alt></p>
-<p>Flink具有两个关系API，即Table API和SQL。这两个API都是用于批处理和流处理的统一API，即，对无界的实时流或有界的记录流以相同的语义执行查询，并产生相同的结果。Table API和SQL利用Apache Calcite进行解析，验证和查询优化。它们可以与DataStream和DataSet API无缝集成。无论输入是批处理输入（DataSet）还是流输入（DataStream），在两个接口中指定的查询具有相同的语义并指定相同的结果。</p>
-<p><strong>请注意，Table API和SQL尚未完成功能，正在积极开发中。</strong> <strong>[Table API，SQL]和[stream，batch]输入的每种组合都不支持所有操作。</strong></p>
-<p>Flink的关系API旨在简化数据分析，数据管道和ETL应用程序的定义。</p>
-<p>以下示例显示了SQL查询，以会话化点击流并计算每个会话的点击次数。这与DataStream API示例中的用例相同。</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">SELECT userId, COUNT(*)</span><br><span class="line">FROM clicks</span><br><span class="line"><span class="function">GROUP BY <span class="title">SESSION</span><span class="params">(clicktime, INTERVAL <span class="string">'30'</span> MINUTE)</span>, userId</span></span><br></pre></td></tr></table></figure>
-<h1 id="Table-API-amp-SQL特点"><a href="#Table-API-amp-SQL特点" class="headerlink" title="Table API &amp; SQL特点"></a>Table API &amp; SQL特点</h1><ul>
-<li>第一，Table API &amp; SQL 是一种声明式的 API。用户只需关心做什么，不用关心怎么做，比如图中的 WordCount 例子，只需要关心按什么维度聚合，做哪种类型的聚合，不需要关心底层的实现。</li>
-<li><p>第二，高性能。Table API &amp; SQL 底层会有优化器对 query 进行优化。举个例子，假如 WordCount 的例子里写了两个 count 操作，优化器会识别并避免重复的计算，计算的时候只保留一个 count 操作，输出的时候再把相同的值输出两遍即可，以达到更好的性能。</p>
-</li>
-<li><p>第三，流批统一。上图例子可以发现，API 并没有区分流和批，同一套 query 可以流批复用，对业务开发来说，避免开发两套代码。</p>
-</li>
-<li><p>第四，标准稳定。Table API &amp; SQL 遵循 SQL 标准，不易变动。API 比较稳定的好处是不用考虑 API 兼容性问题。</p>
-</li>
-<li><p>第五，易理解。语义明确，所见即所得。</p>
-</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">Table API:</span><br><span class="line">tab.groupBy(<span class="string">"word"</span>)</span><br><span class="line">    .select(<span class="string">"word,count(1) as count"</span>)</span><br><span class="line">SQL:</span><br><span class="line">select word,count(*) AS cnt </span><br><span class="line">from MyTable</span><br><span class="line">group by word</span><br></pre></td></tr></table></figure>
-<h1 id="Table-API-amp-SQL开发"><a href="#Table-API-amp-SQL开发" class="headerlink" title="Table API&amp;SQL开发"></a>Table API&amp;SQL开发</h1><h2 id="WordCount示例"><a href="#WordCount示例" class="headerlink" title="WordCount示例"></a>WordCount示例</h2><ul>
-<li>Scala版</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/16</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:TableSQLAPI</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">object TableSQLAPI&#123;</span><br><span class="line">    <span class="function">def <span class="title">main</span><span class="params">(args:Array[String])</span>:unit </span>= &#123;</span><br><span class="line">        val env = ExecutionEnvironment.getExecutionEnvironment</span><br><span class="line">        val tableEnv = TableEnvironment.getTableEnvironment(env)</span><br><span class="line">            val filePath = <span class="string">"file:///user/sales.csv"</span></span><br><span class="line">            <span class="keyword">import</span> org.apache.flink.api.scala._</span><br><span class="line">            <span class="comment">//已经拿到DataSet</span></span><br><span class="line">            val csv = env.readCsvFile[SalesLog](filePath,ignoreFirstLine = <span class="keyword">true</span>)</span><br><span class="line">            <span class="comment">//DataSet ==&gt; Table</span></span><br><span class="line">            val salesTable = tablelEnv.fromDataSet(csv)</span><br><span class="line">            <span class="comment">//Table ==&gt; table</span></span><br><span class="line">            tableEnv.registerTable(<span class="string">"sales"</span>,salesTable)</span><br><span class="line">            <span class="comment">//sql</span></span><br><span class="line">            val resultTable = tableEnv.sqlQuery(<span class="string">"select customerId,sum(amountPaid) money from sales group by customerId"</span>)</span><br><span class="line">            tableEnv.toDataset[Row](resultTable).print()</span><br><span class="line">	</span><br><span class="line">            <span class="function"><span class="keyword">case</span> class <span class="title">SalesLog</span><span class="params">(transactionId:String,customerId:String,itemId:String,</span></span></span><br><span class="line"><span class="function"><span class="params">                               amountPaid:Double)</span>        </span></span><br><span class="line"><span class="function">            </span></span><br><span class="line"><span class="function">    &#125;</span></span><br><span class="line"><span class="function">&#125;</span></span><br></pre></td></tr></table></figure>
-<ul>
-<li>Java版</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/16</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:JavaTableSQLAPI</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JavaTableSQLAPI</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEvironment();</span><br><span class="line">        BatchTableEnvironment tableEnv = BatchTableEnvironment.getTableEnvironment(env);</span><br><span class="line">         val filePath = <span class="string">"file:///user/sales.csv"</span></span><br><span class="line">            <span class="keyword">import</span> org.apache.flink.api.scala._</span><br><span class="line">        DataSet&lt;Sales&gt; csv = env.readCsvFile(filePath).ignoreFirstLine().pojoType(Sales<span class="class">.<span class="keyword">class</span>,<span class="title">transactionId</span>,<span class="title">customerId</span>,<span class="title">itemId</span>,<span class="title">amountPaid</span>)</span>;</span><br><span class="line">        Table sales = tableEnv.fromDataSet(csv);</span><br><span class="line">        tableEnv.registerTable(<span class="string">"sales"</span>,sales);</span><br><span class="line">        Table resultTable = tableEnv.sqlQuery(<span class="string">"select customerId,sum(amountPaid) money from sales group by customerId"</span>);</span><br><span class="line">        DataSet&lt;ROw&gt; result = tableEnv.toDataSet(resultTable,Row<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">        result.print();</span><br><span class="line">        </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Sales</span></span>&#123;</span><br><span class="line">        <span class="keyword">public</span> String transactionId;</span><br><span class="line">        <span class="keyword">public</span> String customerId;</span><br><span class="line">        <span class="keyword">public</span> String itemId;</span><br><span class="line">        <span class="keyword">public</span> Double amountPaid;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>Flink</category>
-      </categories>
-      <tags>
-        <tag>Table API &amp; SQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Flink DataStream API编程</title>
-    <url>/2020/06/21/Flink-DataStream-API%E7%BC%96%E7%A8%8B/</url>
-    <content><![CDATA[<h1 id="流处理基本概念"><a href="#流处理基本概念" class="headerlink" title="流处理基本概念"></a>流处理基本概念</h1><p>对于什么是流处理，从不同的角度有不同的定义。其实流处理与批处理这两个概念是对立统一的，它们的关系有点类似于对于 Java 中的 ArrayList 中的元素，是直接看作一个有限数据集并用下标去访问，还是用迭代器去访问。</p>
-<p>流处理系统本身有很多自己的特点。一般来说，由于需要支持无限数据集的处理，流处理系统一般采用一种数据驱动的处理方式。它会提前设置一些算子，然后等到数据到达后对数据进行处理。为了表达复杂的计算逻辑，包括 Flink 在内的分布式流处理引擎一般采用 DAG 图来表示整个计算逻辑，其中 DAG 图中的每一个点就代表一个基本的逻辑单元，也就是前面说的算子。由于计算逻辑被组织成有向图，数据会按照边的方向，从一些特殊的 Source 节点流入系统，然后通过网络传输、本地传输等不同的数据传输方式在算子之间进行发送和处理，最后会通过另外一些特殊的 Sink 节点将计算结果发送到某个外部系统或数据库中</p>
-<p><img src="/2020/06/21/Flink-DataStream-API%E7%BC%96%E7%A8%8B/1.png" alt></p>
-<center>图2. 一个 DAG 计算逻辑图与实际的物理时模型。<br>逻辑图中的每个算子在物理图中可能有多个并发。</center>
-
-<p>对于实际的分布式流处理引擎，它们的实际运行时物理模型要更复杂一些，这是由于每个算子都可能有多个实例。如图 2 所示，作为 Source 的 A 算子有两个实例，中间算子 C 也有两个实例。在逻辑模型中，A 和 B 是 C 的上游节点，而在对应的物理逻辑中，C 的所有实例和 A、B 的所有实例之间可能都存在数据交换。在物理模型中，我们会根据计算逻辑，采用系统自动优化或人为指定的方式将计算工作分布到不同的实例中。只有当算子实例分布到不同进程上时，才需要通过网络进行数据传输，而同一进程中的多个实例之间的数据传输通常是不需要通过网络的。</p>
-<h1 id="DataStream编程概述"><a href="#DataStream编程概述" class="headerlink" title="DataStream编程概述"></a>DataStream编程概述</h1><p>Flink中的DataStream程序是常规程序，可对数据流实施转换（例如，过滤，更新状态，定义窗口，聚合）。最初从各种来源（例如，消息队列，套接字流，文件）创建数据流。结果通过接收器返回，接收器可以例如将数据写入文件或标准输出（例如命令行终端）。Flink程序可在各种上下文中运行，独立运行或嵌入其他程序中。执行可以在本地JVM或许多计算机的群集中进行。</p>
-<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/16</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:JavaDataStreamSourceApp</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JavaDataStreamSourceApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        <span class="comment">//socketFunction(env);</span></span><br><span class="line">        DataStreamSource&lt;String&gt;data = env.socketTextStream(<span class="string">"local"</span>,<span class="number">9999</span>);</span><br><span class="line">        DataStream&lt;word&gt; result= data.flatMap(<span class="keyword">new</span> FlatMapFunction&lt;String, word&gt;() &#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">flatMap</span><span class="params">(String s, Collector&lt;word&gt; collector)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                <span class="keyword">for</span>(String value:s.split(<span class="string">","</span>)) &#123;</span><br><span class="line">                    collector.collect(<span class="keyword">new</span> word(value,<span class="number">1L</span>));</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).keyBy(<span class="string">"name"</span>).timeWindow(Time.seconds(<span class="number">5</span>),Time.seconds(<span class="number">1</span>)).reduce(<span class="keyword">new</span> ReduceFunction&lt;word&gt;() &#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> word <span class="title">reduce</span><span class="params">(word word, word t1)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> word(word.name,word.count+t1.count);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">        result.print();</span><br><span class="line">        env.execute(<span class="string">"JavaDataStreamSourceApp"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"> <span class="keyword">public</span> <span class="keyword">static</span>  <span class="class"><span class="keyword">class</span> <span class="title">word</span></span>&#123;</span><br><span class="line">            <span class="keyword">private</span> String name;</span><br><span class="line">            <span class="keyword">private</span> Long count;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> name;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">word</span><span class="params">()</span></span>&#123;&#125; <span class="comment">//需要不包含参数的空参构造器</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">word</span><span class="params">(String name, Long count)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.name = name;</span><br><span class="line">            <span class="keyword">this</span>.count = count;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.name = name;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> Long <span class="title">getCount</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> count;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="string">"word&#123;"</span> +</span><br><span class="line">                    <span class="string">"name='"</span> + name + <span class="string">'\''</span> +</span><br><span class="line">                    <span class="string">", count="</span> + count +</span><br><span class="line">                    <span class="string">'&#125;'</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setCount</span><span class="params">(Long count)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.count = count;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line">  * @Author:落墨</span><br><span class="line">  * @CreateTime:2020&#x2F;6&#x2F;16</span><br><span class="line">  * @Description:DataStreamSourceApp</span><br><span class="line">  *&#x2F;</span><br><span class="line">object Wordcount &#123;</span><br><span class="line">  def main(args: Array[String]): Unit &#x3D; &#123;</span><br><span class="line">    val env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment</span><br><span class="line">    val data &#x3D; env.socketTextStream(&quot;localhost&quot;,9999)</span><br><span class="line">    import  org.apache.flink.api.scala._</span><br><span class="line">    data.flatMap(_.split(&quot;,&quot;)).map(x &#x3D;&gt;(x,1)).keyBy(0)</span><br><span class="line">      .timeWindow(Time.seconds(5),Time.seconds(1))</span><br><span class="line">      .sum(1)</span><br><span class="line">      .print()</span><br><span class="line">    env.execute(&quot;WordCount&quot;)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>为了实现流式 Word Count，我们首先要先获得一个 StreamExecutionEnvironment 对象。它是我们构建图过程中的上下文对象。基于这个对象，我们可以添加一些算子。对于流处理程度，我们一般需要首先创建一个数据源去接入数据。在这个例子中，我们使用了 Environment 对象中内置的读取文件的数据源。这一步之后，我们拿到的是一个 DataStream 对象，它可以看作一个无限的数据集，可以在该集合上进行一序列的操作。例如，在 Word Count 例子中，我们首先将每一条记录（即文件中的一行）分隔为单词，这是通过 FlatMap 操作来实现的。调用 FlatMap 将会在底层的 DAG 图中添加一个 FlatMap 算子。然后，我们得到了一个记录是单词的流。我们将流中的单词进行分组（keyBy），然后累积计算每一个单词的数据（sum(1)）。计算出的单词的数据组成了一个新的流，我们将它写入到输出文件中。</p>
-<p>最后，我们需要调用 env.execute 方法来开始程序的执行。需要强调的是，前面我们调用的所有方法，都不是在实际处理数据，而是在构通表达计算逻辑的 DAG 图。只有当我们将整个图构建完成并显式的调用 Execute 方法后，框架才会把计算图提供到集群中，接入数据并执行实际的逻辑。</p>
-<p>基于流式 Word Count 的例子可以看出，基于 Flink 的 DataStream API 来编写流处理程序一般需要三步：通过 Source 接入数据、进行一系统列的处理以及将数据写出。最后，不要忘记显式调用 Execute 方式，否则前面编写的逻辑并不会真正执行。</p>
-<h2 id="Flink中使用数据源"><a href="#Flink中使用数据源" class="headerlink" title="Flink中使用数据源"></a>Flink中使用数据源</h2><p>source是程序从中读取其输入的位置。我们可以使用StreamExecutionEnvironment.addSource(sourceFunction)将一个source附加到程序中。Flink提供了许多预先实现的sourceFunction，但是我们可以通过实现SourceFunction 非并行源，实现ParallelSourceFunction接口或扩展RichParallelSourceFunction 并行源来编写自己的自定义源。</p>
-<h3 id="基于文件："><a href="#基于文件：" class="headerlink" title="基于文件："></a>基于文件：</h3><ul>
-<li><p><code>readTextFile(path)</code>- <code>TextInputFormat</code>逐行读取文本文件，即符合规范的文件，并将其作为字符串返回。</p>
-</li>
-<li><p><code>readFile(fileInputFormat, path)</code> -根据指定的文件输入格式读取（一次）文件。</p>
-</li>
-<li><p><code>readFile(fileInputFormat, path, watchType, interval, pathFilter, typeInfo)</code>-这是前两个内部调用的方法。它<code>path</code>根据给定的读取文件<code>fileInputFormat</code>。根据提供的内容<code>watchType</code>，此源可以定期（每<code>interval</code>ms）监视路径中的新数据（<code>FileProcessingMode.PROCESS_CONTINUOUSLY</code>），或者处理一次当前路径中的数据并退出（<code>FileProcessingMode.PROCESS_ONCE</code>）。使用<code>pathFilter</code>，用户可以进一步从文件中排除文件。       </p>
-</li>
-</ul>
-<h3 id="基于套接字："><a href="#基于套接字：" class="headerlink" title="基于套接字："></a>基于套接字：</h3><ul>
-<li><code>socketTextStream</code>-从套接字读取。元素可以由定界符分隔。</li>
-</ul>
-<h3 id="基于集合："><a href="#基于集合：" class="headerlink" title="基于集合："></a>基于集合：</h3><ul>
-<li><p>fromCollection(Collection)-从Java Java.util.Collection创建数据流。集合中的所有元素必须具有相同的类型。</p>
-</li>
-<li><p>fromCollection(Iterator, Class)-从迭代器创建数据流。该类指定迭代器返回的元素的数据类型。</p>
-</li>
-<li><p>fromElements(T …)-从给定的对象序列创建数据流。所有对象必须具有相同的类型。</p>
-</li>
-<li><p>fromParallelCollection(SplittableIterator, Class)-从迭代器并行创建数据流。该类指定迭代器返回的元素的数据类型。</p>
-</li>
-<li><p>generateSequence(from, to) -并行生成给定间隔中的数字序列。</p>
-</li>
-</ul>
-<h3 id="基于连接器："><a href="#基于连接器：" class="headerlink" title="基于连接器："></a>基于连接器：</h3><ul>
-<li>addSource-附加新的源功能。例如，要阅读Apache Kafka，可以使用 addSource(new FlinkKafkaConsumer08&lt;&gt;(…))。</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">implementing the SourceFunction <span class="keyword">for</span> non-parallel sources</span><br><span class="line">implementing the ParallelSourceFunction <span class="class"><span class="keyword">interface</span></span></span><br><span class="line"><span class="class"><span class="title">extending</span> <span class="title">the</span> <span class="title">RichParallelSourceFunction</span> <span class="title">for</span> <span class="title">parallel</span> <span class="title">sources</span>.</span></span><br></pre></td></tr></table></figure>
-<h3 id="自定义-SourceFunction"><a href="#自定义-SourceFunction" class="headerlink" title="自定义 SourceFunction"></a>自定义 SourceFunction</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> DataStream</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.functions.source.SourceFunction</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/24</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:SourceFunction</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">class CustomNonParallelSourceFunction extends SourceFunction[Long]&#123;</span><br><span class="line">  <span class="keyword">var</span> count = <span class="number">1L</span></span><br><span class="line">  <span class="keyword">var</span> isRunning = <span class="keyword">true</span></span><br><span class="line">  <span class="function">override def <span class="title">run</span><span class="params">(sourceContext: SourceFunction.SourceContext[Long])</span>: Unit </span>= &#123;</span><br><span class="line">   <span class="keyword">while</span>(isRunning)&#123;</span><br><span class="line">     sourceContext.collect(count)</span><br><span class="line">     count += <span class="number">1</span></span><br><span class="line">     Thread.sleep(<span class="number">1000</span>)</span><br><span class="line"></span><br><span class="line">   &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">override def <span class="title">cancel</span><span class="params">()</span>: Unit </span>= &#123;</span><br><span class="line">    isRunning = <span class="keyword">false</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="自定义ParallelSourceFunction"><a href="#自定义ParallelSourceFunction" class="headerlink" title="自定义ParallelSourceFunction"></a>自定义ParallelSourceFunction</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> DataStream</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.functions.source.&#123;ParallelSourceFunction, SourceFunction&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/24</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:ParallelSourceFunction</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">class CustomParallelSourceFunction extends  ParallelSourceFunction[Long]&#123;</span><br><span class="line">  <span class="keyword">var</span> isRunning = <span class="keyword">true</span></span><br><span class="line">  <span class="keyword">var</span> count = <span class="number">1L</span></span><br><span class="line">  <span class="function">override def <span class="title">run</span><span class="params">(sourceContext: SourceFunction.SourceContext[Long])</span>: Unit </span>= &#123;</span><br><span class="line">    <span class="keyword">while</span>(isRunning)&#123;</span><br><span class="line">      sourceContext.collect(count)</span><br><span class="line">      count += <span class="number">1</span></span><br><span class="line"></span><br><span class="line">      Thread.sleep(<span class="number">10000</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">override def <span class="title">cancel</span><span class="params">()</span>: Unit </span>= &#123;</span><br><span class="line">    isRunning = <span class="keyword">false</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="自定义-RichParallelSourceFunction"><a href="#自定义-RichParallelSourceFunction" class="headerlink" title="自定义 RichParallelSourceFunction"></a>自定义 RichParallelSourceFunction</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> DataStream</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.functions.source.&#123;RichParallelSourceFunction, SourceFunction&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/24</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:RichParallelSourceFunction</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">CustomRichParallelSourceFunction</span> <span class="keyword">extends</span></span></span><br><span class="line">  RichParallelSourceFunction[Long] &#123;</span><br><span class="line">  <span class="keyword">var</span> isRunning = <span class="keyword">true</span></span><br><span class="line">  <span class="keyword">var</span> count = <span class="number">1L</span></span><br><span class="line">  <span class="function">override def <span class="title">run</span><span class="params">(sourceContext: SourceFunction.SourceContext[Long])</span>: Unit </span>= &#123;</span><br><span class="line">    <span class="keyword">while</span>(isRunning)&#123;</span><br><span class="line">      sourceContext.collect(count)</span><br><span class="line">      count += <span class="number">1</span></span><br><span class="line">      Thread.sleep(<span class="number">1000</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">override def <span class="title">cancel</span><span class="params">()</span>: Unit </span>= &#123;</span><br><span class="line">    isRunning = <span class="keyword">false</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="使用自定义数据源"><a href="#使用自定义数据源" class="headerlink" title="使用自定义数据源"></a>使用自定义数据源</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> DataStream</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.scala.StreamExecutionEnvironment</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.scala._</span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/24</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:使用自定义数据源</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">object DataStreamSourceApp &#123;</span><br><span class="line"></span><br><span class="line">  <span class="function">def <span class="title">main</span><span class="params">(args: Array[String])</span>: Unit </span>= &#123;</span><br><span class="line">    val env = StreamExecutionEnvironment.getExecutionEnvironment</span><br><span class="line">    <span class="comment">//socketFunction(env)</span></span><br><span class="line">    <span class="comment">//nonParallelSourceFunction(env)</span></span><br><span class="line">    <span class="comment">//ParallelSourceFunction(env)</span></span><br><span class="line">    RichParallelSourceFunction(env)</span><br><span class="line">    env.execute(<span class="string">"DataStreamSourceApp"</span>)</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">def <span class="title">socketFunction</span><span class="params">(environment: StreamExecutionEnvironment)</span>: Unit </span>=&#123;</span><br><span class="line">      val data =  environment.socketTextStream(<span class="string">"localhost"</span>,<span class="number">9999</span>)</span><br><span class="line">    data.print()</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">def <span class="title">nonParallelSourceFunction</span><span class="params">(environment: StreamExecutionEnvironment)</span>: Unit </span>=&#123;</span><br><span class="line">   val data = environment.addSource(<span class="keyword">new</span> CustomNonParallelSourceFunction).setParallelism(<span class="number">1</span>)<span class="comment">//因为实现的不是并行的SourceFunction，所以参数不能设置为2</span></span><br><span class="line">    data.print()</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">def <span class="title">ParallelSourceFunction</span><span class="params">(environment: StreamExecutionEnvironment)</span>: Unit </span>=&#123;</span><br><span class="line">    val data = environment.addSource(<span class="keyword">new</span> CustomParallelSourceFunction).setParallelism(<span class="number">1</span>)<span class="comment">//因为实现的是并行的sourceFunction所以可以设置大于1的并行参数</span></span><br><span class="line">    data.print()</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">def <span class="title">RichParallelSourceFunction</span><span class="params">(environment: StreamExecutionEnvironment)</span>: Unit </span>=&#123;</span><br><span class="line">    val data = environment.addSource(<span class="keyword">new</span> CustomRichParallelSourceFunction).setParallelism(<span class="number">1</span>)<span class="comment">//因为实现的是并行的sourceFunction所以可以设置大于1的并行参数</span></span><br><span class="line">    data.print()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>Flink</category>
-      </categories>
-      <tags>
-        <tag>DataStream API</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>HDFS(1.0)与(2.0)</title>
-    <url>/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/</url>
+    <url>/2019/09/08/HDFS-1-0-%E4%B8%8E-2-0/</url>
     <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>当数据集超过一个单独的物理计算机的存储能力时，便有必要将它分部到多个独立的计算机。管理跨计算机网络存储的文件系统成为分布式文件系统。因为它们是基于网络的，所有网络编程的复杂性都会随之而来，所以分布式文件系统比普通磁盘文件系统更复杂。使这个文件系统能容忍节点故障而不损失数据就是一个极大的挑战。</p>
 <h2 id="HDFS的设计"><a href="#HDFS的设计" class="headerlink" title="HDFS的设计"></a>HDFS的设计</h2><p>HDFS是为以流式出局访问模式存储超大文件而设计的文件系统，在商用硬件的集群上运行。让我们看看它的优势：<br><strong>超大文件</strong><br>“超大文件”在这里指几百MB，几百GB甚至几百TB大小的文件。目前已经有Hadoop集群存储PB级的数据了。<br><strong>流式数据</strong><br>HDFS建立在这样一个思想上：一次写入、多次读取模式是最高效的。一个数据集通常由数据源生成或复制，接着在此基础上进行各种各样的分析。每个分析至少都会涉及数据集中的大部分数据（甚至全部）。<br><strong>商用硬件</strong><br>Hadoop不需要运行在昂贵并且高可靠的硬件上。它被设计运行在商用硬件（在各种零售店都能买到的普通硬件）的集群上，因此至少对于大的集群来说，节点故障的几率还是较高的。HDFS在面对这种故障时，被设计为能够继续运行而让用户察觉不到明显的中断。</p>
 <h2 id="HDFS-1-0架构："><a href="#HDFS-1-0架构：" class="headerlink" title="HDFS 1.0架构："></a>HDFS 1.0架构：</h2><p> HDFS采用的是Master/Slave架构一个 HDFS 集群包含一个单独的 NameNode 和多个 DataNode 节点。</p>
@@ -368,7 +275,7 @@
 <li>NameNode Federation：是用来解决 HDFS 集群的线性扩展能力。  </li>
 </ul>
 <h2 id="HDFS-2-0-的-HA-实现"><a href="#HDFS-2-0-的-HA-实现" class="headerlink" title="HDFS 2.0 的 HA 实现"></a>HDFS 2.0 的 HA 实现</h2><p>这里先看下 HDFS 高可用解决方案的架构设计，如下图</p>
-<p><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/1.png" alt="图片说明"> </p>
+<p><img src="/2019/09/08/HDFS-1-0-%E4%B8%8E-2-0/1.png" alt="图片说明"> </p>
 <p>这里与前面 1.0 的架构已经有很大变化，简单介绍一下的组件：</p>
 <ol>
 <li>Active NameNode 和 Standby NameNode：两台 NameNode 形成互备，一台处于 Active 状态，为主 NameNode，另外一台处于 Standby 状态，为备 NameNode，只有主 NameNode 才能对外提供读写服务；</li>
@@ -379,7 +286,7 @@
 </ol>
 <h2 id="HDFS-2-0-Federation-实现"><a href="#HDFS-2-0-Federation-实现" class="headerlink" title="HDFS 2.0 Federation 实现"></a>HDFS 2.0 Federation 实现</h2><p>在 1.0 中，HDFS 的架构设计有以下缺点：</p>
 <p>namespace 扩展性差：在单一的 NN 情况下，因为所有 namespace 数据都需要加载到内存，所以物理机内存的大小限制了整个 HDFS 能够容纳文件的最大个数（namespace 指的是 HDFS 中树形目录和文件结构以及文件对应的 block 信息）；<br>性能可扩展性差：由于所有请求都需要经过 NN，单一 NN 导致所有请求都由一台机器进行处理，很容易达到单台机器的吞吐；<br>隔离性差：多租户的情况下，单一 NN 的架构无法在租户间进行隔离，会造成不可避免的相互影响。<br>而 Federation 的设计就是为了解决这些问题，采用 Federation 的最主要原因是设计实现简单，而且还能解决问题。</p>
-<h2 id="Federation-架构"><a href="#Federation-架构" class="headerlink" title="Federation 架构"></a>Federation 架构</h2><p>Federation 的架构设计如下图所示（图片来自 HDFS Federation）：<br><img src="/2020/06/17/HDFS-1-0-%E4%B8%8E-2-0/2.png" alt="图片说明"> </p>
+<h2 id="Federation-架构"><a href="#Federation-架构" class="headerlink" title="Federation 架构"></a>Federation 架构</h2><p>Federation 的架构设计如下图所示（图片来自 HDFS Federation）：<br><img src="/2019/09/08/HDFS-1-0-%E4%B8%8E-2-0/2.png" alt="图片说明"> </p>
 <h3 id="HDFS-Federation-架构实现"><a href="#HDFS-Federation-架构实现" class="headerlink" title="HDFS Federation 架构实现"></a>HDFS Federation 架构实现</h3><p>Federation 的核心设计思想<br>Federation 的核心思想是将一个大的 namespace 划分多个子 namespace，并且每个 namespace 分别由单独的 NameNode 负责，这些 NameNode 之间互相独立，不会影响，不需要做任何协调工作（其实跟拆集群有一些相似），集群的所有 DataNode 会被多个 NameNode 共享。</p>
 <p>其中，每个子 namespace 和 DataNode 之间会由数据块管理层作为中介建立映射关系，数据块管理层由若干数据块池（Pool）构成，每个数据块只会唯一属于某个固定的数据块池，而一个子 namespace 可以对应多个数据块池。每个 DataNode 需要向集群中所有的 NameNode 注册，且周期性地向所有 NameNode 发送心跳和块报告，并执行来自所有 NameNode 的命令。</p>
 <ol>
@@ -397,8 +304,8 @@
   </entry>
   <entry>
     <title>HDFS NameNode的工作机制</title>
-    <url>/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/</url>
-    <content><![CDATA[<h2 id="NameNode"><a href="#NameNode" class="headerlink" title="NameNode"></a>NameNode</h2><p><img src="/2020/06/17/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/1.png" alt=" "> </p>
+    <url>/2020/04/02/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<h2 id="NameNode"><a href="#NameNode" class="headerlink" title="NameNode"></a>NameNode</h2><p><img src="/2020/04/02/HDFS-NameNode%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%9C%BA%E5%88%B6/1.png" alt=" "> </p>
 <h3 id="1-第一阶段：-namenode-启动"><a href="#1-第一阶段：-namenode-启动" class="headerlink" title="1 第一阶段： namenode 启动"></a>1 第一阶段： namenode 启动</h3><p>1）第一次启动 namenode 格式化后， 创建 fsimage 和 edits 文件。如果不是第一次启动，直接加载编辑日志和镜像文件到内存。<br>2） 客户端对元数据进行增删改的请求。<br>3） namenode 记录操作日志，更新滚动日志。<br>4） namenode 在内存中对数据进行增删改查。</p>
 <h3 id="2-第二阶段：-Secondary-NameNode-工作"><a href="#2-第二阶段：-Secondary-NameNode-工作" class="headerlink" title="2 第二阶段： Secondary NameNode 工作"></a>2 第二阶段： Secondary NameNode 工作</h3><p>1） Secondary NameNode 询问 namenode 是否需要 checkpoint。 直接带回 namenode 是否检查结果。<br>2） Secondary NameNode 请求执行 checkpoint。<br>3） namenode 滚动正在写的 edits 日志。<br>4）将滚动前的编辑日志和镜像文件拷贝到 Secondary NameNode。<br>5） Secondary NameNode 加载编辑日志和镜像文件到内存，并合并。<br>6） 生成新的镜像文件 fsimage.chkpoint。<br>7） 拷贝 fsimage.chkpoint 到 namenode。<br>8） namenode 将 fsimage.chkpoint 重新命名成 fsimage。</p>
 ]]></content>
@@ -411,7 +318,7 @@
   </entry>
   <entry>
     <title>Hadoop安装</title>
-    <url>/2020/01/19/Hadoop%E5%AE%89%E8%A3%85/</url>
+    <url>/2019/09/03/Hadoop%E5%AE%89%E8%A3%85/</url>
     <content><![CDATA[<h1 id="一、单机（伪分布式）"><a href="#一、单机（伪分布式）" class="headerlink" title="一、单机（伪分布式）"></a>一、单机（伪分布式）</h1><h2 id="1-1、环境"><a href="#1-1、环境" class="headerlink" title="1.1、环境"></a>1.1、环境</h2><p>系统环境为Centos作为系统环境，这里不再叙述系统的安装<br>基于原生Hadoop 2 ，可以适合任何Hadoop 2.x.y版本，例如 Hadoop 2.7.1, Hadoop 2.4.1等。</p>
 <h3 id="Hadoop运行环境搭建"><a href="#Hadoop运行环境搭建" class="headerlink" title="Hadoop运行环境搭建"></a>Hadoop运行环境搭建</h3><p>虚拟机网络模式设置为NAT<br><img src="https://uploadfiles.nowcoder.com/images/20190904/9094293_1567608344001_42757B180952AD1472AC869C06FD55B4" alt="图片说明" title="图片标题"> </p>
 <h3 id="修改为静态ip"><a href="#修改为静态ip" class="headerlink" title="修改为静态ip"></a>修改为静态ip</h3><p>在终端命令窗口中输入</p>
@@ -482,10 +389,10 @@
   </entry>
   <entry>
     <title>HotSpot虚拟机对象探秘</title>
-    <url>/2020/06/17/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/</url>
+    <url>/2019/11/07/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/</url>
     <content><![CDATA[<h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>我们以常用的虚拟机HotSpot和常用的内存区域Java堆为例，深入了解HotSpot虚拟机在Java堆中对象分配、布局和访问的全过程。</p>
-<h2 id="对象的创建"><a href="#对象的创建" class="headerlink" title="对象的创建"></a>对象的创建</h2><p>虚拟机遇到一条new指令时，首先将去检查这个指令的参数是否能在常量池中定位到一个类的符号引用，并且检查这个符号引用代表的类是否已被加载、解析和初始化。如果没有先执行相应的类加载过程。<br>    在类加载检查通过后，接下来虚拟机将为新生对象分配内存。对象所需内存的大小在类加载完成后便可完全确定，为对象分配空间的任务等同把一块确定大小的内存从Java堆中划分出来。假设堆中内存是绝对完整的，所有的内存都放在一边，空闲的内存放在另一边，中间放着一个指针作为分界点的指示器，所有用过的内存都放在一边，中间放着一个值指针作为分界点的指示器，这种分配方式成为“指针碰撞”。如图：<br><img src="/2020/06/17/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/1.png" alt="图片说明"> </p>
-<p>如果Java堆中的内存并不是规整的，已使用的内存和空闲的内存相互交错，那就没有办法简单地进行指针碰撞了，虚拟机就必须维护一个实例，并更新列表上的记录，这种分配方式称为“空闲列表”。如图：<br><img src="/2020/06/17/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/2.png" alt="图片说明"> </p>
+<h2 id="对象的创建"><a href="#对象的创建" class="headerlink" title="对象的创建"></a>对象的创建</h2><p>虚拟机遇到一条new指令时，首先将去检查这个指令的参数是否能在常量池中定位到一个类的符号引用，并且检查这个符号引用代表的类是否已被加载、解析和初始化。如果没有先执行相应的类加载过程。<br>    在类加载检查通过后，接下来虚拟机将为新生对象分配内存。对象所需内存的大小在类加载完成后便可完全确定，为对象分配空间的任务等同把一块确定大小的内存从Java堆中划分出来。假设堆中内存是绝对完整的，所有的内存都放在一边，空闲的内存放在另一边，中间放着一个指针作为分界点的指示器，所有用过的内存都放在一边，中间放着一个值指针作为分界点的指示器，这种分配方式成为“指针碰撞”。如图：<br><img src="/2019/11/07/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/1.png" alt="图片说明"> </p>
+<p>如果Java堆中的内存并不是规整的，已使用的内存和空闲的内存相互交错，那就没有办法简单地进行指针碰撞了，虚拟机就必须维护一个实例，并更新列表上的记录，这种分配方式称为“空闲列表”。如图：<br><img src="/2019/11/07/HotSpot%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AF%B9%E8%B1%A1%E6%8E%A2%E7%A7%98/2.png" alt="图片说明"> </p>
 <p>选择哪种分配方式是由Java堆是否规整决定，而Java堆是否规整又由所采用的垃圾收集器是否带有压缩功能决定。因此，在使用serial、ParNew等带Compact过程的收集器时，系统采用的分配算法是指针碰撞，而使用CMS这种基于Mark-Sweep算法的收集器时，通常采用空闲列表。</p>
 <h2 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h2><p>在HotSpot虚拟机中，对象在内存中存储的布局可以分为3块区域：对象头（Header）、实例数据（InstanceData）和对齐填充（Padding）。<br>HotSpot虚拟机的对象头包括两部分信息：</p>
 <p><strong>第一部分</strong>：用于存储对象自身的运行时数据，如哈希码（HashCode）、GC分代年龄、锁状态标志、线程持有的锁、偏向线程ID、偏向时间戳等，这部分数据的长度在32位和64位的虚拟机（未开启压缩指针）中分别为32bit和64bit，官方称它为“Mark Word”。对象头的另外一部分是类型指针，即对象指向它的类元数据的指针，虚拟机通过这个指针来确定这个对象是哪个类的实例。并不是所有的虚拟机实现都必须在对象数据上保留类型指针，换句话说，查找对象的元数据信息并不一定要经过对象本身<br><strong>第二部分</strong>:实例数据是对象真正存储的有效信息，也是在程序代码中所定义的各种类型的字段内容。无论是从父类继承下来的，还是在子类中定义的，都需要记录起来。<br><strong>第三部分</strong>：对齐填充并不是必然存在的，也没有特别的含义，它仅仅起着占位符的作用。由于HotSpot VM的自动内存管理系统要求对象起始地址必须是8字节的整数倍，换句话说，就是对象的大小必须是8字节的整数倍。而对象头部分正好是8字节的倍数（1倍或者2倍），因此，当对象实例数据部分没有对齐时，就需要通过对齐填充来补全。</p>
@@ -498,42 +405,8 @@
       </tags>
   </entry>
   <entry>
-    <title>Java线程死锁</title>
-    <url>/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/</url>
-    <content><![CDATA[<h1 id="Java线程死锁"><a href="#Java线程死锁" class="headerlink" title="Java线程死锁"></a>Java线程死锁</h1><blockquote><br>死锁是一种特定的程序状态，在实体之间，由于循环依赖导致彼此一直处于等待之中，没有任何个体可以继续前进。死锁不仅仅是在线程之间会发生，存在资源独占的进程之间同样也 可能出现死锁。通常来说，我们大多是聚焦在多线程场景中的死锁，指两个或多个线程之 间，由于互相持有对方需要的锁，而永久处于阻塞的状态。<br><br></blockquote>
-
-
-<p><strong>Java线程死锁</strong>是一个经典的多线程问题，因为不同的线程都在等待那些根本不可能被释放的锁，从而导致所有的工作都无法完成。如图所示</p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁.png" alt="图片说明"> </p>
-<hr>
-
-<h2 id="如何去定位Java线程死锁呢？"><a href="#如何去定位Java线程死锁呢？" class="headerlink" title="如何去定位Java线程死锁呢？"></a>如何去定位Java线程死锁呢？</h2><p>定位死锁最常见的方式就是利用 jstack 等工具获取线程栈，然后定位互相之间的依赖关系，进而找到死锁。如果是比较明显的死锁，往往 jstack 等就能直接定位，类似 JConsole 甚至可以在图形界面进行有限的死锁检测。<br>既然了解了用什么工具去定位线程死锁，那我们模拟一个Java线程死锁的情况，实战定位线程死锁<br><strong>死锁代码：</strong></p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"> * @Author:luomo</span><br><span class="line"> * @CreateTime: 2020&#x2F;3&#x2F;28</span><br><span class="line"> * @Description:模拟DeadLock</span><br><span class="line"> *&#x2F;</span><br><span class="line">public class deadLock implements Runnable&#123;</span><br><span class="line">    public static  Object obj1&#x3D;new Object();</span><br><span class="line">    public static  Object obj2&#x3D;new Object();</span><br><span class="line">    private int flag;</span><br><span class="line">    deadLock(int flag)&#123;</span><br><span class="line">        this.flag&#x3D;flag;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void run() &#123;</span><br><span class="line">        if(flag&#x3D;&#x3D;0)&#123;</span><br><span class="line">            synchronized (obj1)&#123;</span><br><span class="line">                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁1&quot;);</span><br><span class="line">                try &#123;</span><br><span class="line">                    Thread.currentThread().sleep(1000);</span><br><span class="line">                &#125; catch (InterruptedException e) &#123;</span><br><span class="line">                    e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁2&quot;);</span><br><span class="line">                synchronized (obj2)&#123;</span><br><span class="line">                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;else&#123;</span><br><span class="line">            synchronized (obj2)&#123;</span><br><span class="line">                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);</span><br><span class="line">                try &#123;</span><br><span class="line">                    Thread.currentThread().sleep(1000);</span><br><span class="line">                &#125; catch (InterruptedException e) &#123;</span><br><span class="line">                    e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁1&quot;);</span><br><span class="line">                synchronized (obj1)&#123;</span><br><span class="line">                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static void main(String[] args) &#123;</span><br><span class="line">   deadLock d1&#x3D;new deadLock(0);</span><br><span class="line">   deadLock d2&#x3D;new deadLock(1);</span><br><span class="line">   Thread thread1&#x3D;new Thread(d1);</span><br><span class="line">   Thread thread2&#x3D;new Thread(d2);</span><br><span class="line">   thread1.start();</span><br><span class="line">   thread2.start();</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><strong>代码运行：</strong></p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁1.png" alt=" "> </p>
-<p>从运行结果我们看到Thread1和Thread0同时都在争用对方已经占有的锁，进而产生死锁。</p>
-<hr>
-
-<h2 id="如何定位死锁"><a href="#如何定位死锁" class="headerlink" title="如何定位死锁"></a>如何定位死锁</h2><p>如果程序发生了死锁，我们如何去定位死锁？我们可以通过JConsole工具来发现死锁。<br>打开cmd：输入 JConsole 回车<br>我们可以看到一个可视化的工具，找到死锁进程点击连接</p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁2.png" alt="图片说明"> </p>
-<p>我们可以看到有检查死锁的选项</p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁3.png" alt="图片说明"> </p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁4.png" alt="图片说明"> </p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁5.png" alt="图片说明"> </p>
-<p>通过上图我们可以发现产生死锁的线程，从而定位到发生死锁的代码。</p>
-<p>当然我们还可以使用Jstack + pid的方式来定位问题</p>
-<p><img src="/2020/06/15/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁6.png" alt="图片说明"> </p>
-]]></content>
-      <categories>
-        <category>Java</category>
-      </categories>
-      <tags>
-        <tag>死锁</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>JConsole:Java监视与管理控制台</title>
-    <url>/2020/06/17/JConsole-Java%E7%9B%91%E8%A7%86%E4%B8%8E%E7%AE%A1%E7%90%86%E6%8E%A7%E5%88%B6%E5%8F%B0/</url>
+    <url>/2019/11/09/JConsole-Java%E7%9B%91%E8%A7%86%E4%B8%8E%E7%AE%A1%E7%90%86%E6%8E%A7%E5%88%B6%E5%8F%B0/</url>
     <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>JConsole（Java Monitoring and Management Console）是一种基于JMX的可视化监视、管理工具。<br><strong>1.启动JConsole</strong><br>通过JDK/bin目录下的“jconsole.exe”启动JConsole后，将自动搜索出本机运行的所有虚拟机进程，不需要用户自己再使用jps来查询了，如图双击选择其中一个进程即可开始监控了，也可以使用下面的“远程进程”功能来连接远程服务器，对远程虚拟机进行监控。</p>
 <p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573274563736_6654F5DFA4EC7329FE86D88517B8FA93" alt="图片说明" title="图片标题"> </p>
 <p><img src="https://uploadfiles.nowcoder.com/images/20191109/9094293_1573275239073_438AC748ECDB4217D868DFDE95ECFD09" alt=" " title="图片标题"> </p>
@@ -555,26 +428,42 @@
       </tags>
   </entry>
   <entry>
-    <title>Java虚拟机运行时数据区域</title>
-    <url>/2020/06/15/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F/</url>
-    <content><![CDATA[<h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><p>&emsp;&emsp;对于从事C、C++程序开发人员来说，在内存管理领域，他们既是拥有最高权力的“皇帝”又是从事最基础工作的“劳动人民”-既拥有每一个对象的“所有权”，又担负着每一个对象生命开始到终结的维护责任。<br>对于Java 程序员来说，在虚拟机自动内存管理机制的帮助下，不在需要为每一个new操作去写配对的delete/free代码，不容易出现内存泄漏和内存溢出问题，由虚拟机管理内存这一切看起来都很美好。然而一旦出现内存泄漏和溢出的问题，如果不了解虚拟机是怎样使用内存的，那么排查错误将异常艰难。Java虚拟机在执行Java程序的过程中会把它所管理的内存划分为若干个不同的数据区域。这些区域都有各自的<br>用途，以及创建和销毁的时间，有的区域随着虚拟机进程的启动而存在，有些区域则依赖用户线程的启动和结束而<br>建立和销毁。</p>
-<h2 id="运行时数据区域"><a href="#运行时数据区域" class="headerlink" title="运行时数据区域"></a>运行时数据区域</h2><p>&emsp;&emsp;Java 虚拟机在执行java程序的过程中会把它所管理的内存划分为若干个不同的数据区域。这些区域都有各自的用途，以及创建和销毁的时间。<br><img src="/2020/06/15/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F/JVM.png" alt="图片说明"> </p>
-<h3 id="程序计数器"><a href="#程序计数器" class="headerlink" title="程序计数器"></a>程序计数器</h3><p>&emsp;&emsp;程序计数器是一块较小的内存空间，它可以看作是当前线程所执行的字节码的行号指示器。在虚拟机的概念模型里，字节码解释器工作时就是通过改变这个计数器的值来选取下一条需要执行的字节码指令，分支、循环跳转、异常处理、线程恢复等基础功能都需要依赖这个技术器来完成。</p>
-<h3 id="虚拟机栈"><a href="#虚拟机栈" class="headerlink" title="虚拟机栈"></a>虚拟机栈</h3><p>&emsp;&emsp;与程序计数器一样，Java虚拟机栈也是线程私有的，它的生命周期与线程相同。虚拟机栈描述的时Java方法执行的内存模型：每个方法在执行的相同。虚拟机栈描述的是Java方法执行的内存模型：每个方法在执行的同时都会创建栈帧用于存储局部变量表、操作数栈、动态连接、方法出口等信息。每一个放法从调用直至执行完成的过程，就对应着一个栈帧在虚拟机栈中入栈出栈的过程。  </p>
-<h3 id="本地方法栈"><a href="#本地方法栈" class="headerlink" title="本地方法栈"></a>本地方法栈</h3><p>&emsp;&emsp;本地方法栈与虚拟机栈所发挥的作用是非常相似的，他们之间的区别不过是虚拟机栈为虚拟机执行方法（也就是字节码）服务，而本地方法栈则为虚拟机使用到的Native法服务。在虚拟机规范中对被地方法栈中方法使用的语言、使用方式与数据结构并没有强制规定，因此具体的虚拟机可以自由实现它。甚至有的虚拟机直接就把本地方法栈和虚拟机栈合二为一。与虚拟机栈一样，本地方法栈区域也会抛出StackOverflowError和OutofMemoryError异常。</p>
-<h3 id="Java堆"><a href="#Java堆" class="headerlink" title="Java堆"></a>Java堆</h3><p>&emsp;&emsp;对于大多数应用来说，Java堆是Java虚拟机所管理的内存中最大的一块。Java堆是被所有线程共享的一块内存区域，在虚拟机启动时创建。此内存区域的唯一目的就是存放对象实例都在这里分配内存。这一点在Java虚拟机规范中的描述是：所有对象实例以及数组都要在堆上分配,但是随着JIT<br>编译器的发展与逃逸分析技术逐渐成熟，栈上分配、标量替换[2]优化技术将会导致一些微妙的变化发生，所有的<br>对象都分配在堆上也渐渐变得不是那么“绝对”了。</p>
-<h3 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h3><p> &emsp;&emsp;   方法区与Java堆一样，是各个线程共享的内存区域，它用于存储已被虚拟机加载的类信息、常量、静态变量、即时编译器编译后的代码等数据。虽然Java虚拟机规范把方法区描述为堆的一个逻辑部分，但是它却有一个别名Non-Heap（非堆），目的应该是与Java堆区分开来</p>
+    <title>Java线程死锁</title>
+    <url>/2020/03/28/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/</url>
+    <content><![CDATA[<h1 id="Java线程死锁"><a href="#Java线程死锁" class="headerlink" title="Java线程死锁"></a>Java线程死锁</h1><blockquote><br>死锁是一种特定的程序状态，在实体之间，由于循环依赖导致彼此一直处于等待之中，没有任何个体可以继续前进。死锁不仅仅是在线程之间会发生，存在资源独占的进程之间同样也 可能出现死锁。通常来说，我们大多是聚焦在多线程场景中的死锁，指两个或多个线程之 间，由于互相持有对方需要的锁，而永久处于阻塞的状态。<br><br></blockquote>
+
+
+<p><strong>Java线程死锁</strong>是一个经典的多线程问题，因为不同的线程都在等待那些根本不可能被释放的锁，从而导致所有的工作都无法完成。如图所示</p>
+<p><img src="/2020/03/28/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁.png" alt="图片说明"> </p>
+<hr>
+
+<h2 id="如何去定位Java线程死锁呢？"><a href="#如何去定位Java线程死锁呢？" class="headerlink" title="如何去定位Java线程死锁呢？"></a>如何去定位Java线程死锁呢？</h2><p>定位死锁最常见的方式就是利用 jstack 等工具获取线程栈，然后定位互相之间的依赖关系，进而找到死锁。如果是比较明显的死锁，往往 jstack 等就能直接定位，类似 JConsole 甚至可以在图形界面进行有限的死锁检测。<br>既然了解了用什么工具去定位线程死锁，那我们模拟一个Java线程死锁的情况，实战定位线程死锁<br><strong>死锁代码：</strong></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"> * @Author:luomo</span><br><span class="line"> * @CreateTime: 2020&#x2F;3&#x2F;28</span><br><span class="line"> * @Description:模拟DeadLock</span><br><span class="line"> *&#x2F;</span><br><span class="line">public class deadLock implements Runnable&#123;</span><br><span class="line">    public static  Object obj1&#x3D;new Object();</span><br><span class="line">    public static  Object obj2&#x3D;new Object();</span><br><span class="line">    private int flag;</span><br><span class="line">    deadLock(int flag)&#123;</span><br><span class="line">        this.flag&#x3D;flag;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void run() &#123;</span><br><span class="line">        if(flag&#x3D;&#x3D;0)&#123;</span><br><span class="line">            synchronized (obj1)&#123;</span><br><span class="line">                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁1&quot;);</span><br><span class="line">                try &#123;</span><br><span class="line">                    Thread.currentThread().sleep(1000);</span><br><span class="line">                &#125; catch (InterruptedException e) &#123;</span><br><span class="line">                    e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁2&quot;);</span><br><span class="line">                synchronized (obj2)&#123;</span><br><span class="line">                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;else&#123;</span><br><span class="line">            synchronized (obj2)&#123;</span><br><span class="line">                System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);</span><br><span class="line">                try &#123;</span><br><span class="line">                    Thread.currentThread().sleep(1000);</span><br><span class="line">                &#125; catch (InterruptedException e) &#123;</span><br><span class="line">                    e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">                System.out.println(Thread.currentThread().getName()+&quot;尝试获取锁1&quot;);</span><br><span class="line">                synchronized (obj1)&#123;</span><br><span class="line">                    System.out.println(Thread.currentThread().getName()+&quot;成功获取锁2&quot;);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static void main(String[] args) &#123;</span><br><span class="line">   deadLock d1&#x3D;new deadLock(0);</span><br><span class="line">   deadLock d2&#x3D;new deadLock(1);</span><br><span class="line">   Thread thread1&#x3D;new Thread(d1);</span><br><span class="line">   Thread thread2&#x3D;new Thread(d2);</span><br><span class="line">   thread1.start();</span><br><span class="line">   thread2.start();</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>代码运行：</strong></p>
+<p><img src="/2020/03/28/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁1.png" alt=" "> </p>
+<p>从运行结果我们看到Thread1和Thread0同时都在争用对方已经占有的锁，进而产生死锁。</p>
+<hr>
+
+<h2 id="如何定位死锁"><a href="#如何定位死锁" class="headerlink" title="如何定位死锁"></a>如何定位死锁</h2><p>如果程序发生了死锁，我们如何去定位死锁？我们可以通过JConsole工具来发现死锁。<br>打开cmd：输入 JConsole 回车<br>我们可以看到一个可视化的工具，找到死锁进程点击连接</p>
+<p><img src="/2020/03/28/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁2.png" alt="图片说明"> </p>
+<p>我们可以看到有检查死锁的选项</p>
+<p><img src="/2020/03/28/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁3.png" alt="图片说明"> </p>
+<p><img src="/2020/03/28/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁4.png" alt="图片说明"> </p>
+<p><img src="/2020/03/28/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁5.png" alt="图片说明"> </p>
+<p>通过上图我们可以发现产生死锁的线程，从而定位到发生死锁的代码。</p>
+<p>当然我们还可以使用Jstack + pid的方式来定位问题</p>
+<p><img src="/2020/03/28/Java%E7%BA%BF%E7%A8%8B%E6%AD%BB%E9%94%81/死锁6.png" alt="图片说明"> </p>
 ]]></content>
       <categories>
-        <category>JVM</category>
+        <category>Java</category>
       </categories>
       <tags>
-        <tag>运行时数据区域</tag>
+        <tag>死锁</tag>
       </tags>
   </entry>
   <entry>
     <title>Kafka 概述</title>
-    <url>/2020/06/14/Kafka-%E6%A6%82%E8%BF%B0/</url>
+    <url>/2019/09/20/Kafka-%E6%A6%82%E8%BF%B0/</url>
     <content><![CDATA[<h1 id="kafka诞生的背景"><a href="#kafka诞生的背景" class="headerlink" title="kafka诞生的背景"></a>kafka诞生的背景</h1><p>对于一个高效的组织，所有数据需要对该组织的所有服务和系统是可用的，以便挖掘出数据的最大价值。数据采集和数据使用是一个金字塔的结构，底部为以某种统一的方式捕获数据，这些数据需要以统一的方式建模，以方便读取和处理。捕获数据的工作做扎实后，在这个基础上以不同方法处理这些数据就变得得心应手。<br>数据捕获的来源主要有两种：一种是记录正在发生的事件数据。比如Web系统中的用户活动日志（用户的点击选择等）、交警行业中的违章事件等。随着传统行业业务活动的数字化，事件数据正在不断增长，而且这个趋势没有停止。这种类型的事件数据记录了已经发生的事情，往往比传统数据库应用要大好几个数量级。因此对于数据的捕获、数据的处理提出了重大的挑战；另一种是经过二次分析处理之后的数据。对捕获的数据进行二次分析处理后得到的数据也需要记录保存，这里的处理指的是利用批处理、图分析等专有的数据处理系统进行了处理，这些加工后的数据可以作为数据捕获的第二个来源。总之，捕获的数据越来越多，如何将这些巨量的数据以可靠的、完整的数据流方式传递给数据分析处理系统也变得越来越困难。</p>
 <h1 id="Kafka是什么"><a href="#Kafka是什么" class="headerlink" title="Kafka是什么"></a>Kafka是什么</h1><p>在流式计算中，Kafka一般用来缓存数据，Storm通过消费Kafka的数据进行计算。<br>1）Apache Kafka是一个开源消息系统，由Scala写成。是由Apache软件基金会开发的一个开源消息系统项目。<br>2）Kafka最初是由LinkedIn公司开发，并于    2011年初开源。2012年10月从Apache Incubator毕业。该项目的目标是为处理实时数据提供一个统一、高通量、低等待的平台。<br>3）Kafka是一个分布式消息队列。Kafka对消息保存时根据Topic进行归类，发送消息者称为Producer，消息接受者称为Consumer，此外kafka集群有多个kafka实例组成，每个实例(server)成为broker。<br>4）无论是kafka集群，还是producer和consumer都依赖于zookeeper集群保存一些meta信息，来保证系统可用性。</p>
 <h1 id="消息队列内部实现原理"><a href="#消息队列内部实现原理" class="headerlink" title="消息队列内部实现原理"></a>消息队列内部实现原理</h1><p><img src="https://uploadfiles.nowcoder.com/images/20190920/9094293_1568975462389_04F96407B00295C6D53D599B4F14DC90" alt="图片说明" title="图片标题"> </p>
@@ -591,8 +480,63 @@
       </tags>
   </entry>
   <entry>
+    <title>Flink DataStream API编程</title>
+    <url>/2020/06/21/Flink-DataStream-API%E7%BC%96%E7%A8%8B/</url>
+    <content><![CDATA[<h1 id="流处理基本概念"><a href="#流处理基本概念" class="headerlink" title="流处理基本概念"></a>流处理基本概念</h1><p>对于什么是流处理，从不同的角度有不同的定义。其实流处理与批处理这两个概念是对立统一的，它们的关系有点类似于对于 Java 中的 ArrayList 中的元素，是直接看作一个有限数据集并用下标去访问，还是用迭代器去访问。</p>
+<p>流处理系统本身有很多自己的特点。一般来说，由于需要支持无限数据集的处理，流处理系统一般采用一种数据驱动的处理方式。它会提前设置一些算子，然后等到数据到达后对数据进行处理。为了表达复杂的计算逻辑，包括 Flink 在内的分布式流处理引擎一般采用 DAG 图来表示整个计算逻辑，其中 DAG 图中的每一个点就代表一个基本的逻辑单元，也就是前面说的算子。由于计算逻辑被组织成有向图，数据会按照边的方向，从一些特殊的 Source 节点流入系统，然后通过网络传输、本地传输等不同的数据传输方式在算子之间进行发送和处理，最后会通过另外一些特殊的 Sink 节点将计算结果发送到某个外部系统或数据库中</p>
+<p><img src="/2020/06/21/Flink-DataStream-API%E7%BC%96%E7%A8%8B/1.png" alt></p>
+<center>图2. 一个 DAG 计算逻辑图与实际的物理时模型。<br>逻辑图中的每个算子在物理图中可能有多个并发。</center>
+
+<p>对于实际的分布式流处理引擎，它们的实际运行时物理模型要更复杂一些，这是由于每个算子都可能有多个实例。如图 2 所示，作为 Source 的 A 算子有两个实例，中间算子 C 也有两个实例。在逻辑模型中，A 和 B 是 C 的上游节点，而在对应的物理逻辑中，C 的所有实例和 A、B 的所有实例之间可能都存在数据交换。在物理模型中，我们会根据计算逻辑，采用系统自动优化或人为指定的方式将计算工作分布到不同的实例中。只有当算子实例分布到不同进程上时，才需要通过网络进行数据传输，而同一进程中的多个实例之间的数据传输通常是不需要通过网络的。</p>
+<h1 id="DataStream编程概述"><a href="#DataStream编程概述" class="headerlink" title="DataStream编程概述"></a>DataStream编程概述</h1><p>Flink中的DataStream程序是常规程序，可对数据流实施转换（例如，过滤，更新状态，定义窗口，聚合）。最初从各种来源（例如，消息队列，套接字流，文件）创建数据流。结果通过接收器返回，接收器可以例如将数据写入文件或标准输出（例如命令行终端）。Flink程序可在各种上下文中运行，独立运行或嵌入其他程序中。执行可以在本地JVM或许多计算机的群集中进行。</p>
+<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/16</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:JavaDataStreamSourceApp</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JavaDataStreamSourceApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        <span class="comment">//socketFunction(env);</span></span><br><span class="line">        DataStreamSource&lt;String&gt;data = env.socketTextStream(<span class="string">"local"</span>,<span class="number">9999</span>);</span><br><span class="line">        DataStream&lt;word&gt; result= data.flatMap(<span class="keyword">new</span> FlatMapFunction&lt;String, word&gt;() &#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">flatMap</span><span class="params">(String s, Collector&lt;word&gt; collector)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                <span class="keyword">for</span>(String value:s.split(<span class="string">","</span>)) &#123;</span><br><span class="line">                    collector.collect(<span class="keyword">new</span> word(value,<span class="number">1L</span>));</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).keyBy(<span class="string">"name"</span>).timeWindow(Time.seconds(<span class="number">5</span>),Time.seconds(<span class="number">1</span>)).reduce(<span class="keyword">new</span> ReduceFunction&lt;word&gt;() &#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> word <span class="title">reduce</span><span class="params">(word word, word t1)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> word(word.name,word.count+t1.count);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">        result.print();</span><br><span class="line">        env.execute(<span class="string">"JavaDataStreamSourceApp"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"> <span class="keyword">public</span> <span class="keyword">static</span>  <span class="class"><span class="keyword">class</span> <span class="title">word</span></span>&#123;</span><br><span class="line">            <span class="keyword">private</span> String name;</span><br><span class="line">            <span class="keyword">private</span> Long count;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> name;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">word</span><span class="params">()</span></span>&#123;&#125; <span class="comment">//需要不包含参数的空参构造器</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">word</span><span class="params">(String name, Long count)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.name = name;</span><br><span class="line">            <span class="keyword">this</span>.count = count;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.name = name;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> Long <span class="title">getCount</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> count;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="string">"word&#123;"</span> +</span><br><span class="line">                    <span class="string">"name='"</span> + name + <span class="string">'\''</span> +</span><br><span class="line">                    <span class="string">", count="</span> + count +</span><br><span class="line">                    <span class="string">'&#125;'</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setCount</span><span class="params">(Long count)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.count = count;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line">  * @Author:落墨</span><br><span class="line">  * @CreateTime:2020&#x2F;6&#x2F;16</span><br><span class="line">  * @Description:DataStreamSourceApp</span><br><span class="line">  *&#x2F;</span><br><span class="line">object Wordcount &#123;</span><br><span class="line">  def main(args: Array[String]): Unit &#x3D; &#123;</span><br><span class="line">    val env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment</span><br><span class="line">    val data &#x3D; env.socketTextStream(&quot;localhost&quot;,9999)</span><br><span class="line">    import  org.apache.flink.api.scala._</span><br><span class="line">    data.flatMap(_.split(&quot;,&quot;)).map(x &#x3D;&gt;(x,1)).keyBy(0)</span><br><span class="line">      .timeWindow(Time.seconds(5),Time.seconds(1))</span><br><span class="line">      .sum(1)</span><br><span class="line">      .print()</span><br><span class="line">    env.execute(&quot;WordCount&quot;)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>为了实现流式 Word Count，我们首先要先获得一个 StreamExecutionEnvironment 对象。它是我们构建图过程中的上下文对象。基于这个对象，我们可以添加一些算子。对于流处理程度，我们一般需要首先创建一个数据源去接入数据。在这个例子中，我们使用了 Environment 对象中内置的读取文件的数据源。这一步之后，我们拿到的是一个 DataStream 对象，它可以看作一个无限的数据集，可以在该集合上进行一序列的操作。例如，在 Word Count 例子中，我们首先将每一条记录（即文件中的一行）分隔为单词，这是通过 FlatMap 操作来实现的。调用 FlatMap 将会在底层的 DAG 图中添加一个 FlatMap 算子。然后，我们得到了一个记录是单词的流。我们将流中的单词进行分组（keyBy），然后累积计算每一个单词的数据（sum(1)）。计算出的单词的数据组成了一个新的流，我们将它写入到输出文件中。</p>
+<p>最后，我们需要调用 env.execute 方法来开始程序的执行。需要强调的是，前面我们调用的所有方法，都不是在实际处理数据，而是在构通表达计算逻辑的 DAG 图。只有当我们将整个图构建完成并显式的调用 Execute 方法后，框架才会把计算图提供到集群中，接入数据并执行实际的逻辑。</p>
+<p>基于流式 Word Count 的例子可以看出，基于 Flink 的 DataStream API 来编写流处理程序一般需要三步：通过 Source 接入数据、进行一系统列的处理以及将数据写出。最后，不要忘记显式调用 Execute 方式，否则前面编写的逻辑并不会真正执行。</p>
+<h2 id="Flink中使用数据源"><a href="#Flink中使用数据源" class="headerlink" title="Flink中使用数据源"></a>Flink中使用数据源</h2><p>source是程序从中读取其输入的位置。我们可以使用StreamExecutionEnvironment.addSource(sourceFunction)将一个source附加到程序中。Flink提供了许多预先实现的sourceFunction，但是我们可以通过实现SourceFunction 非并行源，实现ParallelSourceFunction接口或扩展RichParallelSourceFunction 并行源来编写自己的自定义源。</p>
+<h3 id="基于文件："><a href="#基于文件：" class="headerlink" title="基于文件："></a>基于文件：</h3><ul>
+<li><p><code>readTextFile(path)</code>- <code>TextInputFormat</code>逐行读取文本文件，即符合规范的文件，并将其作为字符串返回。</p>
+</li>
+<li><p><code>readFile(fileInputFormat, path)</code> -根据指定的文件输入格式读取（一次）文件。</p>
+</li>
+<li><p><code>readFile(fileInputFormat, path, watchType, interval, pathFilter, typeInfo)</code>-这是前两个内部调用的方法。它<code>path</code>根据给定的读取文件<code>fileInputFormat</code>。根据提供的内容<code>watchType</code>，此源可以定期（每<code>interval</code>ms）监视路径中的新数据（<code>FileProcessingMode.PROCESS_CONTINUOUSLY</code>），或者处理一次当前路径中的数据并退出（<code>FileProcessingMode.PROCESS_ONCE</code>）。使用<code>pathFilter</code>，用户可以进一步从文件中排除文件。       </p>
+</li>
+</ul>
+<h3 id="基于套接字："><a href="#基于套接字：" class="headerlink" title="基于套接字："></a>基于套接字：</h3><ul>
+<li><code>socketTextStream</code>-从套接字读取。元素可以由定界符分隔。</li>
+</ul>
+<h3 id="基于集合："><a href="#基于集合：" class="headerlink" title="基于集合："></a>基于集合：</h3><ul>
+<li><p>fromCollection(Collection)-从Java Java.util.Collection创建数据流。集合中的所有元素必须具有相同的类型。</p>
+</li>
+<li><p>fromCollection(Iterator, Class)-从迭代器创建数据流。该类指定迭代器返回的元素的数据类型。</p>
+</li>
+<li><p>fromElements(T …)-从给定的对象序列创建数据流。所有对象必须具有相同的类型。</p>
+</li>
+<li><p>fromParallelCollection(SplittableIterator, Class)-从迭代器并行创建数据流。该类指定迭代器返回的元素的数据类型。</p>
+</li>
+<li><p>generateSequence(from, to) -并行生成给定间隔中的数字序列。</p>
+</li>
+</ul>
+<h3 id="基于连接器："><a href="#基于连接器：" class="headerlink" title="基于连接器："></a>基于连接器：</h3><ul>
+<li>addSource-附加新的源功能。例如，要阅读Apache Kafka，可以使用 addSource(new FlinkKafkaConsumer08&lt;&gt;(…))。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">implementing the SourceFunction <span class="keyword">for</span> non-parallel sources</span><br><span class="line">implementing the ParallelSourceFunction <span class="class"><span class="keyword">interface</span></span></span><br><span class="line"><span class="class"><span class="title">extending</span> <span class="title">the</span> <span class="title">RichParallelSourceFunction</span> <span class="title">for</span> <span class="title">parallel</span> <span class="title">sources</span>.</span></span><br></pre></td></tr></table></figure>
+<h3 id="自定义-SourceFunction"><a href="#自定义-SourceFunction" class="headerlink" title="自定义 SourceFunction"></a>自定义 SourceFunction</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> DataStream</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.functions.source.SourceFunction</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/24</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:SourceFunction</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">class CustomNonParallelSourceFunction extends SourceFunction[Long]&#123;</span><br><span class="line">  <span class="keyword">var</span> count = <span class="number">1L</span></span><br><span class="line">  <span class="keyword">var</span> isRunning = <span class="keyword">true</span></span><br><span class="line">  <span class="function">override def <span class="title">run</span><span class="params">(sourceContext: SourceFunction.SourceContext[Long])</span>: Unit </span>= &#123;</span><br><span class="line">   <span class="keyword">while</span>(isRunning)&#123;</span><br><span class="line">     sourceContext.collect(count)</span><br><span class="line">     count += <span class="number">1</span></span><br><span class="line">     Thread.sleep(<span class="number">1000</span>)</span><br><span class="line"></span><br><span class="line">   &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">override def <span class="title">cancel</span><span class="params">()</span>: Unit </span>= &#123;</span><br><span class="line">    isRunning = <span class="keyword">false</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="自定义ParallelSourceFunction"><a href="#自定义ParallelSourceFunction" class="headerlink" title="自定义ParallelSourceFunction"></a>自定义ParallelSourceFunction</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> DataStream</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.functions.source.&#123;ParallelSourceFunction, SourceFunction&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/24</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:ParallelSourceFunction</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">class CustomParallelSourceFunction extends  ParallelSourceFunction[Long]&#123;</span><br><span class="line">  <span class="keyword">var</span> isRunning = <span class="keyword">true</span></span><br><span class="line">  <span class="keyword">var</span> count = <span class="number">1L</span></span><br><span class="line">  <span class="function">override def <span class="title">run</span><span class="params">(sourceContext: SourceFunction.SourceContext[Long])</span>: Unit </span>= &#123;</span><br><span class="line">    <span class="keyword">while</span>(isRunning)&#123;</span><br><span class="line">      sourceContext.collect(count)</span><br><span class="line">      count += <span class="number">1</span></span><br><span class="line"></span><br><span class="line">      Thread.sleep(<span class="number">10000</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">override def <span class="title">cancel</span><span class="params">()</span>: Unit </span>= &#123;</span><br><span class="line">    isRunning = <span class="keyword">false</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="自定义-RichParallelSourceFunction"><a href="#自定义-RichParallelSourceFunction" class="headerlink" title="自定义 RichParallelSourceFunction"></a>自定义 RichParallelSourceFunction</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> DataStream</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.functions.source.&#123;RichParallelSourceFunction, SourceFunction&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/24</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:RichParallelSourceFunction</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">CustomRichParallelSourceFunction</span> <span class="keyword">extends</span></span></span><br><span class="line">  RichParallelSourceFunction[Long] &#123;</span><br><span class="line">  <span class="keyword">var</span> isRunning = <span class="keyword">true</span></span><br><span class="line">  <span class="keyword">var</span> count = <span class="number">1L</span></span><br><span class="line">  <span class="function">override def <span class="title">run</span><span class="params">(sourceContext: SourceFunction.SourceContext[Long])</span>: Unit </span>= &#123;</span><br><span class="line">    <span class="keyword">while</span>(isRunning)&#123;</span><br><span class="line">      sourceContext.collect(count)</span><br><span class="line">      count += <span class="number">1</span></span><br><span class="line">      Thread.sleep(<span class="number">1000</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">override def <span class="title">cancel</span><span class="params">()</span>: Unit </span>= &#123;</span><br><span class="line">    isRunning = <span class="keyword">false</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="使用自定义数据源"><a href="#使用自定义数据源" class="headerlink" title="使用自定义数据源"></a>使用自定义数据源</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> DataStream</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.scala.StreamExecutionEnvironment</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.scala._</span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/24</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:使用自定义数据源</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">object DataStreamSourceApp &#123;</span><br><span class="line"></span><br><span class="line">  <span class="function">def <span class="title">main</span><span class="params">(args: Array[String])</span>: Unit </span>= &#123;</span><br><span class="line">    val env = StreamExecutionEnvironment.getExecutionEnvironment</span><br><span class="line">    <span class="comment">//socketFunction(env)</span></span><br><span class="line">    <span class="comment">//nonParallelSourceFunction(env)</span></span><br><span class="line">    <span class="comment">//ParallelSourceFunction(env)</span></span><br><span class="line">    RichParallelSourceFunction(env)</span><br><span class="line">    env.execute(<span class="string">"DataStreamSourceApp"</span>)</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">def <span class="title">socketFunction</span><span class="params">(environment: StreamExecutionEnvironment)</span>: Unit </span>=&#123;</span><br><span class="line">      val data =  environment.socketTextStream(<span class="string">"localhost"</span>,<span class="number">9999</span>)</span><br><span class="line">    data.print()</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">def <span class="title">nonParallelSourceFunction</span><span class="params">(environment: StreamExecutionEnvironment)</span>: Unit </span>=&#123;</span><br><span class="line">   val data = environment.addSource(<span class="keyword">new</span> CustomNonParallelSourceFunction).setParallelism(<span class="number">1</span>)<span class="comment">//因为实现的不是并行的SourceFunction，所以参数不能设置为2</span></span><br><span class="line">    data.print()</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">def <span class="title">ParallelSourceFunction</span><span class="params">(environment: StreamExecutionEnvironment)</span>: Unit </span>=&#123;</span><br><span class="line">    val data = environment.addSource(<span class="keyword">new</span> CustomParallelSourceFunction).setParallelism(<span class="number">1</span>)<span class="comment">//因为实现的是并行的sourceFunction所以可以设置大于1的并行参数</span></span><br><span class="line">    data.print()</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function">def <span class="title">RichParallelSourceFunction</span><span class="params">(environment: StreamExecutionEnvironment)</span>: Unit </span>=&#123;</span><br><span class="line">    val data = environment.addSource(<span class="keyword">new</span> CustomRichParallelSourceFunction).setParallelism(<span class="number">1</span>)<span class="comment">//因为实现的是并行的sourceFunction所以可以设置大于1的并行参数</span></span><br><span class="line">    data.print()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>Flink</category>
+      </categories>
+      <tags>
+        <tag>DataStream API</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kafka实现高吞吐之零拷贝</title>
-    <url>/2020/06/15/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/</url>
+    <url>/2019/12/09/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/</url>
     <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Kafka是一个非常优秀的消息开源系统，作为分布式的消息队列之所以能够实现高吞吐，其中的一个原因就是sendFile 的零拷贝</p>
 <h2 id="关于零拷贝"><a href="#关于零拷贝" class="headerlink" title="关于零拷贝"></a>关于零拷贝</h2><p>&quot;零拷贝&quot;中的&quot;拷贝&quot;是操作系统在I/O操作中,将数据从一个内存区域复制到另外一个内存区域. 而&quot;零&quot;并不是指0次复制, 更多的是指在用户态和内核态之前的复制是0次.</p>
 <h2 id="CPU-COPY"><a href="#CPU-COPY" class="headerlink" title="CPU COPY"></a>CPU COPY</h2><p>通过计算机的组成原理我们知道, 内存的读写操作是需要CPU的协调数据总线,地址总线和控制总线来完成的<br>因此在&quot;拷贝&quot;发生的时候,往往需要CPU暂停现有的处理逻辑,来协助内存的读写.这种我们称为CPU COPY，CPU COPY不但占用了CPU资源,还占用了总线的带宽.</p>
@@ -618,7 +562,7 @@
 <li>内核中再把数据从socket的缓冲区(socket buf)发送的网卡的缓冲区(NIC buf)上</li>
 <li>从内核态切换回到用户态(第四次上下文切换)</li>
 </ol>
-<p><img src="/2020/06/15/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/kafka.png" alt="图片说明"> </p>
+<p><img src="/2019/12/09/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/kafka.png" alt="图片说明"> </p>
 <p>由上图可以很清晰地看到, 一次read-send涉及到了四次拷贝:</p>
 <ol>
 <li>硬盘拷贝到内核缓冲区(DMA COPY)</li>
@@ -636,7 +580,7 @@
 <li>内核中再把数据从socket的缓冲区发送的网卡的buf上</li>
 <li>从内核态切换到用户态(第二次上下文切换)  </li>
 </ol>
-<p><img src="/2020/06/15/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/kafka1.png" alt="图片说明"><br>如图所示：<br>涉及到数据拷贝变成:</p>
+<p><img src="/2019/12/09/Kafka%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%90%9E%E5%90%90%E4%B9%8B%E9%9B%B6%E6%8B%B7%E8%B4%9D/kafka1.png" alt="图片说明"><br>如图所示：<br>涉及到数据拷贝变成:</p>
 <ol>
 <li>硬盘拷贝到内核缓冲区(DMA COPY)</li>
 <li>内核缓冲区拷贝到socket缓冲区(CPU COPY)</li>
@@ -652,23 +596,90 @@
       </tags>
   </entry>
   <entry>
-    <title>Spark Error</title>
-    <url>/2020/06/14/Spark-Error/</url>
-    <content><![CDATA[<h1 id="配置historyserver时："><a href="#配置historyserver时：" class="headerlink" title="配置historyserver时："></a>配置historyserver时：</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227263283_97221A1B1C45BED99055FB1996A900CE" alt="图片说明" title="图片标题"> </p>
-<p>因为端口被占用了</p>
-<h1 id="SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错"><a href="#SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错" class="headerlink" title="SparkStreaming updateStateByKeyde 使用时 –checkpoint报错"></a>SparkStreaming updateStateByKeyde 使用时 –checkpoint报错</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227382925_460CCA764930F915D29C8DC785013F26" alt="图片说明" title="图片标题"> </p>
-<p>原因在使用的时候，并没有设置checkPoint 检测点<br>检测点的目的就是为了保存上一次的结果数据。如果没有检测点的话，那么将无法保存上一次结果<br>如果要保证中间数据不丢失的话，可以借助其它的工具，如hdfs<br>ssc.checkpoint(“hdfs://kd0301:9000/spark_checkpoint/”)</p>
+    <title>Java虚拟机运行时数据区域</title>
+    <url>/2019/12/02/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F/</url>
+    <content><![CDATA[<h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><p>&emsp;&emsp;对于从事C、C++程序开发人员来说，在内存管理领域，他们既是拥有最高权力的“皇帝”又是从事最基础工作的“劳动人民”-既拥有每一个对象的“所有权”，又担负着每一个对象生命开始到终结的维护责任。<br>对于Java 程序员来说，在虚拟机自动内存管理机制的帮助下，不在需要为每一个new操作去写配对的delete/free代码，不容易出现内存泄漏和内存溢出问题，由虚拟机管理内存这一切看起来都很美好。然而一旦出现内存泄漏和溢出的问题，如果不了解虚拟机是怎样使用内存的，那么排查错误将异常艰难。Java虚拟机在执行Java程序的过程中会把它所管理的内存划分为若干个不同的数据区域。这些区域都有各自的<br>用途，以及创建和销毁的时间，有的区域随着虚拟机进程的启动而存在，有些区域则依赖用户线程的启动和结束而<br>建立和销毁。</p>
+<h2 id="运行时数据区域"><a href="#运行时数据区域" class="headerlink" title="运行时数据区域"></a>运行时数据区域</h2><p>&emsp;&emsp;Java 虚拟机在执行java程序的过程中会把它所管理的内存划分为若干个不同的数据区域。这些区域都有各自的用途，以及创建和销毁的时间。<br><img src="/2019/12/02/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F/JVM.png" alt="图片说明"> </p>
+<h3 id="程序计数器"><a href="#程序计数器" class="headerlink" title="程序计数器"></a>程序计数器</h3><p>&emsp;&emsp;程序计数器是一块较小的内存空间，它可以看作是当前线程所执行的字节码的行号指示器。在虚拟机的概念模型里，字节码解释器工作时就是通过改变这个计数器的值来选取下一条需要执行的字节码指令，分支、循环跳转、异常处理、线程恢复等基础功能都需要依赖这个技术器来完成。</p>
+<h3 id="虚拟机栈"><a href="#虚拟机栈" class="headerlink" title="虚拟机栈"></a>虚拟机栈</h3><p>&emsp;&emsp;与程序计数器一样，Java虚拟机栈也是线程私有的，它的生命周期与线程相同。虚拟机栈描述的时Java方法执行的内存模型：每个方法在执行的相同。虚拟机栈描述的是Java方法执行的内存模型：每个方法在执行的同时都会创建栈帧用于存储局部变量表、操作数栈、动态连接、方法出口等信息。每一个放法从调用直至执行完成的过程，就对应着一个栈帧在虚拟机栈中入栈出栈的过程。  </p>
+<h3 id="本地方法栈"><a href="#本地方法栈" class="headerlink" title="本地方法栈"></a>本地方法栈</h3><p>&emsp;&emsp;本地方法栈与虚拟机栈所发挥的作用是非常相似的，他们之间的区别不过是虚拟机栈为虚拟机执行方法（也就是字节码）服务，而本地方法栈则为虚拟机使用到的Native法服务。在虚拟机规范中对被地方法栈中方法使用的语言、使用方式与数据结构并没有强制规定，因此具体的虚拟机可以自由实现它。甚至有的虚拟机直接就把本地方法栈和虚拟机栈合二为一。与虚拟机栈一样，本地方法栈区域也会抛出StackOverflowError和OutofMemoryError异常。</p>
+<h3 id="Java堆"><a href="#Java堆" class="headerlink" title="Java堆"></a>Java堆</h3><p>&emsp;&emsp;对于大多数应用来说，Java堆是Java虚拟机所管理的内存中最大的一块。Java堆是被所有线程共享的一块内存区域，在虚拟机启动时创建。此内存区域的唯一目的就是存放对象实例都在这里分配内存。这一点在Java虚拟机规范中的描述是：所有对象实例以及数组都要在堆上分配,但是随着JIT<br>编译器的发展与逃逸分析技术逐渐成熟，栈上分配、标量替换[2]优化技术将会导致一些微妙的变化发生，所有的<br>对象都分配在堆上也渐渐变得不是那么“绝对”了。</p>
+<h3 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h3><p> &emsp;&emsp;   方法区与Java堆一样，是各个线程共享的内存区域，它用于存储已被虚拟机加载的类信息、常量、静态变量、即时编译器编译后的代码等数据。虽然Java虚拟机规范把方法区描述为堆的一个逻辑部分，但是它却有一个别名Non-Heap（非堆），目的应该是与Java堆区分开来</p>
+]]></content>
+      <categories>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>运行时数据区域</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Scala</title>
+    <url>/2020/04/27/Scala/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Scala 是 Scalable Language 的简写，是一门多范式的编程语言<br>联邦理工学院洛桑（EPFL）的Martin Odersky于2001年基于Funnel的工作开始设计Scala。<br>Funnel是把函数式编程思想和Petri网相结合的一种编程语言。Scala 是一门多范式（multi-paradigm）的编程语言，设计初衷是要集成面向对象编程和函数式编程的各种特性。Scala 运行在Java虚拟机上，并兼容现有的Java程序。Scala 源代码被编译成Java字节码，所以它可以运行于JVM之上，并可以调用现有的Java类库。</p>
+<h1 id="Scala特性："><a href="#Scala特性：" class="headerlink" title="Scala特性："></a>Scala特性：</h1><p><strong>面向对象特性：</strong><br>Scala是一种纯面向对象的语言，每个值都是对象。每个方法都是调用。举例来说，如果你执行 <code>1+2</code>，则对于 Scala 而言，实际是在调用 Int 类里定义的名为 <code>+</code> 的方法。<br><strong>函数式编程：</strong><br>Scala也是一种函数式语言，奇函数也能成值来使用。Scala提供了轻量级的语法用以定义匿名函数，支持高级函数，并支持柯里化。Scala的case class及内置的模式匹配相当于函数式编程语言中常用的代数类型。</p>
+<p>我们通过函数式编程来实现数组翻倍的例子</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">val nums = Array(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>)</span><br><span class="line">val doubleNums = nums.map(_*<span class="number">2</span>)</span><br></pre></td></tr></table></figure>
+<p>利用Array的map函数，将所有元素2，并生成了一个新的双倍数组。map函数所做的事情是把遍历整个数组的过程，归纳并抽离出来，让我们专注于描述我们想要的是什么”<strong>_*2*</strong>“。我们传入map的是一个纯函数；它不具有任何副作用(不会改变外部状态)，它只是接收一个数字，返回*2后的值。</p>
+<p>正如<strong><em>封装、继承\</em></strong>和<strong><em>多态\</em></strong>是面向对象编程的三大特性。函数式编程也有自己的语言特性<strong>数据不可变、函数是第一公民、引用透明</strong>和<strong>尾递归</strong></p>
+<p><strong>数据不可变（immutable data）</strong>：变量只赋值一次，如果想改变其值就创建一个新的。</p>
+<p><strong>函数是第一公民（first class method）</strong>:函数可以像普通变量一样去使用。函数可以像变量一样被创建，修改，并当成变量一样传递，返回或是在函数中嵌套函数。</p>
+<p><strong>引用透明(referential transparency)</strong>： 指的是函数的运行不依赖于外部变量或“状态”，只依赖于输入的参数，任何时候只要参数相同，调用函数所得到的返回值总是相同的。天然适应并发编程，因为调用函数的结果具有一致性，所以根本不需要加锁，也就不存在死锁的问题。</p>
+<p><strong>尾递归（tail call optimization）</strong>:函数调用要压栈保存现场，递归层次过深的话，压栈过多会产生性能问题。所以引入尾递归优化，每次递归时都会重用栈，提升性能。</p>
+<h1 id="Scala安装"><a href="#Scala安装" class="headerlink" title="Scala安装"></a>Scala安装</h1><h2 id="Windows-上安装Scala"><a href="#Windows-上安装Scala" class="headerlink" title="Windows 上安装Scala"></a>Windows 上安装Scala</h2><p>Scala 语言可以运行在Window、Linux、Unix、 Mac OS X等系统上。</p>
+<p>Scala是基于java之上，大量使用java的类库和变量，<strong>使用 Scala 之前必须先安装 Java（&gt;1.5版本）。</strong></p>
+<p>这里就不介绍Java环境配置，如果还未安装可以参考相关的博客</p>
+<p>接下来，我们从<a href="http://www.scala-lang.org/downloads" target="_blank" rel="noopener">Scala官网</a></p>
+<p><img src="/2020/04/27/Scala/1.png" alt></p>
+<p>下载后，双击 msi 文件，一步步安装即可，安装过程你可以使用默认的安装目录。</p>
+<p>安装好scala后，系统会自动提示，单击 finish，完成安装。</p>
+<p>右击我的电脑，单击”属性”，进入如图所示页面。下面开始配置环境变量，右击【我的电脑】–【属性】–【高级系统设置】–【环境变量】，如图：</p>
+<p><img src="/2020/04/27/Scala/2.png" alt></p>
+<p>设置 SCALA_HOME 变量：单击新建，在变量名栏输入：<strong>SCALA_HOME</strong>: 变量值一栏输入：E:\02_software\scala-2.11.11 也就是 Scala 的安装目录，根据个人情况有所不同</p>
+<p><img src="/2020/04/27/Scala/3.png" alt></p>
+<p>设置 Path 变量：找到系统变量下的”Path”如图，单击编辑。在”变量值”一栏的最前面添加如下的路径： %SCALA_HOME%\bin;%SCALA_HOME%\jre\bin;</p>
+<p><strong>注意：</strong>后面的分号 <strong>；</strong> 不要漏掉。</p>
+<p><img src="/2020/04/27/Scala/4.png" alt></p>
+<p>设置 Classpath 变量：找到找到系统变量下的”Classpath”如图，单击编辑，如没有，则单击”新建”:</p>
+<ul>
+<li>“变量名”：ClassPath</li>
+<li>“变量值”：.;%SCALA_HOME%\bin;%SCALA_HOME%\lib\dt.jar;%SCALA_HOME%\lib\tools.jar.;</li>
+</ul>
+<p><strong>注意：</strong>“变量值”最前面的 .; 不要漏掉。最后单击确定即可。</p>
+<p><img src="/2020/04/27/Scala/5.png" alt></p>
+<p>检查环境变量是否设置好了：调出”cmd”检查。单击 【开始】，在输入框中输入cmd，然后”回车”，输入 scala，然后回车，如环境变量设置ok，你应该能看到这些信息。</p>
+<p><img src="/2020/04/27/Scala/6.png" alt></p>
+]]></content>
+      <categories>
+        <category>Scala</category>
+      </categories>
+      <tags>
+        <tag>编程语言</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spark Demo(Serializable)</title>
+    <url>/2019/10/29/Spark-Demo-Serializable/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在本文中将介绍spark中Task执行序列化的开发问题</p>
+<h1 id="开发环境准备"><a href="#开发环境准备" class="headerlink" title="开发环境准备"></a>开发环境准备</h1><p>本实验Spark运行在Windows上，为了开发Spark应用程序，在本地机器上需要有Jdk1.8和Maven环境。<br>确保我们的环境配置正常，我们可以使用快捷键 Win+R 输入cmd：<br>环境如下：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341256892_8D8973B8667179A2319B041328F690BD" alt="图片说明" title="图片标题"><br>程序开发工具我们使用IDEA，创建maven项目，添加pom依赖</p>
+<h1 id="编写Spark程序"><a href="#编写Spark程序" class="headerlink" title="编写Spark程序"></a>编写Spark程序</h1><h2 id="目录结构如下"><a href="#目录结构如下" class="headerlink" title="目录结构如下:"></a>目录结构如下:</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341490332_07386CADB58D4E8A80763A83F9F6B34D" alt="图片说明" title="图片标题"> </p>
+<h2 id="创建Serializable-scala"><a href="#创建Serializable-scala" class="headerlink" title="创建Serializable.scala:"></a>创建Serializable.scala:</h2><p>首先我们需要了解RDD中的函数传递：<br>在实际开发中我们往往需要自己定义一些对于RDD的操作，那么此时需要主要的是，初始化工作是在Driver端进行的，而实际运行程序是在Executor端进行的，这就涉及到了跨进程通信，是需要序列化的。<br>如果我们对我们自定义的类不进行序列化：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> SparkDemo</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.spark.rdd.RDD</span><br><span class="line"><span class="keyword">import</span> org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>: luomo</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>: 2019/10/29</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>: Serializable from Driver to Executor</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">object Serializable &#123;</span><br><span class="line"></span><br><span class="line">  <span class="function">def <span class="title">main</span><span class="params">(args: Array[String])</span>: Unit </span>= &#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val config:SparkConf =<span class="keyword">new</span> SparkConf().setMaster(<span class="string">"local[*]"</span>).setAppName(<span class="string">"Serializable"</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val sc = <span class="keyword">new</span> SparkContext(config)</span><br><span class="line"></span><br><span class="line">    val rdd:RDD[String] = sc.parallelize(Array(<span class="string">"hadoop"</span>,<span class="string">"spark"</span>,<span class="string">"hive"</span>,<span class="string">"Flink"</span>))</span><br><span class="line"></span><br><span class="line">    val search = <span class="keyword">new</span> Search(<span class="string">"h"</span>)</span><br><span class="line"></span><br><span class="line">    val match1:RDD[String] =search.getMatch1(rdd)</span><br><span class="line">    match1.collect().foreach(println)</span><br><span class="line">    sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">  class Search(query:String)&#123;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的数据</span></span><br><span class="line">    <span class="function">def  <span class="title">isMatch</span><span class="params">(s:String)</span>:Boolean </span>=&#123;</span><br><span class="line">      s.contains(query)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatch1</span><span class="params">(rdd:RDD[String])</span> :RDD[String] </span>= &#123;</span><br><span class="line">      rdd.filter(isMatch)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatche2</span><span class="params">(rdd: RDD[String])</span>: RDD[String] </span>=&#123;</span><br><span class="line">      rdd.filter(x=&gt; x.contains(query))</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572346997711_619AA778B91D5D25CAB063D1C7D53FFE" alt="图片说明" title="图片标题"> </p>
+<p>可见，对于自己定义的普通类，Spark是无法直接将其序列化的。<br>需要我们自定义的类继承java.io.Serializable</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> SparkDemo</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.spark.rdd.RDD</span><br><span class="line"><span class="keyword">import</span> org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>: luomo</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>: 2019/10/29</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>: Serializable from Driver to Executor</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">object Serializable &#123;</span><br><span class="line"></span><br><span class="line">  <span class="function">def <span class="title">main</span><span class="params">(args: Array[String])</span>: Unit </span>= &#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val config:SparkConf =<span class="keyword">new</span> SparkConf().setMaster(<span class="string">"local[*]"</span>).setAppName(<span class="string">"Serializable"</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val sc = <span class="keyword">new</span> SparkContext(config)</span><br><span class="line"></span><br><span class="line">    val rdd:RDD[String] = sc.parallelize(Array(<span class="string">"hadoop"</span>,<span class="string">"spark"</span>,<span class="string">"hive"</span>,<span class="string">"Flink"</span>))</span><br><span class="line"></span><br><span class="line">    val search = <span class="keyword">new</span> Search(<span class="string">"h"</span>)</span><br><span class="line"></span><br><span class="line">    val match1:RDD[String] =search.getMatch1(rdd)</span><br><span class="line">    match1.collect().foreach(println)</span><br><span class="line">    sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">//自定义类</span></span><br><span class="line">  class Search(query:String) extends  java.io.Serializable &#123;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的数据</span></span><br><span class="line">    <span class="function">def  <span class="title">isMatch</span><span class="params">(s:String)</span>:Boolean </span>=&#123;</span><br><span class="line">      s.contains(query)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatch1</span><span class="params">(rdd:RDD[String])</span> :RDD[String] </span>= &#123;</span><br><span class="line">      rdd.filter(isMatch)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatche2</span><span class="params">(rdd: RDD[String])</span>: RDD[String] </span>=&#123;</span><br><span class="line">      rdd.filter(x=&gt; x.contains(query))</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>如图我们过滤出包含字符h的字符串：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572351464995_DFD27DCB713FEB02D8628E6C67FD4273" alt="图片说明" title="图片标题"> </p>
 ]]></content>
       <categories>
         <category>Spark</category>
       </categories>
       <tags>
-        <tag>Error</tag>
+        <tag>Serializable</tag>
       </tags>
   </entry>
   <entry>
     <title>Spark 概述</title>
-    <url>/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/</url>
+    <url>/2019/10/16/Spark-%E6%A6%82%E8%BF%B0/</url>
     <content><![CDATA[<h1 id="大数据处理框架"><a href="#大数据处理框架" class="headerlink" title="大数据处理框架"></a>大数据处理框架</h1><p>集群环境对于编程来说带来了很多挑战，首先就是并行化：这就要求我们以并行化的方式重写应用程序，以便我们可以利用更大范围节点的计算能力。集群环境的第二个挑战就是对单点失败的处理，节点宕机以及个别节点计算缓慢在集群环境中非常普遍，这会极大地影响程序的性能。最后一个挑战是集群在大多数情况下都会被多个用户分享，那么动态地进行计算资源的分配，也会干扰程序的执行。因此，针对集群环境出现了大量的大数据编程框架。首先我们要提到的就是Google的MapReduce，它给我们展示了一个简单通用和自动容错的批处理计算模型。<br>但是对于其他类型的计算，比如交互式和流式计算，MapReduce并不适合，这也导致了大量的不同于MapReduce的专有的数据处理模型的出现，比如Storm、Impala和GraphLab。随着新模型的不断出现，似乎对于大数据处理而言，我们应对不同类型的作业需要一系列不同的处理框架才能很好地完成。但是这些专有系统也有一些不足。</p>
 <ul>
 <li>重复工作：许多专有系统在解决同样的问题，比如分布式作业以及容错。举例来说，一个分布式的SQL引擎或者一个机器学习系统都需要实现并行聚合。这些问题在每个专有系统中会重复地被解决。</li>
@@ -689,16 +700,16 @@
 <ul>
 <li>复杂的批量数据处理（batch data processing），通常的时间跨度为数十分钟到数小时。</li>
 <li>基于历史数据的交互式查询（interactive query），通常的时间跨度为数十秒到数分钟。</li>
-<li>基于实时数据流的数据处理（streaming data processing），通常的时间跨度为数百毫秒到数秒。<br>由于RDD具有丰富的表达能力，所以伯克利在Spark Core的基础之上衍生出了能够同时处理上述三种情形的统一大数据处理平台，如图1-1所示。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/spark.png" alt="图片说明"></div></li>
+<li>基于实时数据流的数据处理（streaming data processing），通常的时间跨度为数百毫秒到数秒。<br>由于RDD具有丰富的表达能力，所以伯克利在Spark Core的基础之上衍生出了能够同时处理上述三种情形的统一大数据处理平台，如图1-1所示。<br><div align="center"><img src="/2019/10/16/Spark-%E6%A6%82%E8%BF%B0/spark.png" alt="图片说明"></div></li>
 <li>Spark Core：基于RDD提供了丰富的操作接口，利用DAG进行统一的任务规划，使得Spark能够更加灵活地处理类似MapReduce的批处理作业。</li>
 <li>Shark/Spark SQL:兼容Hive的接口HQL，提供了比Hive高出10~100倍的查询速度的分布式SQL引擎。</li>
 <li>Spark Streaming：将流式计算分解成一系列的短小的批处理作业，利用Spark轻量级和低延时的调度框架，可以很好的支持流式处理。目前已经支持的数据输入源包括Kafka、Flume、Twitter、TCP sockets。</li>
 <li>GraphX：基于Spark的图计算框架，兼容Pregel和GraphLab接口，增强了图构建以及图转换功能。</li>
 <li>MLlib:Spark Core 天然地非常适合于迭代式运算，MLlib就是构建在Spark上的机器学习算法库。目前已经可以支持常用的分类算法、聚类算法、推荐算法等。<br>Spark生态系统的目标就是将批处理、交互式处理、流式处理融合到同一个软件栈中。对于最终的用户或者是开发者而言，Spark生态系统有如下特性。</li>
-<li>Spark生态系统兼容Hadoop生态系统。这个特性对于最终用户至关重要，虽然Spark 通用引擎在一定程度上是用来取代MapReduce系统的，但是Spark能够完美兼容Hadoop生态中的HDFS和YARN等其他组件，使得现有的Hadoop用户能够非常容易地迁移到Spark系统中。图1-2显示了Spark与Hadoop生态的兼容性。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/1-2.png" alt></div></li>
-<li>Spark生态系统学习成本很低。要实现一个相对完整的端到端解决方案，以前需要部署维护多个专有系统，现在只需要一个Spark系统。另外，如果开发者对Spark Core的原理有比较深入的理解，对构架在Spark Core之上的其他组件的运用将会非常容易。图1-3对比了Spark生态和其他大数据专有系统的代码量。在图1-3中的Spark一项中，批处理对应Spark Core，交互式处理对应Shark/Spark SQL，流计算对应Spark Streaming，而图计算对应GraphX。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/1-3.png" alt></div></li>
+<li>Spark生态系统兼容Hadoop生态系统。这个特性对于最终用户至关重要，虽然Spark 通用引擎在一定程度上是用来取代MapReduce系统的，但是Spark能够完美兼容Hadoop生态中的HDFS和YARN等其他组件，使得现有的Hadoop用户能够非常容易地迁移到Spark系统中。图1-2显示了Spark与Hadoop生态的兼容性。<br><div align="center"><img src="/2019/10/16/Spark-%E6%A6%82%E8%BF%B0/1-2.png" alt></div></li>
+<li>Spark生态系统学习成本很低。要实现一个相对完整的端到端解决方案，以前需要部署维护多个专有系统，现在只需要一个Spark系统。另外，如果开发者对Spark Core的原理有比较深入的理解，对构架在Spark Core之上的其他组件的运用将会非常容易。图1-3对比了Spark生态和其他大数据专有系统的代码量。在图1-3中的Spark一项中，批处理对应Spark Core，交互式处理对应Shark/Spark SQL，流计算对应Spark Streaming，而图计算对应GraphX。<br><div align="center"><img src="/2019/10/16/Spark-%E6%A6%82%E8%BF%B0/1-3.png" alt></div></li>
 <li>Spark 性能表现优异。由于Spark利用DAG进行调度执行规划，所以在多任务计算以及迭代计算中能够大量减少磁盘I/O的时间。另外，对于每一项任务启动一个线程，而不是启动一个进程，大大缩短了任务启动时间。</li>
-<li>Spark有强大的社区支持。Spark近一年多来保持非常迅猛的发展势头，被誉为大数据处理的未来。Spark的创始团队成立了Databricks公司，全力支持Spark 生态的发展。目前Hadoop商业版本发行公司中，已经有Cloudera、Hortonworks、MapR等公司相继宣布支持Spark软件栈。图1-4显示了Spark不同版本发布时对社区做出贡献的贡献者数量变化情况。<br><div align="center"><img src="/2020/06/12/Spark-%E6%A6%82%E8%BF%B0/1-4.png" alt></div></li>
+<li>Spark有强大的社区支持。Spark近一年多来保持非常迅猛的发展势头，被誉为大数据处理的未来。Spark的创始团队成立了Databricks公司，全力支持Spark 生态的发展。目前Hadoop商业版本发行公司中，已经有Cloudera、Hortonworks、MapR等公司相继宣布支持Spark软件栈。图1-4显示了Spark不同版本发布时对社区做出贡献的贡献者数量变化情况。<br><div align="center"><img src="/2019/10/16/Spark-%E6%A6%82%E8%BF%B0/1-4.png" alt></div></li>
 <li>Spark 支持多种语言编程接口。Spark生态本身是使用Scala语言编写的，但是考虑到其流行性，因此Spark从一开始就支持Java和Python接口，方便Spark 程序开发者自由选择。</li>
 </ul>
 ]]></content>
@@ -710,8 +721,23 @@
       </tags>
   </entry>
   <entry>
+    <title>Spark Error</title>
+    <url>/2019/10/16/Spark-Error/</url>
+    <content><![CDATA[<h1 id="配置historyserver时："><a href="#配置historyserver时：" class="headerlink" title="配置historyserver时："></a>配置historyserver时：</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227263283_97221A1B1C45BED99055FB1996A900CE" alt="图片说明" title="图片标题"> </p>
+<p>因为端口被占用了</p>
+<h1 id="SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错"><a href="#SparkStreaming-updateStateByKeyde-使用时-–checkpoint报错" class="headerlink" title="SparkStreaming updateStateByKeyde 使用时 –checkpoint报错"></a>SparkStreaming updateStateByKeyde 使用时 –checkpoint报错</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191016/9094293_1571227382925_460CCA764930F915D29C8DC785013F26" alt="图片说明" title="图片标题"> </p>
+<p>原因在使用的时候，并没有设置checkPoint 检测点<br>检测点的目的就是为了保存上一次的结果数据。如果没有检测点的话，那么将无法保存上一次结果<br>如果要保证中间数据不丢失的话，可以借助其它的工具，如hdfs<br>ssc.checkpoint(“hdfs://kd0301:9000/spark_checkpoint/”)</p>
+]]></content>
+      <categories>
+        <category>Spark</category>
+      </categories>
+      <tags>
+        <tag>Error</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Spark压缩文件性能分析</title>
-    <url>/2020/06/14/Spark%E5%8E%8B%E7%BC%A9%E6%96%87%E4%BB%B6%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/</url>
+    <url>/2019/10/15/Spark%E5%8E%8B%E7%BC%A9%E6%96%87%E4%BB%B6%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/</url>
     <content><![CDATA[<h1 id="Spark压缩文件性能分析"><a href="#Spark压缩文件性能分析" class="headerlink" title="Spark压缩文件性能分析"></a>Spark压缩文件性能分析</h1><p>HDFS上分布式文件存储，成为大数据平台首选存储平台。而Spark往往以HDFS文件为输入，为保持兼容性，Spark支持多种格式文件读取，大数据场景下，性能瓶颈往往是IO，而不是CPU算力，所以对文件的压缩处理成为了很必要的手段。Spark为提供兼容性，同时支持多种压缩包直接读取，方便于用户使用，不用提前对压缩格式处理，但各种压缩格式各有优缺点，若不注意将导致Spark的能力无法发挥出来。故对Spark计算压缩文件做一个分析。</p>
 <h1 id="支持的压缩格式"><a href="#支持的压缩格式" class="headerlink" title="支持的压缩格式"></a>支持的压缩格式</h1><p>首先来看一下Spark读取HDFS文件常用的压缩格式：<br><img src="https://uploadfiles.nowcoder.com/images/20191003/9094293_1570106237246_09ACB263F52577BA2C36F0D60E304A75" alt="图片说明" title="图片标题"></p>
 <h1 id="执行对比分析"><a href="#执行对比分析" class="headerlink" title="执行对比分析"></a>执行对比分析</h1><p>实验数据：同一个文件包，json格式文件数据<br>处理逻辑：增加列，然后发送到kafka中。<br>DAG逻辑划分：两个job（read动作一个job，foreach动作一个job），每个job下面各一个stage，每个stage下面task若干<br>程序执行参数：–master yarn –deploy-mode client –executor-cores 4 –executor-memory 4G –num-executors 4</p>
@@ -755,61 +781,17 @@
       </tags>
   </entry>
   <entry>
-    <title>Scala</title>
-    <url>/2020/06/19/Scala/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Scala 是 Scalable Language 的简写，是一门多范式的编程语言<br>联邦理工学院洛桑（EPFL）的Martin Odersky于2001年基于Funnel的工作开始设计Scala。<br>Funnel是把函数式编程思想和Petri网相结合的一种编程语言。Scala 是一门多范式（multi-paradigm）的编程语言，设计初衷是要集成面向对象编程和函数式编程的各种特性。Scala 运行在Java虚拟机上，并兼容现有的Java程序。Scala 源代码被编译成Java字节码，所以它可以运行于JVM之上，并可以调用现有的Java类库。</p>
-<h1 id="Scala特性："><a href="#Scala特性：" class="headerlink" title="Scala特性："></a>Scala特性：</h1><p><strong>面向对象特性：</strong><br>Scala是一种纯面向对象的语言，每个值都是对象。每个方法都是调用。举例来说，如果你执行 <code>1+2</code>，则对于 Scala 而言，实际是在调用 Int 类里定义的名为 <code>+</code> 的方法。<br><strong>函数式编程：</strong><br>Scala也是一种函数式语言，奇函数也能成值来使用。Scala提供了轻量级的语法用以定义匿名函数，支持高级函数，并支持柯里化。Scala的case class及内置的模式匹配相当于函数式编程语言中常用的代数类型。</p>
-<p>我们通过函数式编程来实现数组翻倍的例子</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">val nums = Array(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>)</span><br><span class="line">val doubleNums = nums.map(_*<span class="number">2</span>)</span><br></pre></td></tr></table></figure>
-<p>利用Array的map函数，将所有元素2，并生成了一个新的双倍数组。map函数所做的事情是把遍历整个数组的过程，归纳并抽离出来，让我们专注于描述我们想要的是什么”<strong>_*2*</strong>“。我们传入map的是一个纯函数；它不具有任何副作用(不会改变外部状态)，它只是接收一个数字，返回*2后的值。</p>
-<p>正如<strong><em>封装、继承\</em></strong>和<strong><em>多态\</em></strong>是面向对象编程的三大特性。函数式编程也有自己的语言特性<strong>数据不可变、函数是第一公民、引用透明</strong>和<strong>尾递归</strong></p>
-<p><strong>数据不可变（immutable data）</strong>：变量只赋值一次，如果想改变其值就创建一个新的。</p>
-<p><strong>函数是第一公民（first class method）</strong>:函数可以像普通变量一样去使用。函数可以像变量一样被创建，修改，并当成变量一样传递，返回或是在函数中嵌套函数。</p>
-<p><strong>引用透明(referential transparency)</strong>： 指的是函数的运行不依赖于外部变量或“状态”，只依赖于输入的参数，任何时候只要参数相同，调用函数所得到的返回值总是相同的。天然适应并发编程，因为调用函数的结果具有一致性，所以根本不需要加锁，也就不存在死锁的问题。</p>
-<p><strong>尾递归（tail call optimization）</strong>:函数调用要压栈保存现场，递归层次过深的话，压栈过多会产生性能问题。所以引入尾递归优化，每次递归时都会重用栈，提升性能。</p>
-<h1 id="Scala安装"><a href="#Scala安装" class="headerlink" title="Scala安装"></a>Scala安装</h1><h2 id="Windows-上安装Scala"><a href="#Windows-上安装Scala" class="headerlink" title="Windows 上安装Scala"></a>Windows 上安装Scala</h2><p>Scala 语言可以运行在Window、Linux、Unix、 Mac OS X等系统上。</p>
-<p>Scala是基于java之上，大量使用java的类库和变量，<strong>使用 Scala 之前必须先安装 Java（&gt;1.5版本）。</strong></p>
-<p>这里就不介绍Java环境配置，如果还未安装可以参考相关的博客</p>
-<p>接下来，我们从<a href="http://www.scala-lang.org/downloads" target="_blank" rel="noopener">Scala官网</a></p>
-<p><img src="/2020/06/19/Scala/1.png" alt></p>
-<p>下载后，双击 msi 文件，一步步安装即可，安装过程你可以使用默认的安装目录。</p>
-<p>安装好scala后，系统会自动提示，单击 finish，完成安装。</p>
-<p>右击我的电脑，单击”属性”，进入如图所示页面。下面开始配置环境变量，右击【我的电脑】–【属性】–【高级系统设置】–【环境变量】，如图：</p>
-<p><img src="/2020/06/19/Scala/2.png" alt></p>
-<p>设置 SCALA_HOME 变量：单击新建，在变量名栏输入：<strong>SCALA_HOME</strong>: 变量值一栏输入：E:\02_software\scala-2.11.11 也就是 Scala 的安装目录，根据个人情况有所不同</p>
-<p><img src="/2020/06/19/Scala/3.png" alt></p>
-<p>设置 Path 变量：找到系统变量下的”Path”如图，单击编辑。在”变量值”一栏的最前面添加如下的路径： %SCALA_HOME%\bin;%SCALA_HOME%\jre\bin;</p>
-<p><strong>注意：</strong>后面的分号 <strong>；</strong> 不要漏掉。</p>
-<p><img src="/2020/06/19/Scala/4.png" alt></p>
-<p>设置 Classpath 变量：找到找到系统变量下的”Classpath”如图，单击编辑，如没有，则单击”新建”:</p>
-<ul>
-<li>“变量名”：ClassPath</li>
-<li>“变量值”：.;%SCALA_HOME%\bin;%SCALA_HOME%\lib\dt.jar;%SCALA_HOME%\lib\tools.jar.;</li>
-</ul>
-<p><strong>注意：</strong>“变量值”最前面的 .; 不要漏掉。最后单击确定即可。</p>
-<p><img src="/2020/06/19/Scala/5.png" alt></p>
-<p>检查环境变量是否设置好了：调出”cmd”检查。单击 【开始】，在输入框中输入cmd，然后”回车”，输入 scala，然后回车，如环境变量设置ok，你应该能看到这些信息。</p>
-<p><img src="/2020/06/19/Scala/6.png" alt></p>
-]]></content>
-      <categories>
-        <category>Scala</category>
-      </categories>
-      <tags>
-        <tag>编程语言</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>VMwareWorkstation pro无法在Windows上运行的问题</title>
-    <url>/2020/06/19/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/</url>
+    <url>/2019/11/23/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/</url>
     <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>由于Windows系统更新问题，导致电脑上的VMwareWorkstation pro无法使用，之前有卸过Windows组件，但是系统自动更新之后又不能打开，所有只能乖乖地将我的VMwareWorkstation更新到15版本。</p>
-<h3 id="首先根据系统的提示将最新的版本下载至我们的电脑中"><a href="#首先根据系统的提示将最新的版本下载至我们的电脑中" class="headerlink" title="首先根据系统的提示将最新的版本下载至我们的电脑中"></a>首先根据系统的提示将最新的版本下载至我们的电脑中</h3><p><img src="/2020/06/19/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/1.png" alt="图片说明"> </p>
-<h3 id="由于我的电脑是Windows系统所以选择Windows版本"><a href="#由于我的电脑是Windows系统所以选择Windows版本" class="headerlink" title="由于我的电脑是Windows系统所以选择Windows版本"></a>由于我的电脑是Windows系统所以选择Windows版本</h3><p><img src="/2020/06/19/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/2.png" alt="图片说明"> </p>
-<h3 id="当我们打开运行安装时发现"><a href="#当我们打开运行安装时发现" class="headerlink" title="当我们打开运行安装时发现"></a>当我们打开运行安装时发现</h3><p><img src="/2020/06/19/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/3.png" alt="图片说明"> </p>
-<h3 id="于是我抱着可能丢失文件的风险将我的老版本VMwareWorkstation卸载"><a href="#于是我抱着可能丢失文件的风险将我的老版本VMwareWorkstation卸载" class="headerlink" title="于是我抱着可能丢失文件的风险将我的老版本VMwareWorkstation卸载"></a>于是我抱着可能丢失文件的风险将我的老版本VMwareWorkstation卸载</h3><p><img src="/2020/06/19/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/4.png" alt="图片说明"> </p>
-<p><img src="/2020/06/19/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/5.png" alt="图片说明"> </p>
-<p><img src="/2020/06/19/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/6.png" alt="图片说明"> </p>
-<p><img src="/2020/06/19/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/7.png" alt="图片说明"> </p>
-<h2 id="最后升级到我们的VMwareWorkstation-pro版本即可，大功告成-虚拟机又能打开了。（不过界面…）"><a href="#最后升级到我们的VMwareWorkstation-pro版本即可，大功告成-虚拟机又能打开了。（不过界面…）" class="headerlink" title="最后升级到我们的VMwareWorkstation pro版本即可，大功告成! 虚拟机又能打开了。（不过界面…）"></a>最后升级到我们的VMwareWorkstation pro版本即可，大功告成! 虚拟机又能打开了。（不过界面…）</h2><p><img src="/2020/06/19/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/8.png" alt="图片说明"> </p>
+<h3 id="首先根据系统的提示将最新的版本下载至我们的电脑中"><a href="#首先根据系统的提示将最新的版本下载至我们的电脑中" class="headerlink" title="首先根据系统的提示将最新的版本下载至我们的电脑中"></a>首先根据系统的提示将最新的版本下载至我们的电脑中</h3><p><img src="/2019/11/23/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/1.png" alt="图片说明"> </p>
+<h3 id="由于我的电脑是Windows系统所以选择Windows版本"><a href="#由于我的电脑是Windows系统所以选择Windows版本" class="headerlink" title="由于我的电脑是Windows系统所以选择Windows版本"></a>由于我的电脑是Windows系统所以选择Windows版本</h3><p><img src="/2019/11/23/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/2.png" alt="图片说明"> </p>
+<h3 id="当我们打开运行安装时发现"><a href="#当我们打开运行安装时发现" class="headerlink" title="当我们打开运行安装时发现"></a>当我们打开运行安装时发现</h3><p><img src="/2019/11/23/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/3.png" alt="图片说明"> </p>
+<h3 id="于是我抱着可能丢失文件的风险将我的老版本VMwareWorkstation卸载"><a href="#于是我抱着可能丢失文件的风险将我的老版本VMwareWorkstation卸载" class="headerlink" title="于是我抱着可能丢失文件的风险将我的老版本VMwareWorkstation卸载"></a>于是我抱着可能丢失文件的风险将我的老版本VMwareWorkstation卸载</h3><p><img src="/2019/11/23/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/4.png" alt="图片说明"> </p>
+<p><img src="/2019/11/23/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/5.png" alt="图片说明"> </p>
+<p><img src="/2019/11/23/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/6.png" alt="图片说明"> </p>
+<p><img src="/2019/11/23/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/7.png" alt="图片说明"> </p>
+<h2 id="最后升级到我们的VMwareWorkstation-pro版本即可，大功告成-虚拟机又能打开了。（不过界面…）"><a href="#最后升级到我们的VMwareWorkstation-pro版本即可，大功告成-虚拟机又能打开了。（不过界面…）" class="headerlink" title="最后升级到我们的VMwareWorkstation pro版本即可，大功告成! 虚拟机又能打开了。（不过界面…）"></a>最后升级到我们的VMwareWorkstation pro版本即可，大功告成! 虚拟机又能打开了。（不过界面…）</h2><p><img src="/2019/11/23/VMwareWorkstation-pro%E6%97%A0%E6%B3%95%E5%9C%A8Windows%E4%B8%8A%E8%BF%90%E8%A1%8C%E7%9A%84%E9%97%AE%E9%A2%98/8.png" alt="图片说明"> </p>
 ]]></content>
       <categories>
         <category>Tools</category>
@@ -820,7 +802,7 @@
   </entry>
   <entry>
     <title>VisualVM:多合一故障处理工具</title>
-    <url>/2020/06/17/VisualVM-%E5%A4%9A%E5%90%88%E4%B8%80%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7/</url>
+    <url>/2019/11/10/VisualVM-%E5%A4%9A%E5%90%88%E4%B8%80%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7/</url>
     <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>VisualVM (All-in-One Java Troubleshooting Tool)是到目前为止随JDK发布的功能最强大的运行监视和故障处理程序，并且可以预见在未来一段时间内都是官方助力发展的虚拟机故障处理工具。官方在VisualVM的软件说明中写上了“All in One”的描述字样，预示着它除了运行监视，故障处理 外，还提供了很多其他方面的功能。如性能分析，VisualVM的性能分析功能甚至比起JProfiler、YourKit等专业收费的Profiling工具都不会逊色多少，而且VisualVM的还有一个很大的优点：不需要被监视的程序基于特殊Agent运行，因此它对应用程序的实际性能的影响很小，使用它可以直接应用在生产环境中。这个是JProfiler、YourKit等工具无法与之媲美的。</p>
 <h2 id="Visual兼容范围与插件安装"><a href="#Visual兼容范围与插件安装" class="headerlink" title="Visual兼容范围与插件安装"></a>Visual兼容范围与插件安装</h2><p>VisualVM基于NetBeans平台开发，因此它一开始就具备了插件扩展功能的特性，通过插件扩展支持，VisualVM可以做到：</p>
 <ul>
@@ -858,32 +840,32 @@
   </entry>
   <entry>
     <title>Zeppelin 安装</title>
-    <url>/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/</url>
+    <url>/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/</url>
     <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Apache Zeppelin 是一个可以进行大数据可视化分析的交互式开发系统，可以承担数据接入、数据发现、数据分析、数据可视化、数据协作等任务，其前端提供丰富的可视化图形库，不限于SparkSQL，后端支持HBase、Flink 等大数据系统以插件扩展的方式，并支持Spark、Python、JDBC、Markdown、Shell 等各种常用Interpreter，这使得开发者可以方便地使用SQL 在 Zeppelin 中做数据开发。</p>
 <h3 id="安装环境："><a href="#安装环境：" class="headerlink" title="安装环境："></a>安装环境：</h3><p>Centos6.8、jdk1.8、zeppelin-0.8.1-bin-all</p>
 <h3 id="安装步骤"><a href="#安装步骤" class="headerlink" title="安装步骤"></a>安装步骤</h3><p>打开下面链接进行下载:<br><a href="http://zeppelin.apache.org/download.html" target="_blank" rel="noopener">http://zeppelin.apache.org/download.html</a></p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/1.png" alt="图片说明"> </p>
+<p><img src="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/1.png" alt="图片说明"> </p>
 <p>选择zeppelin-0.8.2-bin-all下载并将其解压缩到您选择的目录中，即可开始使用。</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/2.png" alt="图片说明"> </p>
+<p><img src="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/2.png" alt="图片说明"> </p>
 <p>执行 bin/zeppelin-daemon.sh start<br>Zeppelin成功启动后，使用Web浏览器转到http：// localhost：8080。如图：</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/3.png" alt="图片说明"> </p>
+<p><img src="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/3.png" alt="图片说明"> </p>
 <p>安装成功。</p>
 <h3 id="如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决："><a href="#如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决：" class="headerlink" title="如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决："></a>如果遇到Zeppelin启动但是web页面打不开，我们可以尝试一下方法解决：</h3><p>1.防火墙是否关闭<br>使用以下命令永久关闭防火墙<br>chkconfig iptables off<br>2.查看是否是端口被占用<br>lsof -i:端口号 //查看是否被占用<br>如果被占用可以尝试修改默认端口 zeppelin-site.xml.template</p>
 <p>vi zeppelin-site.xml.template</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/4.png" alt="图片说明"> </p>
+<p><img src="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/4.png" alt="图片说明"> </p>
 <h2 id="这里展示一下Zeppelin连接数据库的一个demo"><a href="#这里展示一下Zeppelin连接数据库的一个demo" class="headerlink" title="这里展示一下Zeppelin连接数据库的一个demo"></a>这里展示一下Zeppelin连接数据库的一个demo</h2><p>1.首先进入Zeppelin的首页</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/5.png" alt="图片说明"> </p>
+<p><img src="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/5.png" alt="图片说明"> </p>
 <p>2.点击 anonymous -&gt; Interpreter 输入jdbc回车</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/6.png" alt="图片说明"> </p>
+<p><img src="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/6.png" alt="图片说明"> </p>
 <p>3.点击 edit 编辑红框选中选项</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/7.png" alt="图片说明"> </p>
+<p><img src="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/7.png" alt="图片说明"> </p>
 <p>然后添加你的mysql驱动位置</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/8.png" alt="图片说明"> </p>
+<p><img src="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/8.png" alt="图片说明"> </p>
 <p>4.创建一个新的node，点击 create new note：输入NoteName和Default Interpreter</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/9.png" alt="图片说明"> </p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/10.png" alt="图片说明"> </p>
+<p><img src="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/9.png" alt="图片说明"> </p>
+<p><img src="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/10.png" alt="图片说明"> </p>
 <p>5.在框中输入SQL语句，点击执行</p>
-<p><img src="/2020/06/17/Zeppelin-%E5%AE%89%E8%A3%85/11.png" alt="图片说明"> </p>
+<p><img src="/2019/12/21/Zeppelin-%E5%AE%89%E8%A3%85/11.png" alt="图片说明"> </p>
 <p>我们还可以根据自己的需要进行选择图表的展示方式。</p>
 ]]></content>
       <categories>
@@ -894,24 +876,8 @@
       </tags>
   </entry>
   <entry>
-    <title>Zeppelin</title>
-    <url>/2020/06/17/Zeppelin/</url>
-    <content><![CDATA[<h1 id="什么是ApacheZeppelin？"><a href="#什么是ApacheZeppelin？" class="headerlink" title="什么是ApacheZeppelin？"></a>什么是ApacheZeppelin？</h1><p>Apache Zeppelin 是一个可以进行大数据可视化分析的交互式开发系统，可以承担数据接入、数据发现、数据分析、数据可视化、数据协作等任务，其前端提供丰富的可视化图形库，不限于SparkSQL，后端支持HBase、Flink 等大数据系统以插件扩展的方式，并支持Spark、Python、JDBC、Markdown、Shell 等各种常用Interpreter，这使得开发者可以方便地使用SQL 在 Zeppelin 中做数据开发。在 Zeppelin 中还可以完成机器学习的数据预处理、算法开发和调试、算法作业调度的工作，同时，Zeppelin 还提供了单机 Docker、分布式、K8s、Yarn 四种系统运行模式，以适应各类团队的需求。</p>
-<h1 id="多功能笔记本"><a href="#多功能笔记本" class="headerlink" title="多功能笔记本"></a>多功能笔记本</h1><p>1）数据摄取<br>2）数据发现<br>3）数据可视化与协作<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025783514_8CF155AE412A82C78071201381CEAC20" alt="图片说明" title="图片标题"> </p>
-<h1 id="多语言后端"><a href="#多语言后端" class="headerlink" title="多语言后端"></a>多语言后端</h1><p>Apache Zeppelin解释器概念允许将任何语言数据/数据处理后端插入Zeppelin。当前，Apache Zeppelin支持许多解释器，例如Apache Spark，Python，JDBC，Markdown和Shell。</p>
-<h1 id="Apache-Spark集成"><a href="#Apache-Spark集成" class="headerlink" title="Apache Spark集成"></a>Apache Spark集成</h1><p>特别是，Apache Zeppelin提供了内置的Apache Spark集成。不需要为其构建单独的模块，插件或库。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025811557_14FF85F448A85399AA74361F7B957506" alt="图片说明" title="图片标题"><br>Apache Zeppelin与Spark集成提供<br>Apache Zeppelin与Spark集成提供<br>自动SparkContext和SQLContext注入<br>从本地文件系统或Maven存储库加载运行时jar依赖项。<br>取消作业并显示其进度</p>
-<h1 id="数据可视化"><a href="#数据可视化" class="headerlink" title="数据可视化"></a>数据可视化</h1><p>Apache Zeppelin中已经包含一些基本图表，可视化不仅限于SparkSQL查询，任何语言后端的任何输出都可以被识别和可视化<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025841915_3FDB2A16838FA1D3A8DE66597442CDB1" alt="图片说明" title="图片标题"> </p>
-<h2 id="枢轴图表"><a href="#枢轴图表" class="headerlink" title="枢轴图表"></a>枢轴图表</h2><p>Apache Zeppelin 汇总值并通过简单的拖放将其显示在数据透视图中。您可以轻松地创建具有多个汇总值的图表，包括综合，计数，平均值，最小值，最大值。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025877924_B5510C7235B1E872B0A8BF2CADE4D1CA" alt="图片说明" title="图片标题"><br>在Apache Zeppelin中了解有关基本显示系统和Angular API（frontend，backend）的更多信息。</p>
-<h1 id="动态表格"><a href="#动态表格" class="headerlink" title="动态表格"></a>动态表格</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025899397_63E60EDEB1CCD12D3A765295F3FE0018" alt="图片说明" title="图片标题"> </p>
-<h1 id="通过共享您的笔记本和段落进行协作"><a href="#通过共享您的笔记本和段落进行协作" class="headerlink" title="通过共享您的笔记本和段落进行协作"></a>通过共享您的笔记本和段落进行协作</h1><p>您的笔记本URL可以在协作者之间共享。然后，Apache Zeppelin将实时广播所有更改，就像Google文档中的协作一样。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025913843_7E9D16C843B30DC30C36EBED3FC80485" alt="图片说明" title="图片标题"> </p>
-]]></content>
-      <categories>
-        <category>Zeppelin</category>
-      </categories>
-  </entry>
-  <entry>
     <title>Zookeeper分布式集群部署</title>
-    <url>/2020/06/17/Zookeeper%E5%88%86%E5%B8%83%E5%BC%8F%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2/</url>
+    <url>/2019/11/17/Zookeeper%E5%88%86%E5%B8%83%E5%BC%8F%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2/</url>
     <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><blockquote>
 <p>ZooKeeper是一个开放源代码的分布式协调服务，由知名互联网公司雅虎创建，是Google Chubby的开源实现。ZooKeeper的设计目标是将那些复杂且容易出错的分布式一致性服务封装起来，构成一个高效可靠的原语集，并以一系列简单易用的接口提供给用户使用。  </p>
 <p>ZooKeeper是一个典型的分布式数据一致性的解决方案，分布式应用程序可以基于它实现诸如数据发布/订阅、负载均衡、命名服务、分布式协调/通知、集群管理、Master选举、分布式锁和分布式队列等功能。ZooKeeper可以保证如下分布式一致性特性。<br>今天我们来看看如何分布式安装</p>
@@ -942,15 +908,91 @@
       </tags>
   </entry>
   <entry>
+    <title>Zeppelin</title>
+    <url>/2019/10/02/Zeppelin/</url>
+    <content><![CDATA[<h1 id="什么是ApacheZeppelin？"><a href="#什么是ApacheZeppelin？" class="headerlink" title="什么是ApacheZeppelin？"></a>什么是ApacheZeppelin？</h1><p>Apache Zeppelin 是一个可以进行大数据可视化分析的交互式开发系统，可以承担数据接入、数据发现、数据分析、数据可视化、数据协作等任务，其前端提供丰富的可视化图形库，不限于SparkSQL，后端支持HBase、Flink 等大数据系统以插件扩展的方式，并支持Spark、Python、JDBC、Markdown、Shell 等各种常用Interpreter，这使得开发者可以方便地使用SQL 在 Zeppelin 中做数据开发。在 Zeppelin 中还可以完成机器学习的数据预处理、算法开发和调试、算法作业调度的工作，同时，Zeppelin 还提供了单机 Docker、分布式、K8s、Yarn 四种系统运行模式，以适应各类团队的需求。</p>
+<h1 id="多功能笔记本"><a href="#多功能笔记本" class="headerlink" title="多功能笔记本"></a>多功能笔记本</h1><p>1）数据摄取<br>2）数据发现<br>3）数据可视化与协作<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025783514_8CF155AE412A82C78071201381CEAC20" alt="图片说明" title="图片标题"> </p>
+<h1 id="多语言后端"><a href="#多语言后端" class="headerlink" title="多语言后端"></a>多语言后端</h1><p>Apache Zeppelin解释器概念允许将任何语言数据/数据处理后端插入Zeppelin。当前，Apache Zeppelin支持许多解释器，例如Apache Spark，Python，JDBC，Markdown和Shell。</p>
+<h1 id="Apache-Spark集成"><a href="#Apache-Spark集成" class="headerlink" title="Apache Spark集成"></a>Apache Spark集成</h1><p>特别是，Apache Zeppelin提供了内置的Apache Spark集成。不需要为其构建单独的模块，插件或库。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025811557_14FF85F448A85399AA74361F7B957506" alt="图片说明" title="图片标题"><br>Apache Zeppelin与Spark集成提供<br>Apache Zeppelin与Spark集成提供<br>自动SparkContext和SQLContext注入<br>从本地文件系统或Maven存储库加载运行时jar依赖项。<br>取消作业并显示其进度</p>
+<h1 id="数据可视化"><a href="#数据可视化" class="headerlink" title="数据可视化"></a>数据可视化</h1><p>Apache Zeppelin中已经包含一些基本图表，可视化不仅限于SparkSQL查询，任何语言后端的任何输出都可以被识别和可视化<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025841915_3FDB2A16838FA1D3A8DE66597442CDB1" alt="图片说明" title="图片标题"> </p>
+<h2 id="枢轴图表"><a href="#枢轴图表" class="headerlink" title="枢轴图表"></a>枢轴图表</h2><p>Apache Zeppelin 汇总值并通过简单的拖放将其显示在数据透视图中。您可以轻松地创建具有多个汇总值的图表，包括综合，计数，平均值，最小值，最大值。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025877924_B5510C7235B1E872B0A8BF2CADE4D1CA" alt="图片说明" title="图片标题"><br>在Apache Zeppelin中了解有关基本显示系统和Angular API（frontend，backend）的更多信息。</p>
+<h1 id="动态表格"><a href="#动态表格" class="headerlink" title="动态表格"></a>动态表格</h1><p><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025899397_63E60EDEB1CCD12D3A765295F3FE0018" alt="图片说明" title="图片标题"> </p>
+<h1 id="通过共享您的笔记本和段落进行协作"><a href="#通过共享您的笔记本和段落进行协作" class="headerlink" title="通过共享您的笔记本和段落进行协作"></a>通过共享您的笔记本和段落进行协作</h1><p>您的笔记本URL可以在协作者之间共享。然后，Apache Zeppelin将实时广播所有更改，就像Google文档中的协作一样。<br><img src="https://uploadfiles.nowcoder.com/images/20191002/9094293_1570025913843_7E9D16C843B30DC30C36EBED3FC80485" alt="图片说明" title="图片标题"> </p>
+]]></content>
+      <categories>
+        <category>Zeppelin</category>
+      </categories>
+  </entry>
+  <entry>
+    <title>垃圾收集器</title>
+    <url>/2019/11/08/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/</url>
+    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>如果说收集算法是内存回收的方法论，那么垃圾收集就是内存回收的具体实现。Java虚拟机规范中对垃圾收集器应该如何实现并没有任何规定，因此不同的厂商、不同版本的虚拟机所提供的垃圾收集器可能会有很大差别，并且一般都会提供参数供用户根据自己的应用特点和要求组合出各个年代所使用的收集器。这里讨论的收集器基于JDK1.7Update14之后的HotSpot虚拟机。</p>
+<h2 id="Serial收集器"><a href="#Serial收集器" class="headerlink" title="Serial收集器"></a>Serial收集器</h2><p>Serial收集器是最基本、发展历史最悠久的收集器，曾经是虚拟机新生代收集的唯一选择。我们从名字就可知道，这个收集器是一个单线程的收集器，但它的“单线程”的意义并不仅仅说明它只会使用一个CPU或一条收集线程去完成垃圾收集工作，更重要的是在它进行垃圾收集时，必须暂停其他所有的工作线程，直到它收集结束。<br>如图示意了Serial、Serial Old收集器的运行过程。<br><img src="/2019/11/08/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/1.png" alt="图片说明"> </p>
+<h2 id="ParNew"><a href="#ParNew" class="headerlink" title="ParNew"></a>ParNew</h2><p>ParNew收集器其实就是Serial收集器的多线程版本，除了使用多条线程进行垃圾收集之外，其余行为包括Serial收集器可用的所有控制参数（例如：-XX：SurvivorRatio、——XX：PretenureSizeThreshold、-XX：HandlePromotionFailure等）、收集算法、Stop The World、对象分配规则、回收策略等都与Serial收集器完全一样，在实现上，这两种收集器也共用了相当多的代码。<br>ParNew/Serial Old示意图：</p>
+<p><img src="/2019/11/08/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/2.png" alt="ParNew/Serial Old示意图"> </p>
+<h2 id="Parallel-Scavenge收集器"><a href="#Parallel-Scavenge收集器" class="headerlink" title="Parallel Scavenge收集器"></a>Parallel Scavenge收集器</h2><p>Parallel Scavenge收集器是一个新生代收集器，它也是使用复制算法的收集器，又是并行的多线程收集器，看上去和ParNew都一样，那他有什么特别之处呢?<br>Parallen Scavenge收集器的特点是它的关注点与其他收集器不同，CMS等收集器的关注点是尽可能的缩短垃圾收集时用户线程的停顿时间，而Parallel Scavenge收集器的目标是达到一个可控制的吞吐量。所谓吞吐量<br>就是CPU用于运行用户代码的时间与CPU总消耗时间的比值，即吞吐量=运行用户代码时间/(运行用户代码时间+垃圾收集时间），虚拟机总共运行了100分钟，其中垃圾收集花掉1分钟，那吞吐量就是99%。<br>停顿时间越短就越适合需要与用户交互的程序，良好的响应速度就能提升用户体验，而高吞吐量则可以高效率的利用CPU时间，尽快完成程序的运算任务，主要是和在后台运算而不需要太多交互的任务。</p>
+<h2 id="Serial-Old收集器"><a href="#Serial-Old收集器" class="headerlink" title="Serial Old收集器"></a>Serial Old收集器</h2><p>Serial Old是Serial收集器的老年代版本，它同样是一个单线程收集器，使用“标记-整理”算法。这个收集器的主要意义也是在于给Client模式下的虚拟机使用。如果在Server模式下，那么它主要还有两大用途：一种用途是在JDK1.5以及之前的版本中与Parallel Scavenge收集器搭配使用，另一种用途是作为CMS收集器的后备预案，在并发手机发生Concurrent Mode Failure时使用。<br>如图是Serial、Serial Old收集器的运行过程。</p>
+<p><img src="/2019/11/08/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/3.png" alt="图片说明"></p>
+<h2 id="Parallel-Old收集器"><a href="#Parallel-Old收集器" class="headerlink" title="Parallel Old收集器"></a>Parallel Old收集器</h2><p>Parallel Old是Parallel Scavenge收集器的老年代版本，使用多线程和“标记-整理”算法。这个收集器是在JDk1.6中才开始提供的，在此之前，新生代的Parallel Scavenge收集器一直处于比较尴尬的状态。原因是，如果新生代选择了Parallel Scavenge收集器，老年代除了Serial Old收集器外别无选择。由于老年代Serial Old收集器在服务端应用性能上的拖累，使用了Parallel Scavenge收集器也未必能在整体应用上获得吞吐量最大化的效果，由于单线程的老年代收集中无法充分利用服务器多CPU的处理能力，在老年代很大而且硬件比较高级的环境中，这种组合的吞吐量甚至还不一定有ParNew和CMS的组合给力。<br>Parallel Old收集器的工作过程如图：</p>
+<p><img src="/2019/11/08/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/4.png" alt="图片说明"> </p>
+<h2 id="CMS收集器"><a href="#CMS收集器" class="headerlink" title="CMS收集器"></a>CMS收集器</h2><p>CMS（Concurrent Mark Sweep）收集器是一种以获取最短回收停顿时间为目标的收集器。目前很大一部分的Java应用集中在互联网站或者B/S系统的服务端上，这类应用尤其重视服务的响应速度，希望系统停顿时间最短，以给用户带来较好的体验。CMS收集器就非常复合这类应用的需求。<br>从名字可以看出，CMS收集器是基于“标记清除”算法实现的，它的运作过程相对于前面几种收集器来说更复杂一些，整个过程分为4个步骤，<br>包括：</p>
+<ul>
+<li>初始标记</li>
+<li>并发标记</li>
+<li>重新标记</li>
+<li>并发清除<br>其中，初始标记、重新标记这两个步骤仍然需要“Stop The World”。初始标记仅仅只是标记一下GC Roots能<br>直接关联到的对象，速度很快，并发标记阶段就是进行GC RootsTracing的过程，而重新标记阶段则是为了修正并<br>发标记期间因用户程序继续运作而导致标记产生变动的那一部分对象的标记记录，这个阶段的停顿时间一般会比初<br>始标记阶段稍长一些，但远比并发标记的时间短。<br><img src="/2019/11/08/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/5.png" alt="图片说明"> <h2 id="G1收集器"><a href="#G1收集器" class="headerlink" title="G1收集器"></a>G1收集器</h2>G1（Garbage-First）收集器是当今收集器技术发展的最前沿成果之一。G1是一款面向服务端应用的垃圾收集器。HotSpot开发团队赋予它的使命是（在比较长期的）未来可以替换掉JDK 1.5中发布的CMS收集器。与其他GC收集器相比，G1具备如下特点。</li>
+<li>并行与并发：G1能充分利用多CPU、多核环境下的硬件优势，使用多个CPU（CPU或者CPU核心）来缩短Stop The-World停顿的时间，部分其他收集器原本需要停顿Java线程执行的GC动作，G1收集器仍然可以通过并发的方式让Java程序继续执行。</li>
+<li>分代收集：与其他收集器一样，分代概念在G1中依然得以保留。虽然G1可以不需要其他收集器配合就能独立管理整个GC堆，但它能够采用不同的方式去处理新创建的对象和已经存活了一段时间、熬过多次GC的旧对象以获取更<br>好的收集效果。</li>
+<li>空间整合：与CMS的“标记—清理”算法不同，G1从整体来看是基于“标记—整理”算法实现的收集器，从局部（两个Region之间）上来看是基于“复制”算法实现的，但无论如何，这两种算法都意味着G1运作期间不会产生<br>内存空间碎片，收集后能提供规整的可用内存。这种特性有利于程序长时间运行，分配大对象时不会因为无法找到连续内存空间而提前触发下一次GC。</li>
+<li>可预测的停顿：这是G1相对于CMS的另一大优势，降低停顿时间是G1和CMS共同的关注点，但G1除了追求低停顿外，还能建立可预测的停顿时间模型，能让使用者明确指定在一个长度为M毫秒的时间片段内，消耗在垃圾收集上的时间不得超过N毫秒，这几乎已经是实时Java（RTSJ）的垃圾收集器的特征了。<br>在G1之前的其他收集器进行收集的范围都是整个新生代或者老年代，而G1不再是这样。使用G1收集器时，Java堆的内存布局就与其他收集器有很大差别，它将整个Java堆划分为多个大小相等的独立区域（Region），虽然还保留有新生代和老年代的概念，但新生代和老年代不再是物理隔离的了，它们都是一部分Region（不需要连续）的集合如果不计算维护Remembered Set的操作，G1收集器的运作大致可划分为以下几个步骤：</li>
+<li>初始标记（Initial Marking）</li>
+<li>并发标记（Concurrent Marking）</li>
+<li>最终标记（Final Marking）</li>
+<li>筛选回收（Live Data Counting and Evacuation）<br><img src="/2019/11/08/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/6.png" alt="图片说明"> </li>
+</ul>
+]]></content>
+      <categories>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>垃圾收集器</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>垃圾收集算法</title>
+    <url>/2019/11/06/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/</url>
+    <content><![CDATA[<h1 id="标记清除算法"><a href="#标记清除算法" class="headerlink" title="标记清除算法"></a>标记清除算法</h1><p><img src="/2019/11/06/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/1.png" alt="图片说明"><br>最基础的收集算法是“标记清除”算法，如同它的名字一样，算法分为“标记”和“清除”两个阶段：首先标记出所有需要回收的对象，在标记完成后统一回收所有被标记的对象，它的标记过程其实在前一节讲述对象标记判定时已经介绍过了。之所以说他是最基础的收集算法，是因为后续的收集算法都是基于这种思路并对其不足进行改进而得到的。<br>主要不足：</p>
+<ul>
+<li>效率问题，标记和清除两个过程的效率都不高；</li>
+<li>空间问题，标记清除之后会产生大量不连续的内存碎片，空间碎片太多可能导致以后再程序过程中需要分配较大的对象时，无法找到连续内存而不得不提前触发另一次垃圾收集动作</li>
+</ul>
+<h1 id="复制算法"><a href="#复制算法" class="headerlink" title="复制算法"></a>复制算法</h1><p><img src="/2019/11/06/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/2.png" alt="图片说明"><br>为了解决效率问题，一种称为复制的收集算法出现了，他将可用内存按容量划分为大小相等的两块，每次只使用其中的一块。当这一块内存用完了，就将还存活着的对象复制到另一块上面，然后再把已经使用过的内存空间一次清理掉。这样使得每次都是对整个半区进行内存回收，内存分配时也就不用考虑内存碎片等复杂的情况，只要移动堆顶指针，按顺序分配内存即可，实现简单，运行高效。<br>主要不足：</p>
+<ul>
+<li>将内存缩小为了原来的一半，在对象存活率较高时就要进行较多的复制操作，效率将会变低。</li>
+</ul>
+<h1 id="标记-整理算法"><a href="#标记-整理算法" class="headerlink" title="标记-整理算法"></a>标记-整理算法</h1><p><img src="/2019/11/06/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/3.png" alt="图片说明"><br>根据老年代的特点，有人提出了另外一种“标记-整理”算法，标记过程仍然与“标记-清除”算法一样，但后续步骤不是直接对可回收对象进行清理，而是让所有存活的对象都向一端移动，然后直接清理掉端边界以外的内存。<br>主要不足：</p>
+<ul>
+<li>它对内存变动更频繁，需要整理所有存活对象的引用地址，在效率上比复制算法要差很多。</li>
+</ul>
+<h1 id="分代收集算法"><a href="#分代收集算法" class="headerlink" title="分代收集算法"></a>分代收集算法</h1><p>当前商业虚拟机的垃圾收集器都采用“分代收集”算法，这种算法并没有什么新的思想，知识根据对象存活周期的不同将内存划分为几块。分代收集算法分代收集算法（Generational Collection）严格来说并不是一种思想或理论，而是融合上述3种基础的算法思想，而产生的针对不同情况所采用不同算法的一套组合拳。一般是把Java堆分为新生代和老年代，这样就可以根据各个年代的特点采用最适当的收集算法。在新生代中，每次垃圾收集时都发现有大批对象死去，只有少量存活，那就选用复制算法，没有额外空间对它进行分配担保，就必须使用“标记-清理”或者“标记-整理”算法来进行回收。</p>
+]]></content>
+      <categories>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>垃圾收集算法</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>如何判断对象是否死亡?</title>
-    <url>/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/</url>
+    <url>/2019/11/04/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/</url>
     <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在堆里面存放着Java世界中几乎所有的对象实例，垃圾收集器在对堆进行回收前，第一件事情就是要确定这些对象之中哪些还“存活”着，哪些已经“死去”，判断对象的生死存活都有那些算法？</p>
 <h2 id="引用计数算法"><a href="#引用计数算法" class="headerlink" title="引用计数算法"></a>引用计数算法</h2><p>实现原理：给对象中添加一个引用计数器，每当一个地方引用它是，计数器值就加1；任何时刻计数器为0的对象就是不可能再被使用的。<br>但是主流的Java虚拟机里面没有选用引用计数算法来管理内存，其中主要的原因是它很难解决对象之间相互引用的问题。<br>如下一个简单的例子：请看测试代码：对象objA和objB都有字段instance，赋值令 objA.instance=objB及objB.instance=objA，实际上这两个对象已经不可能再被访问了，但是他们因为互相引用这对方，导致引用计数都不为0，于是引用计数算法无法通过GC收集器回收他们。</p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">public class ReferenceCountingGC &#123;</span><br><span class="line">    &#x2F;**</span><br><span class="line">     * @Author: luomo</span><br><span class="line">     * @CreateTime: 2019&#x2F;11&#x2F;4</span><br><span class="line">     * @Description: 引用计数算法</span><br><span class="line">     *&#x2F;</span><br><span class="line">    public Object instance &#x3D; null;</span><br><span class="line">    private  static final int _1MB&#x3D;1024*1024;</span><br><span class="line">    &#x2F;**</span><br><span class="line">     *  这个成员属性的唯一意义就是占点内存，以便能在GC日志中看清楚是否被回收</span><br><span class="line">     *&#x2F;</span><br><span class="line">    private  byte[] bigSize &#x3D;new byte[2 * _1MB];</span><br><span class="line">    public static void testGC()&#123;</span><br><span class="line">        ReferenceCountingGC objA &#x3D;new  ReferenceCountingGC();</span><br><span class="line">        ReferenceCountingGC objB &#x3D;new ReferenceCountingGC();</span><br><span class="line">        objA.instance&#x3D;objB;</span><br><span class="line">        objB.instance&#x3D;objA;</span><br><span class="line">        objA &#x3D;null;</span><br><span class="line">        objB &#x3D;null;</span><br><span class="line">        System.gc();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">    public  static void main(String[] args)&#123;</span><br><span class="line">        testGC();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>程序运行结果如下：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/1.png" alt=" "><br>从运行结果中可以清楚看出虚拟机并没有因为互相引用就不回收他们，这也从侧面说明虚拟机并不是通过引用计数算法来判断对象是否存活的。</p>
+<p>程序运行结果如下：<br><img src="/2019/11/04/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/1.png" alt=" "><br>从运行结果中可以清楚看出虚拟机并没有因为互相引用就不回收他们，这也从侧面说明虚拟机并不是通过引用计数算法来判断对象是否存活的。</p>
 <h2 id="可达性分析算法"><a href="#可达性分析算法" class="headerlink" title="可达性分析算法"></a>可达性分析算法</h2><p>实现原理：在主流的语言的主流实现中，比如Java、C#、甚至是古老的Lisp都是使用的可达性分析算法来判断对象是否存活的。</p>
 <p>这个算法的核心思路就是通过一些列的“GC Roots”对象作为起始点，从这些对象开始往下搜索，搜索所经过的路径称之为“引用链”。</p>
-<p>当一个对象到GC Roots没有任何引用链相连的时候，证明此对象是可以被回收的。如下图所示：<br><img src="/2020/06/15/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/2.png" alt="图片说明"><br>在Java中，可作为GC Roots对象的列表：</p>
+<p>当一个对象到GC Roots没有任何引用链相连的时候，证明此对象是可以被回收的。如下图所示：<br><img src="/2019/11/04/%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E6%AD%BB%E4%BA%A1/2.png" alt="图片说明"><br>在Java中，可作为GC Roots对象的列表：</p>
 <ul>
 <li>Java虚拟机栈中的引用对象。</li>
 <li>本地方法栈中JNI（既一般说的Native方法）引用的对象。</li>
@@ -966,83 +1008,41 @@
       </tags>
   </entry>
   <entry>
-    <title>垃圾收集算法</title>
-    <url>/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/</url>
-    <content><![CDATA[<h1 id="标记清除算法"><a href="#标记清除算法" class="headerlink" title="标记清除算法"></a>标记清除算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/1.png" alt="图片说明"><br>最基础的收集算法是“标记清除”算法，如同它的名字一样，算法分为“标记”和“清除”两个阶段：首先标记出所有需要回收的对象，在标记完成后统一回收所有被标记的对象，它的标记过程其实在前一节讲述对象标记判定时已经介绍过了。之所以说他是最基础的收集算法，是因为后续的收集算法都是基于这种思路并对其不足进行改进而得到的。<br>主要不足：</p>
-<ul>
-<li>效率问题，标记和清除两个过程的效率都不高；</li>
-<li>空间问题，标记清除之后会产生大量不连续的内存碎片，空间碎片太多可能导致以后再程序过程中需要分配较大的对象时，无法找到连续内存而不得不提前触发另一次垃圾收集动作</li>
+    <title>Flink Table API&amp;SQL编程</title>
+    <url>/2020/06/21/Flink-Table-API-SQL%E7%BC%96%E7%A8%8B/</url>
+    <content><![CDATA[<h1 id="什么是Flink关系型API"><a href="#什么是Flink关系型API" class="headerlink" title="什么是Flink关系型API"></a>什么是Flink关系型API</h1><p>Flink提供了三层API。每个API在简介型和表达性之间提供了不同的权衡，并且针对不同的用例</p>
+<p><img src="/2020/06/21/Flink-Table-API-SQL%E7%BC%96%E7%A8%8B/1.png" alt></p>
+<p>Flink具有两个关系API，即Table API和SQL。这两个API都是用于批处理和流处理的统一API，即，对无界的实时流或有界的记录流以相同的语义执行查询，并产生相同的结果。Table API和SQL利用Apache Calcite进行解析，验证和查询优化。它们可以与DataStream和DataSet API无缝集成。无论输入是批处理输入（DataSet）还是流输入（DataStream），在两个接口中指定的查询具有相同的语义并指定相同的结果。</p>
+<p><strong>请注意，Table API和SQL尚未完成功能，正在积极开发中。</strong> <strong>[Table API，SQL]和[stream，batch]输入的每种组合都不支持所有操作。</strong></p>
+<p>Flink的关系API旨在简化数据分析，数据管道和ETL应用程序的定义。</p>
+<p>以下示例显示了SQL查询，以会话化点击流并计算每个会话的点击次数。这与DataStream API示例中的用例相同。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">SELECT userId, COUNT(*)</span><br><span class="line">FROM clicks</span><br><span class="line"><span class="function">GROUP BY <span class="title">SESSION</span><span class="params">(clicktime, INTERVAL <span class="string">'30'</span> MINUTE)</span>, userId</span></span><br></pre></td></tr></table></figure>
+<h1 id="Table-API-amp-SQL特点"><a href="#Table-API-amp-SQL特点" class="headerlink" title="Table API &amp; SQL特点"></a>Table API &amp; SQL特点</h1><ul>
+<li>第一，Table API &amp; SQL 是一种声明式的 API。用户只需关心做什么，不用关心怎么做，比如图中的 WordCount 例子，只需要关心按什么维度聚合，做哪种类型的聚合，不需要关心底层的实现。</li>
+<li><p>第二，高性能。Table API &amp; SQL 底层会有优化器对 query 进行优化。举个例子，假如 WordCount 的例子里写了两个 count 操作，优化器会识别并避免重复的计算，计算的时候只保留一个 count 操作，输出的时候再把相同的值输出两遍即可，以达到更好的性能。</p>
+</li>
+<li><p>第三，流批统一。上图例子可以发现，API 并没有区分流和批，同一套 query 可以流批复用，对业务开发来说，避免开发两套代码。</p>
+</li>
+<li><p>第四，标准稳定。Table API &amp; SQL 遵循 SQL 标准，不易变动。API 比较稳定的好处是不用考虑 API 兼容性问题。</p>
+</li>
+<li><p>第五，易理解。语义明确，所见即所得。</p>
+</li>
 </ul>
-<h1 id="复制算法"><a href="#复制算法" class="headerlink" title="复制算法"></a>复制算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/2.png" alt="图片说明"><br>为了解决效率问题，一种称为复制的收集算法出现了，他将可用内存按容量划分为大小相等的两块，每次只使用其中的一块。当这一块内存用完了，就将还存活着的对象复制到另一块上面，然后再把已经使用过的内存空间一次清理掉。这样使得每次都是对整个半区进行内存回收，内存分配时也就不用考虑内存碎片等复杂的情况，只要移动堆顶指针，按顺序分配内存即可，实现简单，运行高效。<br>主要不足：</p>
-<ul>
-<li>将内存缩小为了原来的一半，在对象存活率较高时就要进行较多的复制操作，效率将会变低。</li>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">Table API:</span><br><span class="line">tab.groupBy(<span class="string">"word"</span>)</span><br><span class="line">    .select(<span class="string">"word,count(1) as count"</span>)</span><br><span class="line">SQL:</span><br><span class="line">select word,count(*) AS cnt </span><br><span class="line">from MyTable</span><br><span class="line">group by word</span><br></pre></td></tr></table></figure>
+<h1 id="Table-API-amp-SQL开发"><a href="#Table-API-amp-SQL开发" class="headerlink" title="Table API&amp;SQL开发"></a>Table API&amp;SQL开发</h1><h2 id="WordCount示例"><a href="#WordCount示例" class="headerlink" title="WordCount示例"></a>WordCount示例</h2><ul>
+<li>Scala版</li>
 </ul>
-<h1 id="标记-整理算法"><a href="#标记-整理算法" class="headerlink" title="标记-整理算法"></a>标记-整理算法</h1><p><img src="/2020/06/15/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95/3.png" alt="图片说明"><br>根据老年代的特点，有人提出了另外一种“标记-整理”算法，标记过程仍然与“标记-清除”算法一样，但后续步骤不是直接对可回收对象进行清理，而是让所有存活的对象都向一端移动，然后直接清理掉端边界以外的内存。<br>主要不足：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/16</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:TableSQLAPI</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">object TableSQLAPI&#123;</span><br><span class="line">    <span class="function">def <span class="title">main</span><span class="params">(args:Array[String])</span>:unit </span>= &#123;</span><br><span class="line">        val env = ExecutionEnvironment.getExecutionEnvironment</span><br><span class="line">        val tableEnv = TableEnvironment.getTableEnvironment(env)</span><br><span class="line">            val filePath = <span class="string">"file:///user/sales.csv"</span></span><br><span class="line">            <span class="keyword">import</span> org.apache.flink.api.scala._</span><br><span class="line">            <span class="comment">//已经拿到DataSet</span></span><br><span class="line">            val csv = env.readCsvFile[SalesLog](filePath,ignoreFirstLine = <span class="keyword">true</span>)</span><br><span class="line">            <span class="comment">//DataSet ==&gt; Table</span></span><br><span class="line">            val salesTable = tablelEnv.fromDataSet(csv)</span><br><span class="line">            <span class="comment">//Table ==&gt; table</span></span><br><span class="line">            tableEnv.registerTable(<span class="string">"sales"</span>,salesTable)</span><br><span class="line">            <span class="comment">//sql</span></span><br><span class="line">            val resultTable = tableEnv.sqlQuery(<span class="string">"select customerId,sum(amountPaid) money from sales group by customerId"</span>)</span><br><span class="line">            tableEnv.toDataset[Row](resultTable).print()</span><br><span class="line">	</span><br><span class="line">            <span class="function"><span class="keyword">case</span> class <span class="title">SalesLog</span><span class="params">(transactionId:String,customerId:String,itemId:String,</span></span></span><br><span class="line"><span class="function"><span class="params">                               amountPaid:Double)</span>        </span></span><br><span class="line"><span class="function">            </span></span><br><span class="line"><span class="function">    &#125;</span></span><br><span class="line"><span class="function">&#125;</span></span><br></pre></td></tr></table></figure>
 <ul>
-<li>它对内存变动更频繁，需要整理所有存活对象的引用地址，在效率上比复制算法要差很多。</li>
+<li>Java版</li>
 </ul>
-<h1 id="分代收集算法"><a href="#分代收集算法" class="headerlink" title="分代收集算法"></a>分代收集算法</h1><p>当前商业虚拟机的垃圾收集器都采用“分代收集”算法，这种算法并没有什么新的思想，知识根据对象存活周期的不同将内存划分为几块。分代收集算法分代收集算法（Generational Collection）严格来说并不是一种思想或理论，而是融合上述3种基础的算法思想，而产生的针对不同情况所采用不同算法的一套组合拳。一般是把Java堆分为新生代和老年代，这样就可以根据各个年代的特点采用最适当的收集算法。在新生代中，每次垃圾收集时都发现有大批对象死去，只有少量存活，那就选用复制算法，没有额外空间对它进行分配担保，就必须使用“标记-清理”或者“标记-整理”算法来进行回收。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>:落墨</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>:2020/6/16</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>:JavaTableSQLAPI</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JavaTableSQLAPI</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEvironment();</span><br><span class="line">        BatchTableEnvironment tableEnv = BatchTableEnvironment.getTableEnvironment(env);</span><br><span class="line">         val filePath = <span class="string">"file:///user/sales.csv"</span></span><br><span class="line">            <span class="keyword">import</span> org.apache.flink.api.scala._</span><br><span class="line">        DataSet&lt;Sales&gt; csv = env.readCsvFile(filePath).ignoreFirstLine().pojoType(Sales<span class="class">.<span class="keyword">class</span>,<span class="title">transactionId</span>,<span class="title">customerId</span>,<span class="title">itemId</span>,<span class="title">amountPaid</span>)</span>;</span><br><span class="line">        Table sales = tableEnv.fromDataSet(csv);</span><br><span class="line">        tableEnv.registerTable(<span class="string">"sales"</span>,sales);</span><br><span class="line">        Table resultTable = tableEnv.sqlQuery(<span class="string">"select customerId,sum(amountPaid) money from sales group by customerId"</span>);</span><br><span class="line">        DataSet&lt;ROw&gt; result = tableEnv.toDataSet(resultTable,Row<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">        result.print();</span><br><span class="line">        </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Sales</span></span>&#123;</span><br><span class="line">        <span class="keyword">public</span> String transactionId;</span><br><span class="line">        <span class="keyword">public</span> String customerId;</span><br><span class="line">        <span class="keyword">public</span> String itemId;</span><br><span class="line">        <span class="keyword">public</span> Double amountPaid;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 ]]></content>
       <categories>
-        <category>JVM</category>
+        <category>Flink</category>
       </categories>
       <tags>
-        <tag>垃圾收集算法</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>垃圾收集器</title>
-    <url>/2020/06/17/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>如果说收集算法是内存回收的方法论，那么垃圾收集就是内存回收的具体实现。Java虚拟机规范中对垃圾收集器应该如何实现并没有任何规定，因此不同的厂商、不同版本的虚拟机所提供的垃圾收集器可能会有很大差别，并且一般都会提供参数供用户根据自己的应用特点和要求组合出各个年代所使用的收集器。这里讨论的收集器基于JDK1.7Update14之后的HotSpot虚拟机。</p>
-<h2 id="Serial收集器"><a href="#Serial收集器" class="headerlink" title="Serial收集器"></a>Serial收集器</h2><p>Serial收集器是最基本、发展历史最悠久的收集器，曾经是虚拟机新生代收集的唯一选择。我们从名字就可知道，这个收集器是一个单线程的收集器，但它的“单线程”的意义并不仅仅说明它只会使用一个CPU或一条收集线程去完成垃圾收集工作，更重要的是在它进行垃圾收集时，必须暂停其他所有的工作线程，直到它收集结束。<br>如图示意了Serial、Serial Old收集器的运行过程。<br><img src="/2020/06/17/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/1.png" alt="图片说明"> </p>
-<h2 id="ParNew"><a href="#ParNew" class="headerlink" title="ParNew"></a>ParNew</h2><p>ParNew收集器其实就是Serial收集器的多线程版本，除了使用多条线程进行垃圾收集之外，其余行为包括Serial收集器可用的所有控制参数（例如：-XX：SurvivorRatio、——XX：PretenureSizeThreshold、-XX：HandlePromotionFailure等）、收集算法、Stop The World、对象分配规则、回收策略等都与Serial收集器完全一样，在实现上，这两种收集器也共用了相当多的代码。<br>ParNew/Serial Old示意图：</p>
-<p><img src="/2020/06/17/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/2.png" alt="ParNew/Serial Old示意图"> </p>
-<h2 id="Parallel-Scavenge收集器"><a href="#Parallel-Scavenge收集器" class="headerlink" title="Parallel Scavenge收集器"></a>Parallel Scavenge收集器</h2><p>Parallel Scavenge收集器是一个新生代收集器，它也是使用复制算法的收集器，又是并行的多线程收集器，看上去和ParNew都一样，那他有什么特别之处呢?<br>Parallen Scavenge收集器的特点是它的关注点与其他收集器不同，CMS等收集器的关注点是尽可能的缩短垃圾收集时用户线程的停顿时间，而Parallel Scavenge收集器的目标是达到一个可控制的吞吐量。所谓吞吐量<br>就是CPU用于运行用户代码的时间与CPU总消耗时间的比值，即吞吐量=运行用户代码时间/(运行用户代码时间+垃圾收集时间），虚拟机总共运行了100分钟，其中垃圾收集花掉1分钟，那吞吐量就是99%。<br>停顿时间越短就越适合需要与用户交互的程序，良好的响应速度就能提升用户体验，而高吞吐量则可以高效率的利用CPU时间，尽快完成程序的运算任务，主要是和在后台运算而不需要太多交互的任务。</p>
-<h2 id="Serial-Old收集器"><a href="#Serial-Old收集器" class="headerlink" title="Serial Old收集器"></a>Serial Old收集器</h2><p>Serial Old是Serial收集器的老年代版本，它同样是一个单线程收集器，使用“标记-整理”算法。这个收集器的主要意义也是在于给Client模式下的虚拟机使用。如果在Server模式下，那么它主要还有两大用途：一种用途是在JDK1.5以及之前的版本中与Parallel Scavenge收集器搭配使用，另一种用途是作为CMS收集器的后备预案，在并发手机发生Concurrent Mode Failure时使用。<br>如图是Serial、Serial Old收集器的运行过程。</p>
-<p><img src="/2020/06/17/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/3.png" alt="图片说明"></p>
-<h2 id="Parallel-Old收集器"><a href="#Parallel-Old收集器" class="headerlink" title="Parallel Old收集器"></a>Parallel Old收集器</h2><p>Parallel Old是Parallel Scavenge收集器的老年代版本，使用多线程和“标记-整理”算法。这个收集器是在JDk1.6中才开始提供的，在此之前，新生代的Parallel Scavenge收集器一直处于比较尴尬的状态。原因是，如果新生代选择了Parallel Scavenge收集器，老年代除了Serial Old收集器外别无选择。由于老年代Serial Old收集器在服务端应用性能上的拖累，使用了Parallel Scavenge收集器也未必能在整体应用上获得吞吐量最大化的效果，由于单线程的老年代收集中无法充分利用服务器多CPU的处理能力，在老年代很大而且硬件比较高级的环境中，这种组合的吞吐量甚至还不一定有ParNew和CMS的组合给力。<br>Parallel Old收集器的工作过程如图：</p>
-<p><img src="/2020/06/17/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/4.png" alt="图片说明"> </p>
-<h2 id="CMS收集器"><a href="#CMS收集器" class="headerlink" title="CMS收集器"></a>CMS收集器</h2><p>CMS（Concurrent Mark Sweep）收集器是一种以获取最短回收停顿时间为目标的收集器。目前很大一部分的Java应用集中在互联网站或者B/S系统的服务端上，这类应用尤其重视服务的响应速度，希望系统停顿时间最短，以给用户带来较好的体验。CMS收集器就非常复合这类应用的需求。<br>从名字可以看出，CMS收集器是基于“标记清除”算法实现的，它的运作过程相对于前面几种收集器来说更复杂一些，整个过程分为4个步骤，<br>包括：</p>
-<ul>
-<li>初始标记</li>
-<li>并发标记</li>
-<li>重新标记</li>
-<li>并发清除<br>其中，初始标记、重新标记这两个步骤仍然需要“Stop The World”。初始标记仅仅只是标记一下GC Roots能<br>直接关联到的对象，速度很快，并发标记阶段就是进行GC RootsTracing的过程，而重新标记阶段则是为了修正并<br>发标记期间因用户程序继续运作而导致标记产生变动的那一部分对象的标记记录，这个阶段的停顿时间一般会比初<br>始标记阶段稍长一些，但远比并发标记的时间短。<br><img src="/2020/06/17/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/5.png" alt="图片说明"> <h2 id="G1收集器"><a href="#G1收集器" class="headerlink" title="G1收集器"></a>G1收集器</h2>G1（Garbage-First）收集器是当今收集器技术发展的最前沿成果之一。G1是一款面向服务端应用的垃圾收集器。HotSpot开发团队赋予它的使命是（在比较长期的）未来可以替换掉JDK 1.5中发布的CMS收集器。与其他GC收集器相比，G1具备如下特点。</li>
-<li>并行与并发：G1能充分利用多CPU、多核环境下的硬件优势，使用多个CPU（CPU或者CPU核心）来缩短Stop The-World停顿的时间，部分其他收集器原本需要停顿Java线程执行的GC动作，G1收集器仍然可以通过并发的方式让Java程序继续执行。</li>
-<li>分代收集：与其他收集器一样，分代概念在G1中依然得以保留。虽然G1可以不需要其他收集器配合就能独立管理整个GC堆，但它能够采用不同的方式去处理新创建的对象和已经存活了一段时间、熬过多次GC的旧对象以获取更<br>好的收集效果。</li>
-<li>空间整合：与CMS的“标记—清理”算法不同，G1从整体来看是基于“标记—整理”算法实现的收集器，从局部（两个Region之间）上来看是基于“复制”算法实现的，但无论如何，这两种算法都意味着G1运作期间不会产生<br>内存空间碎片，收集后能提供规整的可用内存。这种特性有利于程序长时间运行，分配大对象时不会因为无法找到连续内存空间而提前触发下一次GC。</li>
-<li>可预测的停顿：这是G1相对于CMS的另一大优势，降低停顿时间是G1和CMS共同的关注点，但G1除了追求低停顿外，还能建立可预测的停顿时间模型，能让使用者明确指定在一个长度为M毫秒的时间片段内，消耗在垃圾收集上的时间不得超过N毫秒，这几乎已经是实时Java（RTSJ）的垃圾收集器的特征了。<br>在G1之前的其他收集器进行收集的范围都是整个新生代或者老年代，而G1不再是这样。使用G1收集器时，Java堆的内存布局就与其他收集器有很大差别，它将整个Java堆划分为多个大小相等的独立区域（Region），虽然还保留有新生代和老年代的概念，但新生代和老年代不再是物理隔离的了，它们都是一部分Region（不需要连续）的集合如果不计算维护Remembered Set的操作，G1收集器的运作大致可划分为以下几个步骤：</li>
-<li>初始标记（Initial Marking）</li>
-<li>并发标记（Concurrent Marking）</li>
-<li>最终标记（Final Marking）</li>
-<li>筛选回收（Live Data Counting and Evacuation）<br><img src="/2020/06/17/%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8/6.png" alt="图片说明"> </li>
-</ul>
-]]></content>
-      <categories>
-        <category>JVM</category>
-      </categories>
-      <tags>
-        <tag>垃圾收集器</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spark Demo(Serializable)</title>
-    <url>/2020/06/14/Spark-Demo-Serializable/</url>
-    <content><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在本文中将介绍spark中Task执行序列化的开发问题</p>
-<h1 id="开发环境准备"><a href="#开发环境准备" class="headerlink" title="开发环境准备"></a>开发环境准备</h1><p>本实验Spark运行在Windows上，为了开发Spark应用程序，在本地机器上需要有Jdk1.8和Maven环境。<br>确保我们的环境配置正常，我们可以使用快捷键 Win+R 输入cmd：<br>环境如下：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341256892_8D8973B8667179A2319B041328F690BD" alt="图片说明" title="图片标题"><br>程序开发工具我们使用IDEA，创建maven项目，添加pom依赖</p>
-<h1 id="编写Spark程序"><a href="#编写Spark程序" class="headerlink" title="编写Spark程序"></a>编写Spark程序</h1><h2 id="目录结构如下"><a href="#目录结构如下" class="headerlink" title="目录结构如下:"></a>目录结构如下:</h2><p><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572341490332_07386CADB58D4E8A80763A83F9F6B34D" alt="图片说明" title="图片标题"> </p>
-<h2 id="创建Serializable-scala"><a href="#创建Serializable-scala" class="headerlink" title="创建Serializable.scala:"></a>创建Serializable.scala:</h2><p>首先我们需要了解RDD中的函数传递：<br>在实际开发中我们往往需要自己定义一些对于RDD的操作，那么此时需要主要的是，初始化工作是在Driver端进行的，而实际运行程序是在Executor端进行的，这就涉及到了跨进程通信，是需要序列化的。<br>如果我们对我们自定义的类不进行序列化：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> SparkDemo</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.spark.rdd.RDD</span><br><span class="line"><span class="keyword">import</span> org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>: luomo</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>: 2019/10/29</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>: Serializable from Driver to Executor</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">object Serializable &#123;</span><br><span class="line"></span><br><span class="line">  <span class="function">def <span class="title">main</span><span class="params">(args: Array[String])</span>: Unit </span>= &#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val config:SparkConf =<span class="keyword">new</span> SparkConf().setMaster(<span class="string">"local[*]"</span>).setAppName(<span class="string">"Serializable"</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val sc = <span class="keyword">new</span> SparkContext(config)</span><br><span class="line"></span><br><span class="line">    val rdd:RDD[String] = sc.parallelize(Array(<span class="string">"hadoop"</span>,<span class="string">"spark"</span>,<span class="string">"hive"</span>,<span class="string">"Flink"</span>))</span><br><span class="line"></span><br><span class="line">    val search = <span class="keyword">new</span> Search(<span class="string">"h"</span>)</span><br><span class="line"></span><br><span class="line">    val match1:RDD[String] =search.getMatch1(rdd)</span><br><span class="line">    match1.collect().foreach(println)</span><br><span class="line">    sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">  class Search(query:String)&#123;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的数据</span></span><br><span class="line">    <span class="function">def  <span class="title">isMatch</span><span class="params">(s:String)</span>:Boolean </span>=&#123;</span><br><span class="line">      s.contains(query)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatch1</span><span class="params">(rdd:RDD[String])</span> :RDD[String] </span>= &#123;</span><br><span class="line">      rdd.filter(isMatch)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatche2</span><span class="params">(rdd: RDD[String])</span>: RDD[String] </span>=&#123;</span><br><span class="line">      rdd.filter(x=&gt; x.contains(query))</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>如图：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572346997711_619AA778B91D5D25CAB063D1C7D53FFE" alt="图片说明" title="图片标题"> </p>
-<p>可见，对于自己定义的普通类，Spark是无法直接将其序列化的。<br>需要我们自定义的类继承java.io.Serializable</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> SparkDemo</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.spark.rdd.RDD</span><br><span class="line"><span class="keyword">import</span> org.apache.spark.&#123;SparkConf, SparkContext&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Author</span>: luomo</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@CreateTime</span>: 2019/10/29</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@Description</span>: Serializable from Driver to Executor</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line">object Serializable &#123;</span><br><span class="line"></span><br><span class="line">  <span class="function">def <span class="title">main</span><span class="params">(args: Array[String])</span>: Unit </span>= &#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val config:SparkConf =<span class="keyword">new</span> SparkConf().setMaster(<span class="string">"local[*]"</span>).setAppName(<span class="string">"Serializable"</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建Spark上下文对象</span></span><br><span class="line">    val sc = <span class="keyword">new</span> SparkContext(config)</span><br><span class="line"></span><br><span class="line">    val rdd:RDD[String] = sc.parallelize(Array(<span class="string">"hadoop"</span>,<span class="string">"spark"</span>,<span class="string">"hive"</span>,<span class="string">"Flink"</span>))</span><br><span class="line"></span><br><span class="line">    val search = <span class="keyword">new</span> Search(<span class="string">"h"</span>)</span><br><span class="line"></span><br><span class="line">    val match1:RDD[String] =search.getMatch1(rdd)</span><br><span class="line">    match1.collect().foreach(println)</span><br><span class="line">    sc.stop()</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">//自定义类</span></span><br><span class="line">  class Search(query:String) extends  java.io.Serializable &#123;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的数据</span></span><br><span class="line">    <span class="function">def  <span class="title">isMatch</span><span class="params">(s:String)</span>:Boolean </span>=&#123;</span><br><span class="line">      s.contains(query)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatch1</span><span class="params">(rdd:RDD[String])</span> :RDD[String] </span>= &#123;</span><br><span class="line">      rdd.filter(isMatch)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//过滤出包含字符串的RDD</span></span><br><span class="line">    <span class="function">def <span class="title">getMatche2</span><span class="params">(rdd: RDD[String])</span>: RDD[String] </span>=&#123;</span><br><span class="line">      rdd.filter(x=&gt; x.contains(query))</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h1 id="运行程序"><a href="#运行程序" class="headerlink" title="运行程序"></a>运行程序</h1><p>如图我们过滤出包含字符h的字符串：<br><img src="https://uploadfiles.nowcoder.com/images/20191029/9094293_1572351464995_DFD27DCB713FEB02D8628E6C67FD4273" alt="图片说明" title="图片标题"> </p>
-]]></content>
-      <categories>
-        <category>Spark</category>
-      </categories>
-      <tags>
-        <tag>Serializable</tag>
+        <tag>Table API &amp; SQL</tag>
       </tags>
   </entry>
 </search>
