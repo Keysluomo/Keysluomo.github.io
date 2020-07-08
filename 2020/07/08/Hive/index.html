@@ -7,27 +7,22 @@
   
   
   
-  <title>Scala | 落墨</title>
+  <title>Hive | 落墨</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="Scala即可伸缩的语言（Scalable Language），是一种多范式的编程语言，类似于java的编程，设计初衷是要集成面向对象编程和函数式编程的各种特性。">
+  <meta name="description" content="Hive 提供了一个被称为Hive 查询语言（简称 HiveQL或HQL）的SQL方言，来查询存储在Hadoop集群中的数据。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Scala">
-<meta property="og:url" content="https://keysluomo.github.io/2020/04/27/Scala/index.html">
+<meta property="og:title" content="Hive">
+<meta property="og:url" content="https://keysluomo.github.io/2020/07/08/Hive/index.html">
 <meta property="og:site_name" content="落墨">
-<meta property="og:description" content="Scala即可伸缩的语言（Scalable Language），是一种多范式的编程语言，类似于java的编程，设计初衷是要集成面向对象编程和函数式编程的各种特性。">
+<meta property="og:description" content="Hive 提供了一个被称为Hive 查询语言（简称 HiveQL或HQL）的SQL方言，来查询存储在Hadoop集群中的数据。">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://keysluomo.github.io/2020/04/27/Scala/1.png">
-<meta property="og:image" content="https://keysluomo.github.io/2020/04/27/Scala/2.png">
-<meta property="og:image" content="https://keysluomo.github.io/2020/04/27/Scala/3.png">
-<meta property="og:image" content="https://keysluomo.github.io/2020/04/27/Scala/4.png">
-<meta property="og:image" content="https://keysluomo.github.io/2020/04/27/Scala/5.png">
-<meta property="og:image" content="https://keysluomo.github.io/2020/04/27/Scala/6.png">
-<meta property="article:published_time" content="2020-04-27T03:00:31.000Z">
-<meta property="article:modified_time" content="2020-06-25T16:32:19.408Z">
+<meta property="og:image" content="https://keysluomo.github.io/2020/07/08/Hive/1.png">
+<meta property="article:published_time" content="2020-07-08T13:28:02.000Z">
+<meta property="article:modified_time" content="2020-07-08T14:12:27.746Z">
 <meta property="article:author" content="落墨">
-<meta property="article:tag" content="编程语言">
+<meta property="article:tag" content="Hive概述">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://keysluomo.github.io/2020/04/27/Scala/1.png">
+<meta name="twitter:image" content="https://keysluomo.github.io/2020/07/08/Hive/1.png">
   
     <link rel="alternative" href="/atom.xml" title="落墨" type="application/atom+xml">
   
@@ -260,11 +255,11 @@
         </header>
     </div>
 </nav>
-      <div class="body-wrap"><article id="post-Scala" class="article article-type-post" itemscope itemprop="blogPost">
+      <div class="body-wrap"><article id="post-Hive" class="article article-type-post" itemscope itemprop="blogPost">
   
     <div class="article-meta">
-      <a  href="/2020/04/27/Scala/" class="article-date">
-      <time datetime="2020-04-27T03:00:31.000Z" itemprop="datePublished">2020-04-27</time>
+      <a  href="/2020/07/08/Hive/" class="article-date">
+      <time datetime="2020-07-08T13:28:02.000Z" itemprop="datePublished">2020-07-08</time>
 </a>
 
     </div>
@@ -278,7 +273,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      Scala
+      Hive
     </h1>
   
 
@@ -288,13 +283,13 @@
       <div class="article-info article-info-post">
         
     <div class="article-category tagcloud">
-    <a class="article-category-link" href="/categories/Scala/">Scala</a>
+    <a class="article-category-link" href="/categories/Hadoop%E7%94%9F%E6%80%81%E5%9C%88/">Hadoop生态圈</a>
     </div>
 
 
         
     <div class="article-tag tagcloud">
-        <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/" rel="tag">编程语言</a></li></ul>
+        <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hive%E6%A6%82%E8%BF%B0/" rel="tag">Hive概述</a></li></ul>
     </div>
 
         <div class="clearfix"></div>
@@ -304,39 +299,30 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Scala 是 Scalable Language 的简写，是一门多范式的编程语言<br>联邦理工学院洛桑（EPFL）的Martin Odersky于2001年基于Funnel的工作开始设计Scala。<br>Funnel是把函数式编程思想和Petri网相结合的一种编程语言。Scala 是一门多范式（multi-paradigm）的编程语言，设计初衷是要集成面向对象编程和函数式编程的各种特性。Scala 运行在Java虚拟机上，并兼容现有的Java程序。Scala 源代码被编译成Java字节码，所以它可以运行于JVM之上，并可以调用现有的Java类库。</p>
-<h1 id="Scala特性："><a href="#Scala特性：" class="headerlink" title="Scala特性："></a>Scala特性：</h1><p><strong>面向对象特性：</strong><br>Scala是一种纯面向对象的语言，每个值都是对象。每个方法都是调用。举例来说，如果你执行 <code>1+2</code>，则对于 Scala 而言，实际是在调用 Int 类里定义的名为 <code>+</code> 的方法。<br><strong>函数式编程：</strong><br>Scala也是一种函数式语言，奇函数也能成值来使用。Scala提供了轻量级的语法用以定义匿名函数，支持高级函数，并支持柯里化。Scala的case class及内置的模式匹配相当于函数式编程语言中常用的代数类型。</p>
-<p>我们通过函数式编程来实现数组翻倍的例子</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">val nums = Array(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>)</span><br><span class="line">val doubleNums = nums.map(_*<span class="number">2</span>)</span><br></pre></td></tr></table></figure>
-<p>利用Array的map函数，将所有元素2，并生成了一个新的双倍数组。map函数所做的事情是把遍历整个数组的过程，归纳并抽离出来，让我们专注于描述我们想要的是什么”<strong>_*2*</strong>“。我们传入map的是一个纯函数；它不具有任何副作用(不会改变外部状态)，它只是接收一个数字，返回*2后的值。</p>
-<p>正如<strong><em>封装、继承\</em></strong>和<strong><em>多态\</em></strong>是面向对象编程的三大特性。函数式编程也有自己的语言特性<strong>数据不可变、函数是第一公民、引用透明</strong>和<strong>尾递归</strong></p>
-<p><strong>数据不可变（immutable data）</strong>：变量只赋值一次，如果想改变其值就创建一个新的。</p>
-<p><strong>函数是第一公民（first class method）</strong>:函数可以像普通变量一样去使用。函数可以像变量一样被创建，修改，并当成变量一样传递，返回或是在函数中嵌套函数。</p>
-<p><strong>引用透明(referential transparency)</strong>： 指的是函数的运行不依赖于外部变量或“状态”，只依赖于输入的参数，任何时候只要参数相同，调用函数所得到的返回值总是相同的。天然适应并发编程，因为调用函数的结果具有一致性，所以根本不需要加锁，也就不存在死锁的问题。</p>
-<p><strong>尾递归（tail call optimization）</strong>:函数调用要压栈保存现场，递归层次过深的话，压栈过多会产生性能问题。所以引入尾递归优化，每次递归时都会重用栈，提升性能。</p>
-<h1 id="Scala安装"><a href="#Scala安装" class="headerlink" title="Scala安装"></a>Scala安装</h1><h2 id="Windows-上安装Scala"><a href="#Windows-上安装Scala" class="headerlink" title="Windows 上安装Scala"></a>Windows 上安装Scala</h2><p>Scala 语言可以运行在Window、Linux、Unix、 Mac OS X等系统上。</p>
-<p>Scala是基于java之上，大量使用java的类库和变量，<strong>使用 Scala 之前必须先安装 Java（&gt;1.5版本）。</strong></p>
-<p>这里就不介绍Java环境配置，如果还未安装可以参考相关的博客</p>
-<p>接下来，我们从<a href="http://www.scala-lang.org/downloads" target="_blank" rel="noopener">Scala官网</a></p>
-<p><img src="/2020/04/27/Scala/1.png" alt></p>
-<p>下载后，双击 msi 文件，一步步安装即可，安装过程你可以使用默认的安装目录。</p>
-<p>安装好scala后，系统会自动提示，单击 finish，完成安装。</p>
-<p>右击我的电脑，单击”属性”，进入如图所示页面。下面开始配置环境变量，右击【我的电脑】–【属性】–【高级系统设置】–【环境变量】，如图：</p>
-<p><img src="/2020/04/27/Scala/2.png" alt></p>
-<p>设置 SCALA_HOME 变量：单击新建，在变量名栏输入：<strong>SCALA_HOME</strong>: 变量值一栏输入：E:\02_software\scala-2.11.11 也就是 Scala 的安装目录，根据个人情况有所不同</p>
-<p><img src="/2020/04/27/Scala/3.png" alt></p>
-<p>设置 Path 变量：找到系统变量下的”Path”如图，单击编辑。在”变量值”一栏的最前面添加如下的路径： %SCALA_HOME%\bin;%SCALA_HOME%\jre\bin;</p>
-<p><strong>注意：</strong>后面的分号 <strong>；</strong> 不要漏掉。</p>
-<p><img src="/2020/04/27/Scala/4.png" alt></p>
-<p>设置 Classpath 变量：找到找到系统变量下的”Classpath”如图，单击编辑，如没有，则单击”新建”:</p>
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Hadoop 生态系统就是为处理如此大数据集而产生的一个合乎成本效益的解决方案。Hadoop 实现了一个特别的计算模型，也就是MapReduce，其可以将计算任务分割成多个处理单元然后分散到一群家用的或服务器级别的硬件机器上，从而降低成本并提供水平可伸缩性。这个计算模型的下面是一个被称为Hadoop分布式文件系统（HDFS）的分布式文件系统。这个文件系统是“可插拔的”，而且现在已经出现了几个商用的和开源的替代方案。</p>
+<p>不过，仍然存在一个挑战，那就是用户如何从一个现有的数据基础架构转移到Hadoop上，而这个基础架构是基于传统关系型数据库和结构化查询语句（SQL）的。对于大量的SQL用户（包括专业数据库设计师和管理员，也包括那些使用SQL从数据仓库中抽取信息的临时用户）来说，这个问题又将如何解决呢？<br>这就是Hive 出现的原因。Hive 提供了一个被称为Hive 查询语言（简称 HiveQL或HQL）的SQL方言，来查询存储在Hadoop集群中的数据。<br>SQL知识分布广泛的一个原因是：它是一个可以有效地、合理地且直观地组织和使用数据的模型。即使对于经验丰富的Java开发工程师来说，将这些常见的数据运算对应到底层的MapReduce JavaAPI也是令人畏缩的。Hive可以帮助用户来做这些苦活，这样用户就可以集中精力关注于查询本身了。Hive可以将大多数的查询转换为MapReduce任务（job），进而在介绍一个令人熟悉的SQL抽象的同时，拓宽Hadoop的可扩展性。</p>
+<p>Hive 最适合于数据仓库应用程序，使用该应用程序进行相关的静态数据分析，不需要快速响应给出结果，而且数据本身不会频繁变化。<br>Hive不是一个完整的数据库。Hadoop以及HDFS的设计本身约束和局限性地限制了Hive 所能胜任的工作。其中最大的限制就是Hive不支持记录级别的更新、插入或者删除操作。但是用户可以通过查询生成新表或者将查询结果导入到文件中。同时，因为Hadoop是一个面向批处理的系统，而MapReduce任务（job）的启动过程需要消耗较长的时间，所以Hive查询延时比较严重。传统数据库中在秒级别可以完成的查询，在Hive中，即使数据集相对较小，往往也需要执行更长的时间。最后需要说明的是，Hive不支持事务。</p>
+<p>Hive是最适合数据仓库应用程序的，其可以维护海量数据，而且可以对数据进行挖掘，然后形成意见和报告等。<br>因为大多数的数据仓库应用程序是使用基于SQL的关系型数据库实现的，所以Hive降低了将这些应用程序移植到Hadoop上的障碍。用户如果懂得SQL，那么学习使用Hive将会很容易。如果没有Hive，那么这些用户就需要去重新学习新的语言和新的工具后才能进行生产。<br>同样地，相对于其他Hadoop 语言和工具来说，Hive也使得开发者将基于SQL的应用程序移植到Hadoop变得更加容易。</p>
+<h1 id="Hive的体系架构"><a href="#Hive的体系架构" class="headerlink" title="Hive的体系架构"></a>Hive的体系架构</h1><p><img src="/2020/07/08/Hive/1.png" alt></p>
+<h2 id="command-line-shell-amp-thrift-jdbc"><a href="#command-line-shell-amp-thrift-jdbc" class="headerlink" title="command-line shell &amp; thrift/jdbc"></a>command-line shell &amp; thrift/jdbc</h2><p>可以用 command-line shell 和 thrift／jdbc 两种方式来操作数据：</p>
 <ul>
-<li>“变量名”：ClassPath</li>
-<li>“变量值”：.;%SCALA_HOME%\bin;%SCALA_HOME%\lib\dt.jar;%SCALA_HOME%\lib\tools.jar.;</li>
+<li><strong>command-line shell</strong>：通过 hive 命令行的的方式来操作数据；</li>
+<li><strong>thrift／jdbc</strong>：通过 thrift 协议按照标准的 JDBC 的方式操作数据。</li>
 </ul>
-<p><strong>注意：</strong>“变量值”最前面的 .; 不要漏掉。最后单击确定即可。</p>
-<p><img src="/2020/04/27/Scala/5.png" alt></p>
-<p>检查环境变量是否设置好了：调出”cmd”检查。单击 【开始】，在输入框中输入cmd，然后”回车”，输入 scala，然后回车，如环境变量设置ok，你应该能看到这些信息。</p>
-<p><img src="/2020/04/27/Scala/6.png" alt></p>
+<h2 id="Metastore"><a href="#Metastore" class="headerlink" title="Metastore"></a>Metastore</h2><p>在 Hive 中，表名、表结构、字段名、字段类型、表的分隔符等统一被称为元数据。所有的元数据默认存储在 Hive 内置的 derby 数据库中，但由于 derby 只能有一个实例，也就是说不能有多个命令行客户端同时访问，所以在实际生产环境中，通常使用 MySQL 代替 derby。</p>
+<p>Hive 进行的是统一的元数据管理，就是说你在 Hive 上创建了一张表，然后在 presto／impala／sparksql 中都是可以直接使用的，它们会从 Metastore 中获取统一的元数据信息，同样的你在 presto／impala／sparksql 中创建一张表，在 Hive 中也可以直接使用。</p>
+<h2 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h2><ul>
+<li><p>简单、容易上手 (提供了类似 sql 的查询语言 hql)，使得精通 sql 但是不了解 Java 编程的人也能很好地进行大数据分析；</p>
+</li>
+<li><p>灵活性高，可以自定义用户函数 (UDF) 和存储格式；</p>
+</li>
+<li><p>为超大的数据集设计的计算和存储能力，集群扩展容易;</p>
+</li>
+<li><p>统一的元数据管理，可与 presto／impala／sparksql 等共享数据；</p>
+</li>
+<li><p>执行延迟高，不适合做数据的实时处理，但适合做海量数据的离线处理。</p>
+</li>
+</ul>
 
       
     </div>
@@ -350,18 +336,9 @@
 
 <nav id="article-nav">
   
-    <a  href="/2020/06/21/Flink-Table-API-SQL%E7%BC%96%E7%A8%8B/" id="article-nav-newer" class="article-nav-link-wrap">
-      <strong class="article-nav-caption"><</strong>
-      <div class="article-nav-title">
-        
-          Flink Table API&amp;SQL编程
-        
-      </div>
-    </a>
   
-  
-    <a  href="/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">Flume监控之Ganglia</div>
+    <a  href="/2020/07/03/Kafka-Eagle/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Kafka Eagle</div>
       <strong class="article-nav-caption">></strong>
     </a>
   
@@ -373,7 +350,7 @@
 
     <div id="toc" class="toc-article">
     <strong class="toc-title">文章目录</strong>
-    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#前言"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Scala特性："><span class="toc-number">2.</span> <span class="toc-text">Scala特性：</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Scala安装"><span class="toc-number">3.</span> <span class="toc-text">Scala安装</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Windows-上安装Scala"><span class="toc-number">3.1.</span> <span class="toc-text">Windows 上安装Scala</span></a></li></ol></li></ol>
+    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#前言"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Hive的体系架构"><span class="toc-number">2.</span> <span class="toc-text">Hive的体系架构</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#command-line-shell-amp-thrift-jdbc"><span class="toc-number">2.1.</span> <span class="toc-text">command-line shell &amp; thrift&#x2F;jdbc</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Metastore"><span class="toc-number">2.2.</span> <span class="toc-text">Metastore</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#特点"><span class="toc-number">2.3.</span> <span class="toc-text">特点</span></a></li></ol></li></ol>
 </div>
 <style>
     .left-col .switch-btn {
@@ -434,13 +411,11 @@
 
     <div class="scroll" id="post-nav-button">
         
-            <a  href="/2020/06/21/Flink-Table-API-SQL%E7%BC%96%E7%A8%8B/" title="上一篇: Flink Table API&amp;SQL编程">
-                <i class="fa fa-angle-left"></i>
-            </a>
+            <a  href="/" title="回到主页"><i class="fa fa-home"></i></a>
         
         <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
         
-            <a  href="/2020/04/06/Flume%E7%9B%91%E6%8E%A7%E4%B9%8BGanglia/" title="下一篇: Flume监控之Ganglia">
+            <a  href="/2020/07/03/Kafka-Eagle/" title="下一篇: Kafka Eagle">
                 <i class="fa fa-angle-right"></i>
             </a>
         
