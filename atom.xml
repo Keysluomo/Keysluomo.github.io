@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://keysluomo.github.io/"/>
-  <updated>2020-07-26T03:54:14.069Z</updated>
+  <updated>2020-07-26T04:27:42.571Z</updated>
   <id>https://keysluomo.github.io/</id>
   
   <author>
@@ -21,18 +21,20 @@
     <link href="https://keysluomo.github.io/2020/07/26/SpringBoot-Hello-World/"/>
     <id>https://keysluomo.github.io/2020/07/26/SpringBoot-Hello-World/</id>
     <published>2020-07-26T03:54:14.000Z</published>
-    <updated>2020-07-26T03:54:14.069Z</updated>
+    <updated>2020-07-26T04:27:42.571Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="Springboot之Hello-World"><a href="#Springboot之Hello-World" class="headerlink" title="Springboot之Hello World"></a>Springboot之Hello World</h1><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>世界上最好的文档来源自官方的《<a href="https://g.halouworld.com:5555/url?sa=t&amp;rct=j&amp;q=&amp;esrc=s&amp;source=web&amp;cd=2&amp;ved=0ahUKEwirptX0jqrMAhVFmZQKHTBIDIcQFggqMAE&amp;url=http%3a%2f%2fdocs.spring.io%2fspring-boot%2fdocs%2fcurrent%2freference%2fhtmlsingle%2f&amp;usg=AFQjCNF-iUAjNLcDaGoKyG7R7g50nY1zfA" target="_blank" rel="noopener">Spring Boot Reference Guide</a>》，是这样介绍的：</p><p>Spring Boot(英文中是“引导”的意思)，是用来简化Spring应用的搭建到开发的过程。应用开箱即用，只要通过 “just run”（可能是 java -jar 或 tomcat 或 maven插件run 或 shell脚本），就可以启动项目。二者，Spring Boot 只要很少的Spring配置文件（例如那些xml，property）。</p><p>因为“习惯优先于配置”的原则，使得Spring Boot在快速开发应用和微服务架构实践中得到广泛应用。</p><h1 id="Springboot优点"><a href="#Springboot优点" class="headerlink" title="Springboot优点"></a>Springboot优点</h1><ul><li><p>为所有的Spring开发者更快的入门</p></li><li><p>开箱即用，提供各种默认配置来简化项目配置</p></li><li>内嵌式容器简化Web项目</li><li>没有冗余代码生成和XML配置的要求</li></ul><h1 id="Springboot之Hello-World-1"><a href="#Springboot之Hello-World-1" class="headerlink" title="Springboot之Hello World"></a>Springboot之Hello World</h1><p>我们将快速搭建一个Spring Boot应用，并且实现一个简单的HTTP请求处理，通过这个例子我们可以对SpringBoot有一个初步的认识，并体验其结构简单、开发快速的特性。</p><h2 id="创建基础项目"><a href="#创建基础项目" class="headerlink" title="创建基础项目"></a>创建基础项目</h2><p>使用IntelliJ IDEA来写Java程序的话，可以直接在编译器中创建Spring Boot应用。</p><p><strong>第一步</strong>：菜单栏中选择：File =&gt; New =&gt; Project..，我们可以看到如下图所示的创建功能窗口。</p><p><img src="/2020/07/26/SpringBoot-Hello-World/1.png" alt="image-20200725164131533"></p><p>其中Initial Service Url指向的地址就是Spring官方提供的Spring Initializr工具地址，所以这里创建的工程实际上也是基于它的Web工具来实现的。</p><p><strong>第二步</strong>：点击Next，等待片刻后，我们可以看到如下图所示的工程信息窗口：</p><p><img src="/2020/07/26/SpringBoot-Hello-World/2.png" alt="image-20200725164217932"></p><p>其实内容就跟我们用Web版的Spring Initializr是一模一样的，跟之前在页面上一样填写即可。</p><p><strong>第三步</strong>：继续点击Next，进入选择Spring Boot版本和依赖管理的窗口：</p><p><img src="/2020/07/26/SpringBoot-Hello-World/3.png" alt="image-20200725164250373"></p><p><strong>第四步</strong>：点击Next，进入最后关于工程物理存储的一些细节。最后，点击Finish就能完成工程的构建了。</p><h3 id="项目结构解析"><a href="#项目结构解析" class="headerlink" title="项目结构解析"></a>项目结构解析</h3><p><img src="/2020/07/26/SpringBoot-Hello-World/4.png" alt="image-20200725164404859"></p><h3 id="编写一个HTTP接口"><a href="#编写一个HTTP接口" class="headerlink" title="编写一个HTTP接口"></a>编写一个HTTP接口</h3><ul><li>创建package命名为com.didispace.web（根据实际情况修改）</li><li>创建<code>HelloController</code>类，内容如下：</li></ul><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">@RestController</span><br><span class="line">public class HelloController &#123;</span><br><span class="line"></span><br><span class="line">    @RequestMapping(&quot;&#x2F;hello&quot;)</span><br><span class="line">    public String index() &#123;</span><br><span class="line">        return &quot;Hello World&quot;;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>启动主程序，使用PostMan等工具发起请求：<code>http://localhost:8080/hello</code>，可以看到页面返回：Hello World，大功告成！</p>]]></content>
     
     <summary type="html">
     
-      预览描述
+      Spring Boot(英文中是“引导”的意思)，是用来简化Spring应用的搭建到开发的过程。应用开箱即用，只要通过 “just run”（可能是 java -jar 或 tomcat 或 maven插件run 或 shell脚本），就可以启动项目。二者，Spring Boot 只要很少的Spring配置文件（例如那些xml，property）。
     
     </summary>
     
-      <category term="目录" scheme="https://keysluomo.github.io/categories/%E7%9B%AE%E5%BD%95/"/>
+      <category term="other" scheme="https://keysluomo.github.io/categories/other/"/>
     
     
-      <category term="标签" scheme="https://keysluomo.github.io/tags/%E6%A0%87%E7%AD%BE/"/>
+      <category term="SpringBoot" scheme="https://keysluomo.github.io/tags/SpringBoot/"/>
     
   </entry>
   
