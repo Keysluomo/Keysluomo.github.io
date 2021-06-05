@@ -1979,4 +1979,100 @@
         <tag>分布式存储系统</tag>
       </tags>
   </entry>
+  <entry>
+    <title>ClickHouse</title>
+    <url>/2021/06/05/ClickHouse/</url>
+    <content><![CDATA[<h1 id="ClickHouse"><a href="#ClickHouse" class="headerlink" title="ClickHouse"></a>ClickHouse</h1><h2 id="1-背景"><a href="#1-背景" class="headerlink" title="1. 背景"></a>1. 背景</h2><p>ClickHouse 是俄罗斯Yandex在2016年年开源的一个<strong>单进程多线程</strong>分析型<strong>列式存储数据</strong></p>
+<p>库，主要面向OLAP场景。</p>
+<h3 id="1-1-列式存储与行式存储"><a href="#1-1-列式存储与行式存储" class="headerlink" title="1.1 列式存储与行式存储"></a>1.1 列式存储与行式存储</h3><p><strong>行式存储：</strong></p>
+<p>在传统的行式数据库系统中，数据按顺序存储，处于同一行中的数据总是被物理的存储在一起。常见的行式数据库系统有： MySQL、Postgres和MS SQL Server。</p>
+<p><strong>列式存储：</strong></p>
+<p>在列式数据库系统中，存储格式是列名，列值1, 列2.方式存储，对于存储而言，列式数据库总是将同一列的数据存储在一起，不同列的数据也总是分开存储。</p>
+<p>不同的存储方式有不同的使用场景。</p>
+<h3 id="1-2-OLAP场景的关键特征"><a href="#1-2-OLAP场景的关键特征" class="headerlink" title="1.2 OLAP场景的关键特征"></a>1.2 OLAP场景的关键特征</h3><p>大多数是读请求</p>
+<p>数据总是相当大的批（&gt; 1000 rows)进行写入</p>
+<p>不修改已添加的数据</p>
+<p>每次查询都从数据库中读取大量的行，但是同时又仅需要少量的列</p>
+<p>宽表，即每个表包含着大量的列</p>
+<p>较少的查询（通常每台服务器每秒数百个查询或更少）</p>
+<p>对于简单查询，允许延迟大约50毫秒</p>
+<p>列中的数据相对较小：数字和短字符串</p>
+<p>处理单个查询时需要高吞吐量（每个服务器每秒高达数十亿行）</p>
+<p>事务不是必须的</p>
+<p>对数据一致性要求低</p>
+<p>每一个查询除了一个大表外都很小</p>
+<p>查询结果明显小于源数据，换句话说，数据被过滤或聚合后能够被盛放在单台服务器的内存中。</p>
+<h3 id="1-3-列式数据更适合OLAP场景的原因"><a href="#1-3-列式数据更适合OLAP场景的原因" class="headerlink" title="1.3 列式数据更适合OLAP场景的原因"></a>1.3 列式数据更适合OLAP场景的原因</h3><p>列式数据库更适合于OLAP场景（对于大多数查询而言，处理速度至少提高了100倍），具体原因如下:</p>
+<p>输入输出</p>
+<ol>
+<li>针对分析类查询，通常只需要读取表的一小部分列。在列式数据库中你可以只读取你需要的数据。例如，如果只需要读取100列中的5列，这将帮助你最少减少20倍的I/O消耗。</li>
+<li>由于数据总是打包成批量读取的，所以压缩是非常容易的。同时数据按列分别存储这也更容易压缩。这进一步降低了I/O的体积。</li>
+<li>由于I/O的降低，这将帮助更多的数据被系统缓存。</li>
+</ol>
+<h2 id="2-ClickHouse-表引擎详解和架构原理"><a href="#2-ClickHouse-表引擎详解和架构原理" class="headerlink" title="2. ClickHouse 表引擎详解和架构原理"></a>2. ClickHouse 表引擎详解和架构原理</h2><h3 id="2-1-ClickHouse-设计思想和核心技术特征"><a href="#2-1-ClickHouse-设计思想和核心技术特征" class="headerlink" title="2.1. ClickHouse 设计思想和核心技术特征"></a>2.1. ClickHouse 设计思想和核心技术特征</h3><p>ClickHouse 是一个用于联机分析 (OLAP) 的列式数据库管理系统 (DBMS)。来自于 2011 年在纳斯达克上市的俄罗斯本土搜索引擎企业 Yandex 公司，诞生之初就是为了服务 Yandex 公司自家的 Web 流量分析产品 Yandex.Metrica，后来经过演变，逐渐形成为现在的 ClickHouse，全称是：ClickStream,Data WareHouse。</p>
+<p>在 1 亿数据集体量的情况下，ClickHouse 的平均响应速度是 Vertica 的 2.63 倍、InfiniDB 的 17 倍、MonetDB 的 27 倍、Hive 的 126 倍、MySQL 的</p>
+<p>429 倍以及Greenplum 的 10 倍。详细的测试结果可以查阅：<a href="https://clickhouse.tech/benchmark/dbms/。" target="_blank" rel="noopener">https://clickhouse.tech/benchmark/dbms/。</a></p>
+<p>ClickHouse 非常适用于商业智能领域（也就是我们所说的 BI 领域），除此之外，它也能够被广泛应用于广告流量、Web、App 流量、电信、金融、电子</p>
+<p>商务、信息安全、网络游戏、物联网等众多其他领域。</p>
+<ol>
+<li><p>ClickHouse 是近年来备受关注的开源列式数据库，主要用于数据分析（OLAP）领域。目前国内社区火热，各个大厂纷纷跟进大规模使用：</p>
+</li>
+<li><p>今日头条内部用 ClickHouse 来做用户行为分析，内部一共几千个 ClickHouse 节点，单集群最大 1200 节点，总数据量几十 PB，日增原始数据300TB 左右。</p>
+</li>
+<li><p>腾讯内部用 ClickHouse 做游戏数据分析，并且为之建立了一整套监控运维体系。</p>
+</li>
+<li><p>携程内部从 18 年 7 月份开始接入试用，目前 80% 的业务都跑在 ClickHouse 上。每天数据增量十多亿，近百万次查询请求。</p>
+</li>
+</ol>
+<p>快手内部也在使用 ClickHouse，存储总量大约 10PB， 每天新增 200TB， 90% 查询小于 3S。</p>
+<p>clickHouse缺点：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">1、没有完整的事务支持 </span><br><span class="line">2、稀疏索引导致 ClickHouse 不擅长细粒度或者 key-value 类型数据的查询需求 </span><br><span class="line">3、缺少高频率，低延迟的修改或删除已存在数据的能力。仅能用于批量删除或修改数据 </span><br><span class="line">4、不擅长 join 操作</span><br><span class="line">5、扩缩容数据平衡问题是其最大的痛点</span><br></pre></td></tr></table></figure>
+<p><strong>2.2. ClickHouse</strong> <strong>表引擎详解</strong></p>
+<p><strong>2.2.1. ClickHouse</strong> <strong>表引擎介绍</strong></p>
+<p>表引擎在 ClickHouse 中的作用十分关键，直接决定了数据如何存储和读取、是否支持并发读写、是否支持 index、支持的 query 种类、是否支持主备复</p>
+<p>制等。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">1、数据的存储方式和位置，写到哪里以及从哪里读取数据 </span><br><span class="line"></span><br><span class="line">2、支持哪些查询以及如何支持。 </span><br><span class="line"></span><br><span class="line">3、并发数据访问。 </span><br><span class="line"></span><br><span class="line">4、索引的使用（如果存在）。 </span><br><span class="line"></span><br><span class="line">5、是否可以执行多线程请求。 </span><br><span class="line"></span><br><span class="line">6、数据复制参数。</span><br></pre></td></tr></table></figure>
+<p>具体可看官网：<a href="https://clickhouse.tech/docs/zh/engines/table-engines/" target="_blank" rel="noopener">https://clickhouse.tech/docs/zh/engines/table-engines/</a></p>
+<p>关于 ClickHouse 的底层引擎，其实可以分为 数据库引擎 和 表引擎 两种。在此，我们重点讲解 表引擎。</p>
+<p>关于库引擎，简单总结一下：ClickHouse 也支持在创建库的时候，指定库引擎，目前支持5种，分别是：Ordinary，Dictionary， Memory， Lazy，</p>
+<p>MySQL，其实 Ordinary 是默认库引擎，在此类型库引擎下，可以使用任意类型的表引擎。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">1、Ordinary引擎：默认引擎，如果不指定数据库引擎创建的就是 Ordinary 数据库 </span><br><span class="line">2、Dictionary引擎：此数据库会自动为所有数据字典创建表 </span><br><span class="line">3、Memory引擎：所有数据只会保存在内存中，服务重启数据消失，该数据库引擎只能够创建 Memory 引擎表 </span><br><span class="line">4、MySQL引擎：改引擎会自动拉取远端 MySQL 中的数据，并在该库下创建 MySQL 表引擎的数据表 </span><br><span class="line">5、Lazy延时引擎：在距最近一次访问间隔 expiration_time_in_seconds 时间段内，将表保存在内存中，仅适用于 Log 引擎表</span><br></pre></td></tr></table></figure>
+<p>ClickHouse 的表引擎提供了四个系列（Log、MergeTree、Integration、Special）大约 28 种表引擎，各有各的用途。比如 Log 系列用来做小表数据分析，MergeTree 系列用来做大数据量分析，而 Integration 系列则多用于外表数据集成。Log、Special、Integration 系列的表引擎相对来说，应用场景有限，功能简单，应用特殊用途，MergeTree 系列表引擎又和两种特殊表引擎（Replicated，Distributed）正交形成多种具备不同功能的 MergeTree 表引擎。</p>
+<h3 id="2-2-MergeTree-引擎工作机制详解"><a href="#2-2-MergeTree-引擎工作机制详解" class="headerlink" title="2.2 MergeTree 引擎工作机制详解"></a>2.2 MergeTree 引擎工作机制详解</h3><p>MergeTree 系列是官方主推的存储引擎，支持几乎所有 ClickHouse 核心功能，该系列中，常用的表引擎有：MergeTree、ReplacingMergeTree、</p>
+<p>CollapsingMergeTree、VersionedCollapsingMergeTree、SummingMergeTree、AggregatingMergeTree 等。学习好 MergeTree 表引擎的工作机</p>
+<p>制，是应用好 ClickHouse 的最基本基础。</p>
+<p><strong>关于表引擎类型</strong>：</p>
+<p>第一：<strong>MergeTree</strong> 表引擎主要用于海量数据分析，支持数据分区、存储有序、主键索引、稀疏索引、数据 TTL 等。MergeTree 支持所有 ClickHouse</p>
+<p>SQL 语法，但是有些功能与 MySQL 并不一致，比如在 MergeTree 中主键并不用于去重。</p>
+<p>第二：为了解决 MergeTree 相同主键无法去重的问题，ClickHouse 提供了 ReplacingMergeTree 引擎，用来做去重。<strong>ReplacingMergeTree</strong> 确保数据</p>
+<p>最终被去重，但是无法保证查询过程中主键不重复。因为相同主键的数据可能被 shard 到不同的节点，但是 compaction 只能在一个节点中进行，而且</p>
+<p>optimize 的时机也不确定。</p>
+<p>第三：<strong>CollapsingMergeTree</strong> 引擎要求在建表语句中指定一个标记列 Sign（插入的时候指定为 1，删除的时候指定为 -1），后台 Compaction 时会将主</p>
+<p>键相同、Sign 相反的行进行折叠，也即删除。来消除 ReplacingMergeTree 的限制。</p>
+<p>第四：为了解决 CollapsingMergeTree 乱序写入情况下无法正常折叠问题，<strong>VersionedCollapsingMergeTree</strong> 表引擎在建表语句中新增了一列</p>
+<p>Version，用于在乱序情况下记录状态行与取消行的对应关系。主键相同，且 Version 相同、Sign 相反的行，在 Compaction 时会被删除。</p>
+<p>第五：ClickHouse 通过 <strong>SummingMergeTree</strong> 来支持对主键列进行预先聚合。在后台 Compaction 时，会将主键相同的多行进行 sum 求和，然后使用</p>
+<p>一行数据取而代之，从而大幅度降低存储空间占用，提升聚合计算性能。</p>
+<p>第六：<strong>AggregatingMergeTree</strong> 也是预先聚合引擎的一种，用于提升聚合计算的性能。与 SummingMergeTree 的区别在于：SummingMergeTree 对</p>
+<p>非主键列进行 sum 聚合，而 AggregatingMergeTree 则可以指定各种聚合函数.</p>
+<p>MergeTree 的建表语法：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">CREATE TABLE [IF NOT EXISTS] [db_name.]table_name ( </span><br><span class="line">	name1 [type] [DEFAULT|MATERIALIZED|ALIAS expr], </span><br><span class="line">	name2 [type] [DEFAUErEMAMLERLALLIZED|ALIAS expr], 省略... </span><br><span class="line">	) ENGINE &#x3D; MergeTree() </span><br><span class="line">	[PARTITION BY expr] </span><br><span class="line">	[ORDER BY expr] </span><br><span class="line">	[PRIMARY KEY expr] </span><br><span class="line">	[SAMPLE BY expr] </span><br><span class="line">	[SETTINGS name&#x3D;value, 省略...]</span><br></pre></td></tr></table></figure>
+<p>介绍一下其中的几个关键选项：</p>
+<p>1、PARTITION BY：分区键。指定表数据以何种标准进行分区。分区键既可以是单个列字段，也可以通过元组的形式使用多个列字段，同时它也支持使用列表达 </p>
+<p>式。</p>
+<p>2、ORDER BY：排序键，用于指定在一个数据片段内，数据以何种标准排序。默认情况下主键(PRIMARY KEY)与排序键相同。 </p>
+<p>3、PRIMARY KEY：主键。声明后会依照主键字段生成一级索引。默认情况下，主键与排序键(ORDER BY)相同，所以通常直接使用 ORDER BY 代为指定主键。 </p>
+<p>4、SETTINGS：index_granularity 选项表示索引的粒度，默认值为 8192。MergeTree 索引在默认情况下，每间隔 8192 行数据才生成一条索引。 </p>
+<p>5、SAMPLE BY：抽样表达式，用于声明数据以何种标准进行采样。 </p>
+<p>注意 settings 中的重要参数：</p>
+<p>1、index_granularity 默认是 8192 </p>
+<p>2、index_granularity_bytes 默认 10M，需要通过 enable_mixed_granularity_parts 来开启</p>
+]]></content>
+      <categories>
+        <category>Other</category>
+      </categories>
+      <tags>
+        <tag>分布式Olap引擎</tag>
+      </tags>
+  </entry>
 </search>
